@@ -73,71 +73,69 @@ export class TrainingSiteRepositoryService {
 
   // }
 
-  async findWithFilters(filters: any[], page: number, limit: number) {
-    const where: string[] = [];
-    const values: any[] = [];
+ async findWithFilters(filters: any[], page: number, limit: number) {
+  const where: string[] = [];
+  const values: any[] = [];
 
-    filters.forEach((f) => {
-      let value = f.value;
+  filters.forEach((f) => {
+    let value = f.value;
 
-      if (f.operator === 'isEmpty') {
-        where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
+    if (f.operator === 'isEmpty') {
+      where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
+      return;
+    }
+
+    if (f.operator === 'is_not_empty') {
+      where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
+      return;
+    }
+
+    if (f.type === 'date') {
+      const startOfDay = `${f.value} 00:00:00`;
+      const endOfDay = `${f.value} 23:59:59`;
+
+      if (f.operator === 'equals') {
+        where.push(`(${f.column} BETWEEN ? AND ?)`);
+        values.push(startOfDay, endOfDay);
         return;
       }
 
-      if (f.operator === 'is_not_empty') {
-        where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
+      if (f.operator === 'before') {
+        where.push(`${f.column} < ?`);
+        values.push(startOfDay);
         return;
       }
 
-
-      if (f.type === 'date') {
-        const startOfDay = `${f.value} 00:00:00`;
-        const endOfDay = `${f.value} 23:59:59`;
-
-        if (f.operator === 'equals') {
-          where.push(`(${f.column} BETWEEN ? AND ?)`);
-          values.push(startOfDay, endOfDay);
-          return;
-        }
-
-        if (f.operator === 'before') {
-          where.push(`${f.column} < ?`);
-          values.push(startOfDay);
-          return;
-        }
-
-        if (f.operator === 'after') {
-          where.push(`${f.column} > ?`);
-          values.push(endOfDay);
-          return;
-        }
+      if (f.operator === 'after') {
+        where.push(`${f.column} > ?`);
+        values.push(endOfDay);
+        return;
       }
+    }
 
-      if (f.operator === 'contains') value = `%${value}%`;
-      if (f.operator === 'starts_with') value = `${value}%`;
-      if (f.operator === 'ends_with') value = `%${value}`;
-      if (f.type === 'number') value = Number(value);
+    if (f.operator === 'contains') value = `%${value}%`;
+    if (f.operator === 'starts_with') value = `${value}%`;
+    if (f.operator === 'ends_with') value = `%${value}`;
+    if (f.type === 'number') value = Number(value);
 
-      where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
-      values.push(value);
-    });
+    where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
+    values.push(value);
+  });
 
-    const offset = (page - 1) * limit;
+  const safeLimit = Math.max(1, Number(limit));
+  const safeOffset = Math.max(0, Number((page - 1) * limit));
 
-    const sql = `
+  const sql = `
     SELECT ts.*
     FROM training_sites ts
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY ts.training_point_id DESC
-    LIMIT ? OFFSET ?
+    LIMIT ${safeLimit} OFFSET ${safeOffset}
   `;
 
-    values.push(limit, offset);
-
-    const [rows] = await this.db.query(sql, values);
-    return rows;
-  }
+  const [rows] = await this.db.query(sql, values);
+  return rows;
+}
 
   // async findAll(page: number, limit: number) {
   //   const offset = (page - 1) * limit;
@@ -150,24 +148,24 @@ export class TrainingSiteRepositoryService {
   //   return rows;
   // }
   async findAll(page: number, limit: number) {
-  const safeLimit = Number(limit);
-  const safeOffset = Number((page - 1) * limit);
+    const safeLimit = Number(limit);
+    const safeOffset = Number((page - 1) * limit);
 
-  if (isNaN(safeLimit) || isNaN(safeOffset)) {
-    throw new Error('Invalid pagination parameters');
-  }
-  console.log("page Limit set ",safeLimit);
-  console.log("page Limit set 2",safeOffset);
- const sql = `
+    if (isNaN(safeLimit) || isNaN(safeOffset)) {
+      throw new Error('Invalid pagination parameters');
+    }
+    console.log("page Limit set ", safeLimit);
+    console.log("page Limit set 2", safeOffset);
+    const sql = `
   SELECT *
   FROM training_sites
   ORDER BY training_point_id DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
 
-const [rows] = await this.db.query(sql);
-return rows;
-}
+    const [rows] = await this.db.query(sql);
+    return rows;
+  }
 
   async getTrainingbyID(training_id: number) {
     const [rows] = await this.db.query(

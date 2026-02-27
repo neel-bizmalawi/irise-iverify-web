@@ -48,8 +48,8 @@ export class TrainingSiteService {
 
     const username = user.name;
 
-    console.log("user name is",username)
-    const data = await this.trainingSiteRepo.insertTraining(dto,username)
+    console.log("user name is", username)
+    const data = await this.trainingSiteRepo.insertTraining(dto, username)
 
     return {
       message: 'Training site created successfully',
@@ -106,14 +106,14 @@ export class TrainingSiteService {
     };
   }
 
-  async updateTrain(trainingId: number, dto: UpdateTrainingSiteDto,userId :number) {
+  async updateTrain(trainingId: number, dto: UpdateTrainingSiteDto, userId: number) {
 
-     const user = await this.trainingSiteRepo.getUserById(userId);
+    const user = await this.trainingSiteRepo.getUserById(userId);
 
     const username = user.name;
 
 
-    return this.trainingSiteRepo.updateTraining(trainingId, dto,username);
+    return this.trainingSiteRepo.updateTraining(trainingId, dto, username);
   }
 
 
@@ -150,6 +150,7 @@ export class TrainingSiteService {
     limit: number,
     filters: any[] = [],
   ) {
+    
     if (page < 1) page = 1;
     if (limit < 1) limit = 10;
 
