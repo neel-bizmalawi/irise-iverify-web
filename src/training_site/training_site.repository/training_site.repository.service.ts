@@ -139,16 +139,35 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
+  // async findAll(page: number, limit: number) {
+  //   const offset = (page - 1) * limit;
+
+  //   const [rows] = await this.db.query(
+  //     `SELECT * from training_sites order by training_point_id desc limit ? offset ?`,
+  //     [limit, offset],
+  //   );
+
+  //   return rows;
+  // }
   async findAll(page: number, limit: number) {
-    const offset = (page - 1) * limit;
+  const safeLimit = Number(limit);
+  const safeOffset = Number((page - 1) * limit);
 
-    const [rows] = await this.db.query(
-      `SELECT * from training_sites order by training_point_id desc limit ? offset ?`,
-      [limit, offset],
-    );
-
-    return rows;
+  if (isNaN(safeLimit) || isNaN(safeOffset)) {
+    throw new Error('Invalid pagination parameters');
   }
+  console.log("page Limit set ",safeLimit);
+  console.log("page Limit set 2",safeOffset);
+ const sql = `
+  SELECT *
+  FROM training_sites
+  ORDER BY training_point_id DESC
+  LIMIT ${safeLimit} OFFSET ${safeOffset}
+`;
+
+const [rows] = await this.db.query(sql);
+return rows;
+}
 
   async getTrainingbyID(training_id: number) {
     const [rows] = await this.db.query(
