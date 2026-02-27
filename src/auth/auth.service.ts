@@ -19,7 +19,7 @@ export class AuthService {
     console.log("generatetoken called ")
   const accessToken = this.jwtService.sign(
   { sub: user.id, email: user.email },
-  { expiresIn: '1m' },
+  { expiresIn: '5h' },
 );
 
 const refreshToken = this.jwtService.sign(

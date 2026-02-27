@@ -1,38 +1,58 @@
+/* eslint-disable prettier/prettier */
 export const TRAINING_SITES_FILTER_SCHEMA = {
+
+  training_point_id: {
+    column: 'ts.training_point_id',
+    type: 'number',
+    operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
+  },
+
+  created_by: {
+    column: 'ts.created_by',
+    type: 'text',
+    operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  },
+
+  modified_by: {
+    column: 'ts.modified_by',
+    type: 'text',
+    operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  },
+
   training_site: {
     column: 'ts.training_site',
     type: 'text',
-    operators: ['contains', 'equals', 'starts_with', 'ends_with'],
+    operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
   },
 
   district: {
     column: 'ts.district',
     type: 'text',
-    operators: ['equals', 'contains'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
   },
 
   traditional_authority: {
     column: 'ts.traditional_authority',
     type: 'text',
-    operators: ['equals', 'contains'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
   },
 
   village_head_name: {
     column: 'ts.village_head_name',
     type: 'text',
-    operators: ['equals', 'contains'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
   },
 
   gvh_name: {
     column: 'ts.gvh_name',
     type: 'text',
-    operators: ['equals', 'contains'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
   },
 
   training_status: {
     column: 'ts.training_status',
     type: 'select',
-    operators: ['equals', 'not_equals'],
+    operators: ['equals', 'not_equals', 'isEmpty', 'is_not_empty'],
   },
 
   road_access: {
@@ -82,4 +102,11 @@ export const TRAINING_SITES_FILTER_SCHEMA = {
     type: 'date',
     operators: ['equals', 'before', 'after'],
   },
+
+  modified_date: {
+    column: 'ts.modified_date',
+    type: 'date',
+    operators: ['equals', 'before', 'after'],
+  },
+
 };

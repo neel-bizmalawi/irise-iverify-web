@@ -1,5 +1,5 @@
-/* eslint-disable prettier/prettier */
-import { Injectable } from "@nestjs/common";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable prettier/prettier */import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "src/database/database.service";
 
 
@@ -12,7 +12,7 @@ export class AuthRepositoryService {
 
         const [rows]: any = await this.db.query(
             'SELECT id, email ,name,password FROM users WHERE email = ? LIMIT 1',
-            [email],
+            [email]
         );
 
         return rows;

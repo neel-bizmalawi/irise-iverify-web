@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateTrainingSiteDto } from '../create-training-site.dto';
 import { UpdateTrainingSiteDto } from '../update-training-site.dto';
@@ -80,6 +80,40 @@ export class TrainingSiteRepositoryService {
     filters.forEach((f) => {
       let value = f.value;
 
+      if (f.operator === 'isEmpty') {
+        where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
+        return;
+      }
+
+      if (f.operator === 'is_not_empty') {
+        where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
+        return;
+      }
+
+
+      if (f.type === 'date') {
+        const startOfDay = `${f.value} 00:00:00`;
+        const endOfDay = `${f.value} 23:59:59`;
+
+        if (f.operator === 'equals') {
+          where.push(`(${f.column} BETWEEN ? AND ?)`);
+          values.push(startOfDay, endOfDay);
+          return;
+        }
+
+        if (f.operator === 'before') {
+          where.push(`${f.column} < ?`);
+          values.push(startOfDay);
+          return;
+        }
+
+        if (f.operator === 'after') {
+          where.push(`${f.column} > ?`);
+          values.push(endOfDay);
+          return;
+        }
+      }
+
       if (f.operator === 'contains') value = `%${value}%`;
       if (f.operator === 'starts_with') value = `${value}%`;
       if (f.operator === 'ends_with') value = `%${value}`;
@@ -124,6 +158,18 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
+  async getUserById(userId: number) {
+    const [rows] = await this.db.query(
+      'SELECT * FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    );
+    if (!rows || rows.length === 0) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+
+    return rows[0]; // return single user, not array
+
+  }
 
 
   async deleteTrainginId(training_id: number) {
@@ -154,24 +200,29 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
-  async insertTraining(data: CreateTrainingSiteDto) {
-    const {
-      training_site,
-      district,
-      gvh_name,
-      village_head_name,
-      traditional_authority,
-      cookstoves_count,
-      house_holds_count,
-      house_hold_radius,
-      road_access,
-      total_people,
-      latitude,
-      longitude,
-    } = data;
+  async insertTraining(data: CreateTrainingSiteDto, username: string) {
 
-    const [result] = await this.db.query(
-      `
+    console.log("username is ", username)
+
+    try {
+      const {
+        training_site,
+        district,
+        gvh_name,
+        village_head_name,
+        traditional_authority,
+        cookstoves_count,
+        house_holds_count,
+        house_hold_radius,
+        road_access,
+        total_people,
+        latitude,
+        longitude,
+      } = data;
+
+      const [result] = await this.db.query(
+
+        `
     INSERT INTO training_sites
     (
       training_site,
@@ -185,33 +236,58 @@ export class TrainingSiteRepositoryService {
       road_access,
       total_people,
       latitude,
-      longitude
+      longitude,
+      created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `,
-      [
-        training_site,
-        district,
-        gvh_name ?? null,
-        village_head_name ?? null,
-        traditional_authority ?? null,
-        cookstoves_count ?? null,
-        house_holds_count ?? null,
-        house_hold_radius ?? null,
-        road_access ?? null,
-        total_people ?? null,
-        latitude ?? null,   // ✅ FIX
-        longitude ?? null,  // ✅ FIX
-      ],
-    );
+        [
+          training_site,
+          district,
+          gvh_name ?? null,
+          village_head_name ?? null,
+          traditional_authority ?? null,
+          cookstoves_count ?? null,
+          house_holds_count ?? null,
+          house_hold_radius ?? null,
+          road_access ?? null,
+          total_people ?? null,
+          latitude ?? null,   // ✅ FIX
+          longitude ?? null,  // ✅ FIX
+          username ?? null,
+        ],
+      );
 
-    return result;
+      return result;
+    }
+    catch (error: any) {
+
+      console.error('❌ insertTraining DB error:', error);
+
+      if (error.code === 'ER_DUP_ENTRY') {
+        throw new ConflictException('Training site already exists');
+      }
+
+      // Foreign key constraint (created_by user missing)
+      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+        throw new ConflictException('Invalid user reference');
+      }
+
+      // Fallback
+      throw new InternalServerErrorException(
+        'Failed to create training site',
+      );
+    }
   }
+
+
 
 
   async updateTraining(
     id: number,
     dto: UpdateTrainingSiteDto,
+    username: string,
+
   ) {
 
     // 🔥 Remove undefined fields
@@ -234,11 +310,11 @@ export class TrainingSiteRepositoryService {
 
     const sql = `
     UPDATE training_sites
-    SET ${setClause}, modified_date = NOW()
+    SET ${setClause}, modified_date = NOW(),modified_by=?
     WHERE training_point_id = ?
   `;
 
-    await this.db.query(sql, [...values, id]);
+    await this.db.query(sql, [...values, username, id]);
 
     return { message: 'Training site updated successfully' };
   }

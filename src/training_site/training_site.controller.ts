@@ -38,8 +38,23 @@ export class TrainingSiteController {
     @Post('create_training')
     @UseGuards(AuthGuard('jwt'))
     async CreateTraining(@Body() dto: CreateTrainingSiteDto, @Req() req: any,) {
-        console.log("request user is from jwt",req.user);
-        return this.TrainingSiteService.createTraining(dto);
+        const userId = req.user.userId;
+        console.log("user id is", userId)
+        return this.TrainingSiteService.createTraining(dto, userId);
+    }
+
+    @Put('Update_Trainig/:id')
+    @UseGuards(AuthGuard('jwt'))
+    async updateTraining(
+        @Param('id') id: string,
+        @Body() dto: CreateTrainingSiteDto,@Req() req: any,) {
+                    const userId = req.user.userId;
+
+        return this.TrainingSiteService.updateTrain(
+            Number(id),
+            dto,
+            Number(userId),
+        );
     }
 
     @Get('get_training/:id')
@@ -57,15 +72,7 @@ export class TrainingSiteController {
     }
 
 
-    @Put('Update_Trainig/:id')
-    async updateTraining(
-        @Param('id') id: string,
-        @Body() dto: CreateTrainingSiteDto,) {
-        return this.TrainingSiteService.updateTrain(
-            Number(id),
-            dto,
-        );
-    }
+
 
 
     // @Post('filter')

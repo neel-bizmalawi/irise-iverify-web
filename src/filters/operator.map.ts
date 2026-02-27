@@ -10,4 +10,6 @@ export const OPERATOR_SQL = {
   ends_with: 'LIKE',
   before: '<',
   after: '>',
+  isEmpty: 'IS_EMPTY',
+  is_not_empty: 'IS_NOT_EMPTY',
 };
