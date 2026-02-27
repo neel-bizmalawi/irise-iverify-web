@@ -22,7 +22,6 @@ import {
   InputBase,
   Chip,
   CircularProgress,
-  alpha,
 } from "@mui/material";
 import axios from "axios";
 
@@ -38,6 +37,7 @@ import RadarOutlinedIcon from "@mui/icons-material/RadarOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import ForestOutlinedIcon from "@mui/icons-material/ForestOutlined";
+import { API_BASE_URL } from "../../../config";
 
 const initialState = {
   trainingSiteName: "",
@@ -218,7 +218,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
       try {
         setDistrictLoading(true);
         const res = await axios.get(
-          "http://192.168.0.106:3000/training-site/district_slug",
+          `${API_BASE_URL}/training-site/district_slug`,
         );
         setDistrictOptions(res.data?.data || []);
       } catch (error) {
@@ -236,7 +236,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
       try {
         setAuthorityLoading(true);
         const res = await axios.get(
-          "http://192.168.0.106:3000/training-site/authority_slug",
+          `${API_BASE_URL}/training-site/authority_slug`,
         );
         setAuthorityOptions(res.data?.data || []);
       } catch (error) {
@@ -248,40 +248,40 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
     fetchAuthorities();
   }, [open]);
 
-  const sectionDivider = (label) => (
-    <Grid item xs={12}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          mt: 0.5,
-          mb: -1,
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{
-            fontWeight: 700,
-            color: "#16a34a",
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            fontSize: "0.65rem",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </Typography>
-        <Box
-          sx={{
-            flex: 1,
-            height: "1px",
-            background: "linear-gradient(to right, #dcfce7, transparent)",
-          }}
-        />
-      </Box>
-    </Grid>
-  );
+  // const sectionDivider = (label) => (
+  //   <Grid item xs={12}>
+  //     <Box
+  //       sx={{
+  //         display: "flex",
+  //         alignItems: "center",
+  //         gap: 1.5,
+  //         mt: 0.5,
+  //         mb: -1,
+  //       }}
+  //     >
+  //       <Typography
+  //         variant="caption"
+  //         sx={{
+  //           fontWeight: 700,
+  //           color: "#16a34a",
+  //           letterSpacing: "0.06em",
+  //           textTransform: "uppercase",
+  //           fontSize: "0.65rem",
+  //           whiteSpace: "nowrap",
+  //         }}
+  //       >
+  //         {label}
+  //       </Typography>
+  //       <Box
+  //         sx={{
+  //           flex: 1,
+  //           height: "1px",
+  //           background: "linear-gradient(to right, #dcfce7, transparent)",
+  //         }}
+  //       />
+  //     </Box>
+  //   </Grid>
+  // );
 
   return (
     <Dialog

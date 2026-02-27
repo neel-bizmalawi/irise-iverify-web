@@ -8,6 +8,7 @@ import CreateTrainingSiteDialog from "./CreateTrainingSiteDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
+import { API_BASE_URL } from "../../../config";
 
 const TrainingSites = () => {
   const [tableData, setTableData] = useState([]);
@@ -156,7 +157,7 @@ const TrainingSites = () => {
             : [];
 
         const res = await axios.post(
-          "http://192.168.0.106:3000/training-site/list",
+          `${API_BASE_URL}/training-site/list`,
           { filters: cleanFilters },
           {
             params: {
@@ -255,14 +256,14 @@ const TrainingSites = () => {
 
       if (editId) {
         await axios.put(
-          `http://192.168.0.106:3000/training-site/Update_Trainig/${editId}`,
+          `${API_BASE_URL}/training-site/Update_Trainig/${editId}`,
           payload,
           config,
         );
         toast.success("Training site updated successfully!");
       } else {
         await axios.post(
-          "http://192.168.0.106:3000/training-site/create_training",
+          `${API_BASE_URL}/training-site/create_training`,
           payload,
           config,
         );
@@ -290,7 +291,7 @@ const TrainingSites = () => {
       setLoading(true);
 
       const res = await axios.get(
-        `http://192.168.0.106:3000/training-site/Get_training/${id}`,
+        `${API_BASE_URL}/training-site/Get_training/${id}`,
       );
       const items = res.data?.data;
       if (!items || items.length === 0) {
@@ -326,7 +327,7 @@ const TrainingSites = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(
-        `http://192.168.0.106:3000/training-site/Delete_training/${id}`,
+        `${API_BASE_URL}/training-site/Delete_training/${id}`,
       );
       toast.success("Training site deleted successfully!");
       // Refresh the list (stay on current page, keep filters)

@@ -21,6 +21,7 @@ import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { API_BASE_URL } from "../../../config";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function Login() {
       setLoading(true);
 
       const response = await axios.post(
-        "http://192.168.0.106:3000/auth/verifyUser",
+        `${API_BASE_URL}/auth/verifyUser`,
         {
           validemail: username,
           validPass: password,
