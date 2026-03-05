@@ -7,10 +7,12 @@ import {
 } from 'class-validator';
 
 export class CreateTrainingSiteDto {
-    
+
+    @IsOptional()
     @IsString()
     training_site: string;
 
+    @IsOptional()
     @IsString()
     district: string;
 

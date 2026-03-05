@@ -12,7 +12,7 @@ import { DatabaseModule } from 'src/database/database.module';
 @Module({
   imports: [
     PassportModule,
-      JwtModule.registerAsync({
+      JwtModule.registerAsync({ //jwtModule provides jwtModule and jwtService i.e this.jwtService.sign(),jwt.jwtService.verify()
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get('JWT_SECRET'),
@@ -23,7 +23,7 @@ import { DatabaseModule } from 'src/database/database.module';
   ],
   providers: [JwtStrategy, AuthService,AuthRepositoryService],
 
-  exports: [PassportModule],
+  exports: [PassportModule], 
   controllers: [AuthController],
 })
 export class AuthModule {}

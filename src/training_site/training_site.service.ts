@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { TrainingSiteRepositoryService } from './training_site.repository/training_site.repository.service';
 import { CreateTrainingSiteDto } from './create-training-site.dto';
 import { UpdateTrainingSiteDto } from './update-training-site.dto';
 import { TRAINING_SITES_FILTER_SCHEMA } from './training-sites.filter.schema';
+import { SyncTrainingSiteDto } from './sync-training-site.dto';
 
 
 @Injectable()
@@ -12,6 +13,7 @@ export class TrainingSiteService {
 
 
   constructor(private readonly trainingSiteRepo: TrainingSiteRepositoryService,) { }
+
 
   async getAll(page: number = 1, limit: number = 100) {
     if (page < 1) page = 1;
@@ -48,7 +50,6 @@ export class TrainingSiteService {
 
     const username = user.name;
 
-    console.log("user name is", username)
     const data = await this.trainingSiteRepo.insertTraining(dto, username)
 
     return {
@@ -150,7 +151,7 @@ export class TrainingSiteService {
     limit: number,
     filters: any[] = [],
   ) {
-    
+
     if (page < 1) page = 1;
     if (limit < 1) limit = 10;
 
@@ -202,6 +203,171 @@ export class TrainingSiteService {
       previousPage: page > 1 ? page - 1 : null,
       data,
     };
+  }
+
+
+
+  async syncTrainings(trainings: SyncTrainingSiteDto[], userId: number) {
+
+    const user = await this.trainingSiteRepo.getUserById(userId);
+
+    const username = user.name;
+
+    let syncedCount = 0;
+    let skippedCount = 0;
+    const failed: any[] = [];
+
+
+    for (const training of trainings) {
+
+      try {
+        // ✅ Skip if already synced
+        if (training.offline_id) {
+          const exists = await this.trainingSiteRepo.existsByOfflineId(
+            training.offline_id,
+          );
+
+          if (exists) {
+            skippedCount++;
+            continue;
+          }
+        }
+
+        await this.trainingSiteRepo.insertTrainingsync(
+          training,
+          username,
+        );
+
+        syncedCount++;
+      }
+      catch (error: any) {
+        failed.push({
+          offline_id: training.offline_id,
+          error: error.message,
+        })
+      }
+    }
+
+    const totalTraining =
+      await this.trainingSiteRepo.getTotalTrainingCount();
+
+    return {
+      success: failed.length === 0,
+      syncedCount,
+      skippedCount,
+      failedCount: failed.length,
+      failedRecords: failed,
+      totalTraining,
+    };
+
+  }
+
+  async getupdateDataCount(dates: Date) {
+    try {
+
+      const count = await this.trainingSiteRepo.getUpdatedCountByDate(dates);
+
+      if (count === 0) {
+        return {
+          message: "no data found",
+          data: [],
+        }
+      }
+
+      return {
+        success: true,
+        message: "updated data count fetched succesfully",
+        data: count,
+      }
+    } catch (error) {
+      console.error("getUserRles error", error)
+
+      throw new InternalServerErrorException("Failed to get updated data count",);
+    }
+  }
+
+
+  async getupdateData(dates: Date) {
+    try {
+
+      const record = await this.trainingSiteRepo.getUpdatedDataByDate(dates);
+
+      if (!record || record.length === 0) {
+        return {
+          message: "no data found",
+          data: [],
+        }
+      }
+
+      return {
+        success: true,
+        message: "updated data  fetched succesfully",
+        data: record,
+      }
+    } catch (error) {
+      console.error("getUserRles error", error)
+
+      throw new InternalServerErrorException("Failed to get updated data",);
+    }
+  }
+
+
+
+  async CreateDistrict(district: string, userId: number) {
+    try {
+
+      const user = await this.trainingSiteRepo.getUserById(userId);
+
+      if (!user) {
+        return {
+          success: false,
+          message: "User not found",
+          data: []
+        };
+      }
+
+      const username = user.name;
+
+      const insertDistrict = await this.trainingSiteRepo.insertDistrict(district, username);
+
+      return {
+        success: true,
+        message: "District created successfully",
+        data: insertDistrict
+      };
+
+    } catch (error) {
+      console.error("CreateDistrict error", error);
+
+      throw new InternalServerErrorException(
+        "Failed to create district"
+      );
+    }
+  }
+
+
+   async searchDistrict(search: string) {
+    try {
+
+      const record = await this.trainingSiteRepo.getSearchDistrict(search);
+
+      if (!record || record.length === 0) {
+        return {
+          message: "no District found",
+          data: [],
+        }
+      }
+
+      return {
+        success: true,
+        message: "City fetched succesfully",
+        data: record,
+      }
+    } catch (error) {
+      console.error("getUserRles error", error)
+
+      throw new InternalServerErrorException("Failed to get updated data",);
+    }
   }
 
 

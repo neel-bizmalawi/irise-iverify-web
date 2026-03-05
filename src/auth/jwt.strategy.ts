@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 ExtractJwt.fromAuthHeaderAsBearerToken(), // ✅ frontend
                 (req) => req?.cookies?.access_token,
             ]),
-            secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
+            secretOrKey: config.getOrThrow<string>('JWT_SECRET'), //it checks the jwt_secret and is token modified , token expired ex. 
         });
     }
 

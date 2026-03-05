@@ -28,25 +28,25 @@ export const TRAINING_SITES_FILTER_SCHEMA = {
   district: {
     column: 'ts.district',
     type: 'text',
-    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
   },
 
   traditional_authority: {
     column: 'ts.traditional_authority',
     type: 'text',
-    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
   },
 
   village_head_name: {
     column: 'ts.village_head_name',
     type: 'text',
-    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
   },
 
   gvh_name: {
     column: 'ts.gvh_name',
     type: 'text',
-    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty'],
+    operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
   },
 
   training_status: {
@@ -58,7 +58,7 @@ export const TRAINING_SITES_FILTER_SCHEMA = {
   road_access: {
     column: 'ts.road_access',
     type: 'select',
-    operators: ['equals'],
+    operators: ['equals','not_equals', 'isEmpty', 'is_not_empty'],
   },
 
   is_parent: {

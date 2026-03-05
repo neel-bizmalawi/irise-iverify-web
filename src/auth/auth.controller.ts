@@ -17,7 +17,6 @@ export class AuthController {
     }
 
 
-
     @Post('verifyUser')
     async LoginByEmail(
         @Body() body,

@@ -4,6 +4,7 @@ import { TrainingSiteService } from './training_site.service';
 import { CreateTrainingSiteDto } from './create-training-site.dto';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response, Request } from 'express';
+import { SyncTrainingSiteDto } from './sync-training-site.dto';
 
 
 @Controller('training-site')
@@ -35,6 +36,19 @@ export class TrainingSiteController {
         return this.TrainingSiteService.getAuthority();
     }
 
+    @Get("search-district")
+async searchDistrict(@Query("search") search: string) {
+  return this.TrainingSiteService.searchDistrict(search);
+}
+
+    @Post('create_district')
+    @UseGuards(AuthGuard('jwt'))
+    async CreateDsitrict(@Body('district') district: string, @Req() req: any,) {
+        const userId = req.user.userId;
+        console.log("user id is", userId)
+        return this.TrainingSiteService.CreateDistrict(district, userId);
+    }
+
     @Post('create_training')
     @UseGuards(AuthGuard('jwt'))
     async CreateTraining(@Body() dto: CreateTrainingSiteDto, @Req() req: any,) {
@@ -47,8 +61,8 @@ export class TrainingSiteController {
     @UseGuards(AuthGuard('jwt'))
     async updateTraining(
         @Param('id') id: string,
-        @Body() dto: CreateTrainingSiteDto,@Req() req: any,) {
-                    const userId = req.user.userId;
+        @Body() dto: CreateTrainingSiteDto, @Req() req: any,) {
+        const userId = req.user.userId;
 
         return this.TrainingSiteService.updateTrain(
             Number(id),
@@ -73,14 +87,6 @@ export class TrainingSiteController {
 
 
 
-
-
-    // @Post('filter')
-    // async  filterUsers(@Body('filters') filters:any[]){
-    //     return this.TrainingSiteService.getFilteredUsers(filters);
-    // }
-
-
     @Post('list')
     async getTrainingSites(
         @Query('page') page = '1',
@@ -93,4 +99,29 @@ export class TrainingSiteController {
             filters,
         );
     }
+
+
+    @Post('sync')
+    @UseGuards(AuthGuard('jwt'))
+    async syncTrainings(
+        @Body('trainings') trainings: SyncTrainingSiteDto[],
+        @Req() req: any,
+    ) {
+        const userId = req.user.userId;
+        return this.TrainingSiteService.syncTrainings(trainings, userId);
+    }
+
+    @Post('update_count')
+    async getupdatedatacount(@Body('date') date: string) {
+        return this.TrainingSiteService.getupdateDataCount(new Date(date));
+    }
+
+    @Post('update_data')
+    async getupdatedata(@Body('date') date: string) {
+        return this.TrainingSiteService.getupdateData(new Date(date));
+    }
+
+
+
+
 }
