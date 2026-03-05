@@ -38,6 +38,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import ForestOutlinedIcon from "@mui/icons-material/ForestOutlined";
 import { API_BASE_URL } from "../../../config";
+import SearchableCreatableSelect from "../../components/SearchableCreatableSelect";
 
 const initialState = {
   trainingSiteName: "",
@@ -84,7 +85,7 @@ const StyledInput = ({ value, onChange, type = "text", placeholder }) => (
     onChange={onChange}
     placeholder={placeholder}
     fullWidth
-    
+
     sx={{
       border: "1.5px solid #e5e7eb",
       borderRadius: "10px",
@@ -184,7 +185,10 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
   const [districtLoading, setDistrictLoading] = useState(false);
   const [authorityLoading, setAuthorityLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // const [districtSearch, setDistrictSearch] = useState("");
 
+  console.log("district options are",districtOptions)
+  
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -248,6 +252,56 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
     fetchAuthorities();
   }, [open]);
 
+
+
+  const searchDistrict = async (query) => {
+    try {
+      setDistrictLoading(true);
+
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/search-district`,
+        { params: { search: query } }
+      );
+
+      setDistrictOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District search error:", error);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+
+
+  const createDistrict = async (name) => {
+    const token = localStorage.getItem("token");
+
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/training-site/create_district`,
+        { district: name },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+
+      );
+
+      const newDistrict = res.data.data;
+
+      setDistrictOptions((prev) => [...prev, newDistrict]);
+
+      setForm((prev) => ({
+        ...prev,
+        district: newDistrict,
+      }));
+    } catch (error) {
+      console.error("Add district error:", error);
+    }
+  };
+
+
   // const sectionDivider = (label) => (
   //   <Grid item xs={12}>
   //     <Box
@@ -282,6 +336,11 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
   //     </Box>
   //   </Grid>
   // );
+
+
+
+
+ 
 
   return (
     <Dialog
@@ -417,24 +476,70 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          {/* <Grid item xs={12} md={6}>
             <FormControl fullWidth>
               <FieldLabel
                 icon={LocationOnOutlinedIcon}
                 label="District"
                 required
               />
+
+              <TextField
+                placeholder="Search District..."
+                size="small"
+                value={districtSearch}
+                onChange={(e) => setDistrictSearch(e.target.value)}
+                sx={{ mb: 1 }}
+              />
+
               <StyledSelect
                 value={form.district}
                 onChange={handleChange("district")}
-                options={districtOptions}
+                // options={districtOptions}
+                options={filteredDistricts}
                 disabled={districtLoading}
                 placeholder="Select District"
                 valueKey="district_id"
                 labelKey="district_name"
               />
+              {districtSearch && !districtExists && (
+                <Button
+                  size="small"
+                  sx={{ mt: 1 }}
+                  onClick={() => createDistrict(districtSearch)}
+                >
+                  + Add "{districtSearch}"
+                </Button>
+              )}
+
             </FormControl>
-          </Grid>
+          </Grid> */}
+
+          <Grid item xs={12} md={6}>
+  <FormControl fullWidth>
+    <FieldLabel
+      icon={LocationOnOutlinedIcon}
+      label="District"
+      required
+    />
+
+    <SearchableCreatableSelect
+      label="Search District" 
+      value={form.district}
+      options={districtOptions}
+      loading={districtLoading}
+      labelKey="district_name"
+      onSearch={searchDistrict}
+      onChange={(val) =>
+        setForm((prev) => ({
+          ...prev,
+          district: val?.district_name,
+        }))
+      }
+      onCreate={createDistrict}
+    />
+  </FormControl>
+</Grid>
 
           <Grid item xs={12} md={6}>
             <FormControl fullWidth>
@@ -681,3 +786,14 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
 };
 
 export default CreateTrainingSiteDialog;
+
+
+
+
+
+
+
+
+
+
+

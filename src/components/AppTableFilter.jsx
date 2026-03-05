@@ -22,13 +22,15 @@ const OPERATORS = {
     { value: "equals", label: "Equals" },
     { value: "starts_with", label: "Starts with" },
     { value: "ends_with", label: "Ends with" },
+    {value:"isEmpty",label:"Empty"},
+    {value:"is_not_empty",label:"Not Empty"},
   ],
   select: [
-    { value: "equals", label: "Is" },
+    { value: "equals", label: "Equals" },
     { value: "not_equals", label: "Is not" },
   ],
   date: [
-    { value: "equals", label: "On" },
+    { value: "equals", label: "Equals" },
     { value: "before", label: "Before" },
     { value: "after", label: "After" },
   ],
@@ -510,12 +512,32 @@ const AppTableFilter = ({
       }),
     );
   };
+
+  // const handleApply = () => {
+  //   const valid = draft.filter((r) => r.field && r.value);
+  //   onChange?.(valid);
+  //   onApply?.(valid);
+  //   setOpen(false);
+  // };
+
   const handleApply = () => {
-    const valid = draft.filter((r) => r.field && r.value);
-    onChange?.(valid);
-    onApply?.(valid);
-    setOpen(false);
-  };
+  const valid = draft.filter((r) => {
+    if (!r.field) return false;
+
+    // operators that don't need value
+    if (["isEmpty", "is_not_empty"].includes(r.operator)) {
+      return true;
+    }
+
+    return r.value !== "" && r.value !== null && r.value !== undefined;
+  });
+
+  onChange?.(valid);
+  onApply?.(valid);
+  setOpen(false);
+};
+
+
   const handleClear = () => {
     setDraft([buildEmptyRule(fields)]);
     onChange?.([]);

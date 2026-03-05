@@ -109,7 +109,6 @@ const TrainingSites = () => {
 
   useEffect(() => {
     setFilterFields([
-      { key: "training_point_id", label: "Training Point ID", type: "number" },
       { key: "training_site", label: "Training Site", type: "text" },
       { key: "district", label: "District", type: "text" },
       {
@@ -125,6 +124,7 @@ const TrainingSites = () => {
         type: "select",
         options: ["Yes", "No"],
       },
+      { key: "training_point_id", label: "Training Point ID", type: "number" },
       { key: "total_people", label: "Total People", type: "number" },
       { key: "house_holds_count", label: "Households", type: "number" },
       { key: "cookstoves_count", label: "Cookstoves", type: "number" },
