@@ -364,11 +364,34 @@ export class TrainingSiteService {
         data: record,
       }
     } catch (error) {
-      console.error("getUserRles error", error)
+      console.error("searchDistrict error", error)
 
       throw new InternalServerErrorException("Failed to get updated data",);
     }
   }
 
+    async searchAuthority(search: string) {
+    try {
+
+      const record = await this.trainingSiteRepo.getSearchAuthority(search);
+
+      if (!record || record.length === 0) {
+        return {
+          message: "no Authority found",
+          data: [],
+        }
+      }
+
+      return {
+        success: true,
+        message: "Authority fetched succesfully",
+        data: record,
+      }
+    } catch (error) {
+      console.error("searchAuthority error", error)
+
+      throw new InternalServerErrorException("Failed to get updated data",);
+    }
+  }
 
 }

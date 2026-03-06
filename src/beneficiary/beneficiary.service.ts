@@ -6,11 +6,11 @@ import { CreateBeneficiarydto } from './create-benificiary.dto';
 @Injectable()
 export class BeneficiaryService {
 
-    constructor(private readonly beneficiaryRepo:BeneficiaryRepositoryService){}
+    constructor(private readonly beneficiaryRepo: BeneficiaryRepositoryService) { }
 
-    async CreateBeneficiaryService(dto:CreateBeneficiarydto){
+    async CreateBeneficiaryService(dto: CreateBeneficiarydto) {
 
-        const data= await this.beneficiaryRepo.insertBeneficiary(dto);
+        const data = await this.beneficiaryRepo.insertBeneficiary(dto);
     }
 
 }

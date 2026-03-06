@@ -188,4 +188,28 @@ export class UserService {
         }
     }
 
+        async getAll() {
+        try {
+            const users = await this.userRepo.getAlluser();
+
+            if(!users || users.length===0)
+            {
+                return {
+                    success:false,
+                    message:"no users found",
+                    data:[],
+                }
+            }
+
+            return{
+                success:true,
+                message:"user fetched succesfully",
+                data : users,
+            }
+        } catch (error) {
+            console.error("getUserRles error",error)
+
+            throw new InternalServerErrorException("Failed to fetch roles",);
+        }
+    }
 }

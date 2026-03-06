@@ -4,9 +4,162 @@ import {
     IsOptional,
     IsNumber,
     IsEnum,
+    IsDateString,
 } from 'class-validator';
 
 export class CreateBeneficiarydto {
 
+  @IsOptional()
+  @IsString()
+  training_site?: string;
 
+  @IsOptional()
+  @IsNumber()
+  m_user_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  m_site_id?: number;
+
+  @IsOptional()
+  @IsString()
+  first_name?: string;
+
+  @IsOptional()
+  @IsString()
+  last_name?: string;
+
+  @IsOptional()
+  @IsString()
+  mobile_no?: string;
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  other_cookstove?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsNumber()
+  femalesBelow18?: number;
+
+  @IsOptional()
+  @IsNumber()
+  femalesAbove18?: number;
+
+  @IsOptional()
+  @IsNumber()
+  malesBelow18?: number;
+
+  @IsOptional()
+  @IsNumber()
+  malesAbove18?: number;
+
+  @IsOptional()
+  @IsString()
+  cooking_method?: string;
+
+  @IsOptional()
+  @IsString()
+  district_name?: string;
+
+  @IsOptional()
+  @IsString()
+  national_id?: string;
+
+  @IsOptional()
+  @IsString()
+  national_id_attachment?: string;
+
+  @IsOptional()
+  @IsString()
+  house_pic?: string;
+
+  @IsOptional()
+  @IsString()
+  cookstove_pic?: string;
+
+  @IsOptional()
+  @IsString()
+  signature?: string;
+
+  @IsOptional()
+  @IsNumber()
+  emp_id?: number;
+
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  read_doc?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  understood_doc?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsString()
+  emp_sign?: string;
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  read_to_you?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  stove_status_delivery?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  no_other_cook_stove_present?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsEnum(['yes', 'no'])
+  primary_residence_confirmation?: 'yes' | 'no';
+
+  @IsOptional()
+  @IsDateString()
+  cookstove_pic_timestamp?: Date;
+
+  @IsOptional()
+  @IsDateString()
+  house_pic_timestamp?: Date;
+
+  @IsOptional()
+  @IsDateString()
+  national_id_timestamp?: Date;
+
+  @IsOptional()
+  @IsDateString()
+  signature_timestamp?: Date;
+
+  @IsOptional()
+  @IsString()
+  device_serial_no?: string;
+
+  @IsOptional()
+  latitude?: number;
+
+  @IsOptional()
+  longitude?: number;
+
+  @IsOptional()
+  @IsString()
+  geo_address?: string;
+
+  @IsOptional()
+  @IsString()
+  created_by?: string;
+
+  @IsOptional()
+  @IsString()
+  modified_by?: string;
+
+  @IsOptional()
+  @IsEnum(['active', 'inactive'])
+  status?: 'active' | 'inactive';
+
+  @IsOptional()
+  @IsString()
+  s_is_sync?: string;
 }

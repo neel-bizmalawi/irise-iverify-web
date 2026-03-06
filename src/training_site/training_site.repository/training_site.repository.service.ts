@@ -512,9 +512,24 @@ export class TrainingSiteRepositoryService {
 
       return rows
     } catch (error) {
-      console.error('getUpdatedDataByDate error', error);
+      console.error('getSearchDistrict error', error);
       throw error;
     }
   }
 
+  async getSearchAuthority(search: string) {
+    try {
+      const [rows]: any = await this.db.query(
+        `
+   select * from ab_traditional_authority where authority_name like?
+      `,
+        [`%${search}%`],
+      );
+
+      return rows
+    } catch (error) {
+      console.error('getSearchAuthority error', error);
+      throw error;
+    }
+  }
 }

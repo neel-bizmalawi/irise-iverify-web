@@ -37,9 +37,16 @@ export class TrainingSiteController {
     }
 
     @Get("search-district")
-async searchDistrict(@Query("search") search: string) {
-  return this.TrainingSiteService.searchDistrict(search);
-}
+    async searchDistrict(@Query("search") search: string) {
+        return this.TrainingSiteService.searchDistrict(search);
+    }
+
+    @Get("search-authority")
+    async searchAuthority(@Query("search") search: string) {
+        return this.TrainingSiteService.searchAuthority(search);
+    }
+
+
 
     @Post('create_district')
     @UseGuards(AuthGuard('jwt'))
@@ -77,7 +84,7 @@ async searchDistrict(@Query("search") search: string) {
         return this.TrainingSiteService.getTrainingData(id)
     }
 
-
+ 
 
     @Delete('delete_training/:id')
     async deleteTrainingData(@Param('id', ParseIntPipe) id: number,) {

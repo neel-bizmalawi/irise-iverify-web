@@ -19,6 +19,12 @@ export class UserController {
         return this.userService.CreateUser(dto, userId);
     }
 
+    @Get('getAllUsers')
+    async getAllusers()
+    {
+        return this.userService.getAll();
+    }
+
     @Put('update_user/:id')
     @UseGuards(AuthGuard('jwt'))
     async UpdateUser(
