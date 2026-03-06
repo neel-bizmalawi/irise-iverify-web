@@ -80,7 +80,7 @@ const SIDEBAR_COLLAPSED_WIDTH = 72;
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: GraduationCap, label: "Training", path: "/training" },
+  { icon: GraduationCap, label: "Training Sites", path: "/training" },
   { icon: Shield, label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
 ];

@@ -28,6 +28,9 @@ const TrainingSites = () => {
 
   const [districtOptions, setDistrictOptions] = useState([]);
   const [authorityOptions, setAuthorityOptions] = useState([]);
+  const [createOptions, setCreateOptions] = useState([]);
+  const [modifiedByOptions, setModifiedByOptions] = useState([]);
+
   const [districtLoading, setDistrictLoading] = useState(false);
   const [authorityLoading, setAuthorityLoading] = useState(false);
 
@@ -61,12 +64,12 @@ const TrainingSites = () => {
         render: (value) =>
           value
             ? new Date(value).toLocaleString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
             : "-",
       },
       {
@@ -76,12 +79,12 @@ const TrainingSites = () => {
         render: (value) =>
           value
             ? new Date(value).toLocaleString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
             : "-",
       },
       {
@@ -149,20 +152,34 @@ const TrainingSites = () => {
         type: "number",
       },
 
-      { key: "created_by", label: "Created By", type: "text" },
-      { key: "modified_by", label: "Modified By", type: "text" },
+      // { key: "created_by", label: "Created By", type: "text" },
+      {
+        key: "created_by",
+        label: "Created By",
+        type: "searchable",
+        options: createOptions,
+        labelKey: "name",
+        onSearch: fetchusers,
+      },
+      // { key: "modified_by", label: "Modified By", type: "text" },
+      {
+        key: "modified_by",
+        label: "Modified By",
+        type: "searchable",
+        options: modifiedByOptions,
+        labelKey: "name",
+        onSearch: fetchusers,
+      },
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
     ]);
-  }, [districtOptions, authorityOptions]);
-
+  }, [districtOptions, authorityOptions, createOptions, modifiedByOptions]);
 
   useEffect(() => {
     fetchDistricts();
     fetchAuthorities();
+    fetchusers();
   }, []);
-
-
 
   const searchDistrict = async (query) => {
     try {
@@ -170,7 +187,7 @@ const TrainingSites = () => {
 
       const res = await axios.get(
         `${API_BASE_URL}/training-site/search-district`,
-        { params: { search: query } }
+        { params: { search: query } },
       );
 
       setDistrictOptions(res.data?.data || []);
@@ -181,13 +198,24 @@ const TrainingSites = () => {
     }
   };
 
+  const fetchusers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/user/getAllUsers`);
+
+      setCreateOptions(res.data?.data || []);
+      setModifiedByOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("fetchuser error:", error);
+    }
+  };
+
   const searchAuthority = async (query) => {
     try {
       setAuthorityLoading(true);
 
       const res = await axios.get(
         `${API_BASE_URL}/training-site/search-authority`,
-        { params: { search: query } }
+        { params: { search: query } },
       );
 
       setAuthorityOptions(res.data?.data || []);
@@ -206,7 +234,7 @@ const TrainingSites = () => {
         `${API_BASE_URL}/training-site/district_slug`,
         {
           params: { search },
-        }
+        },
       );
 
       setDistrictOptions(res.data?.data || []);
@@ -225,7 +253,7 @@ const TrainingSites = () => {
         `${API_BASE_URL}/training-site/authority_slug`,
         {
           params: { search },
-        }
+        },
       );
 
       setAuthorityOptions(res.data?.data || []);
@@ -245,10 +273,10 @@ const TrainingSites = () => {
         const cleanFilters =
           Array.isArray(filters) && filters.length > 0
             ? filters.map(({ field, operator, value }) => ({
-              field,
-              operator,
-              value,
-            }))
+                field,
+                operator,
+                value,
+              }))
             : [];
 
         const res = await axios.post(
@@ -421,9 +449,7 @@ const TrainingSites = () => {
   // Delete
   const handleDelete = async (id) => {
     try {
-      await axios.delete(
-        `${API_BASE_URL}/training-site/Delete_training/${id}`,
-      );
+      await axios.delete(`${API_BASE_URL}/training-site/Delete_training/${id}`);
       toast.success("Training site deleted successfully!");
       // Refresh the list (stay on current page, keep filters)
       await fetchData(page, pageSize, activeFilters);
@@ -434,10 +460,10 @@ const TrainingSites = () => {
 
   return (
     <Box>
-      <h1 style={{ margin: 0 }}>Training</h1>
+      <h1 style={{ margin: 0 }}>Training Sites</h1>
       <Breadcrumb
         homeLabel="Dashboard"
-        items={[{ label: "Training", path: "/training" }]}
+        items={[{ label: "Training Sites", path: "/training" }]}
       />
 
       {/* Top Row */}
@@ -476,7 +502,7 @@ const TrainingSites = () => {
             }}
             onClick={() => setOpenDialog(true)}
           >
-            Create Training
+            Create
           </Button>
         </Box>
       </Box>

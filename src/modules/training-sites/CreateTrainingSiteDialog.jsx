@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Grid,
   Button,
   Radio,
   RadioGroup,
   FormControlLabel,
-  FormLabel,
+  FormHelperText,
   Box,
   Typography,
-  Divider,
   MenuItem,
   Zoom,
   useTheme,
@@ -23,9 +20,11 @@ import {
   Chip,
   CircularProgress,
 } from "@mui/material";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import axios from "axios";
 
-// Icons (using MUI icons - make sure @mui/icons-material is installed)
+// Icons
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
@@ -34,13 +33,11 @@ import RouteOutlinedIcon from "@mui/icons-material/RouteOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import RadarOutlinedIcon from "@mui/icons-material/RadarOutlined";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import ForestOutlinedIcon from "@mui/icons-material/ForestOutlined";
 import { API_BASE_URL } from "../../../config";
 import SearchableCreatableSelect from "../../components/SearchableCreatableSelect";
 
-const initialState = {
+const initialValues = {
   trainingSiteName: "",
   district: "",
   groupVillageHead: "",
@@ -52,8 +49,40 @@ const initialState = {
   totalPeople: "",
   roadAccess: "No",
 };
-
-// Styled field label
+// ── Validation Schema ─────────────────────────────────────────────────────────
+const validationSchema = Yup.object({
+  trainingSiteName: Yup.string()
+    .matches(/^[A-Za-z\s]+$/, "Only letters are allowed")
+    .required("Training site name is required"),
+  district: Yup.string().required("District is required"),
+  traditionalAuthority: Yup.string().required(
+    "Traditional authority is required",
+  ),
+  groupVillageHead: Yup.string()
+    .matches(/^[A-Za-z\s]+$/, "Only letters are allowed")
+    .required("Group village head is required"),
+  villageHeadName: Yup.string()
+    .matches(/^[A-Za-z\s]+$/, "Only letters are allowed")
+    .required("Village head name is required"),
+  totalCookstoves: Yup.number()
+    .typeError("Must be a number")
+    .min(0, "Cannot be negative")
+    .required("Total cookstoves is required"),
+  totalHouseHolds: Yup.number()
+    .typeError("Must be a number")
+    .min(0, "Cannot be negative")
+    .required("Total households is required"),
+  totalPeople: Yup.number()
+    .typeError("Must be a number")
+    .min(0, "Cannot be negative")
+    .required("Total people is required"),
+  houseHoldRadius: Yup.number()
+    .typeError("Must be a number")
+    .min(0, "Cannot be negative")
+    .required("Household radius is required"),
+  roadAccess: Yup.string().oneOf(["Yes", "No"]).required(),
+});
+// ── Styled Field Label ────────────────────────────────────────────────────────
 const FieldLabel = ({ icon: Icon, label, required }) => (
   <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 1 }}>
     {Icon && <Icon sx={{ fontSize: 15, color: "#6b7280" }} />}
@@ -77,17 +106,24 @@ const FieldLabel = ({ icon: Icon, label, required }) => (
   </Box>
 );
 
-// Styled text input
-const StyledInput = ({ value, onChange, type = "text", placeholder }) => (
+// ── Styled Input ──────────────────────────────────────────────────────────────
+const StyledInput = ({
+  value,
+  onChange,
+  onBlur,
+  type = "text",
+  placeholder,
+  error,
+}) => (
   <InputBase
     type={type}
     value={value}
     onChange={onChange}
+    onBlur={onBlur}
     placeholder={placeholder}
     fullWidth
-
     sx={{
-      border: "1.5px solid #e5e7eb",
+      border: `1.5px solid ${error ? "#ef4444" : "#e5e7eb"}`,
       borderRadius: "10px",
       px: 1.75,
       py: 1.1,
@@ -99,125 +135,56 @@ const StyledInput = ({ value, onChange, type = "text", placeholder }) => (
         "&::placeholder": { color: "#b0b7c3", fontSize: "0.85rem" },
       },
       "&:hover": {
-        borderColor: "#9ca3af",
+        borderColor: error ? "#ef4444" : "#9ca3af",
         background: "#fafafa",
       },
       "&.Mui-focused": {
-        borderColor: "#16a34a",
+        borderColor: error ? "#ef4444" : "#16a34a",
         background: "#fff",
-        boxShadow: "0 0 0 3px rgba(22, 163, 74, 0.1)",
+        boxShadow: error
+          ? "0 0 0 3px rgba(239, 68, 68, 0.1)"
+          : "0 0 0 3px rgba(22, 163, 74, 0.1)",
       },
     }}
   />
 );
 
-// Styled select
-const StyledSelect = ({
-  value,
-  onChange,
-  options,
-  disabled,
-  placeholder,
-  valueKey,
-  labelKey,
-}) => (
-  <Select
-    value={value || ""}
-    onChange={onChange}
-    disabled={disabled}
-    displayEmpty
-    fullWidth
-    sx={{
-      border: "1.5px solid #e5e7eb",
-      borderRadius: "10px",
-      px: 1.75,
-      py: 0.1, // important
-      fontSize: "0.88rem",
-      color: value ? "#111827" : "#b0b7c3",
-      background: "#ffffff",
-      transition: "all 0.2s ease",
-
-      "& .MuiOutlinedInput-notchedOutline": {
-        border: "none",
-      },
-
-      "& .MuiSelect-select": {
-        px: 0,
-        py: 1.1, // 👈 match StyledInput vertical padding
-        display: "flex",
-        alignItems: "center",
-      },
-
-      "&:hover": {
-        borderColor: "#9ca3af",
-        background: "#fafafa",
-      },
-
-      "&.Mui-focused": {
-        borderColor: "#16a34a",
-        background: "#fff",
-        boxShadow: "0 0 0 3px rgba(22, 163, 74, 0.1)",
-      },
-    }}
-  >
-    <MenuItem value="" disabled>
-      <Typography sx={{ fontSize: "0.85rem", color: "#b0b7c3" }}>
-        {placeholder}
-      </Typography>
-    </MenuItem>
-
-    {options.map((option) => (
-      <MenuItem
-        key={option[valueKey]}
-        value={option[labelKey]}
-        sx={{ fontSize: "0.88rem" }}
-      >
-        {option[labelKey]}
-      </MenuItem>
-    ))}
-  </Select>
-);
-
+// ── Main Component ────────────────────────────────────────────────────────────
 const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
-  const [form, setForm] = useState(initialState);
-  const [districtOptions, setDistrictOptions] = useState([]);
-  const [authorityOptions, setAuthorityOptions] = useState([]);
-  const [districtLoading, setDistrictLoading] = useState(false);
-  const [authorityLoading, setAuthorityLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  // const [districtSearch, setDistrictSearch] = useState("");
-
-  console.log("district options are", districtOptions)
+  const [districtOptions, setDistrictOptions] = React.useState([]);
+  const [authorityOptions, setAuthorityOptions] = React.useState([]);
+  const [districtLoading, setDistrictLoading] = React.useState(false);
+  const [authorityLoading, setAuthorityLoading] = React.useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
   const isEdit = Boolean(initialData);
 
+  // ── Formik ──────────────────────────────────────────────────────────────────
+  const formik = useFormik({
+    initialValues: initialData
+      ? { ...initialValues, ...initialData }
+      : initialValues,
+    validationSchema,
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
+      try {
+        await onSubmit?.(values);
+        resetForm();
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
+
+  // Reset form when dialog closes
   useEffect(() => {
-    if (initialData) {
-      setForm({ ...initialState, ...initialData });
-    } else {
-      setForm(initialState);
+    if (!open) {
+      formik.resetForm();
     }
-  }, [initialData, open]);
+  }, [open]);
 
-  
-
-  const handleChange = (key) => (event) => {
-    setForm((prev) => ({ ...prev, [key]: event.target.value }));
-  };
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      await onSubmit?.(form);
-      setForm(initialState);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+  // ── API Calls ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     const fetchDistricts = async () => {
@@ -254,17 +221,15 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
     fetchAuthorities();
   }, [open]);
 
-
-
   const searchDistrict = async (query) => {
     try {
       setDistrictLoading(true);
-
       const res = await axios.get(
         `${API_BASE_URL}/training-site/search-district`,
-        { params: { search: query } }
+        {
+          params: { search: query },
+        },
       );
-
       setDistrictOptions(res.data?.data || []);
     } catch (error) {
       console.error("District search error:", error);
@@ -276,15 +241,15 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
   const searchAuthority = async (query) => {
     try {
       setAuthorityLoading(true);
-
       const res = await axios.get(
         `${API_BASE_URL}/training-site/search-authority`,
-        { params: { search: query } }
+        {
+          params: { search: query },
+        },
       );
-
       setAuthorityOptions(res.data?.data || []);
     } catch (error) {
-      console.error("District search error:", error);
+      console.error("Authority search error:", error);
     } finally {
       setAuthorityLoading(false);
     }
@@ -292,7 +257,6 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
 
   const createDistrict = async (name) => {
     const token = localStorage.getItem("token");
-
     try {
       const res = await axios.post(
         `${API_BASE_URL}/training-site/create_district`,
@@ -302,64 +266,17 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
-
+        },
       );
-
       const newDistrict = res.data.data;
-
       setDistrictOptions((prev) => [...prev, newDistrict]);
-
-      setForm((prev) => ({
-        ...prev,
-        district: newDistrict,
-      }));
+      formik.setFieldValue("district", newDistrict?.district_name);
     } catch (error) {
       console.error("Add district error:", error);
     }
   };
 
-
-  // const sectionDivider = (label) => (
-  //   <Grid item xs={12}>
-  //     <Box
-  //       sx={{
-  //         display: "flex",
-  //         alignItems: "center",
-  //         gap: 1.5,
-  //         mt: 0.5,
-  //         mb: -1,
-  //       }}
-  //     >
-  //       <Typography
-  //         variant="caption"
-  //         sx={{
-  //           fontWeight: 700,
-  //           color: "#16a34a",
-  //           letterSpacing: "0.06em",
-  //           textTransform: "uppercase",
-  //           fontSize: "0.65rem",
-  //           whiteSpace: "nowrap",
-  //         }}
-  //       >
-  //         {label}
-  //       </Typography>
-  //       <Box
-  //         sx={{
-  //           flex: 1,
-  //           height: "1px",
-  //           background: "linear-gradient(to right, #dcfce7, transparent)",
-  //         }}
-  //       />
-  //     </Box>
-  //   </Grid>
-  // );
-
-
-
-
-
-
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <Dialog
       open={open}
@@ -388,7 +305,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
         },
       }}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <Box
         sx={{
           background:
@@ -400,7 +317,6 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
           overflow: "hidden",
         }}
       >
-        {/* Decorative circles */}
         <Box
           sx={{
             position: "absolute",
@@ -424,7 +340,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
           }}
         />
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.75 }}>
+        {/* <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.75 }}>
           <Box
             sx={{
               width: 36,
@@ -451,7 +367,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
               "& .MuiChip-label": { px: 1.2 },
             }}
           />
-        </Box>
+        </Box> */}
 
         <Typography
           variant="h6"
@@ -474,210 +390,310 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
         </Typography>
       </Box>
 
-      {/* Form Body */}
+      {/* ── Form Body ── */}
       <DialogContent
         sx={{ px: { xs: 2.5, sm: 4 }, py: 3.5, background: "#f8fafc" }}
       >
         <Grid container spacing={2.5}>
+          {/* Training Site Name */}
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.trainingSiteName &&
+                Boolean(formik.errors.trainingSiteName)
+              }
+            >
               <FieldLabel
                 icon={LocationOnOutlinedIcon}
                 label="Training Site Name"
                 required
               />
               <StyledInput
-                value={form.trainingSiteName}
-                onChange={handleChange("trainingSiteName")}
+                value={formik.values.trainingSiteName}
+                onChange={formik.handleChange("trainingSiteName")}
+                onBlur={formik.handleBlur("trainingSiteName")}
                 placeholder="e.g. Lilongwe North Site"
+                error={
+                  formik.touched.trainingSiteName &&
+                  Boolean(formik.errors.trainingSiteName)
+                }
               />
+              {formik.touched.trainingSiteName &&
+                formik.errors.trainingSiteName && (
+                  <FormHelperText>
+                    {formik.errors.trainingSiteName}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
-          {/* <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <FieldLabel
-                icon={LocationOnOutlinedIcon}
-                label="District"
-                required
-              />
-
-              <TextField
-                placeholder="Search District..."
-                size="small"
-                value={districtSearch}
-                onChange={(e) => setDistrictSearch(e.target.value)}
-                sx={{ mb: 1 }}
-              />
-
-              <StyledSelect
-                value={form.district}
-                onChange={handleChange("district")}
-                // options={districtOptions}
-                options={filteredDistricts}
-                disabled={districtLoading}
-                placeholder="Select District"
-                valueKey="district_id"
-                labelKey="district_name"
-              />
-              {districtSearch && !districtExists && (
-                <Button
-                  size="small"
-                  sx={{ mt: 1 }}
-                  onClick={() => createDistrict(districtSearch)}
-                >
-                  + Add "{districtSearch}"
-                </Button>
-              )}
-
-            </FormControl>
-          </Grid> */}
-
+          {/* District */}
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={formik.touched.district && Boolean(formik.errors.district)}
+            >
               <FieldLabel
                 icon={LocationOnOutlinedIcon}
                 label="District"
                 required
               />
-
               <SearchableCreatableSelect
                 label="Search District"
-                value={form.district}
+                value={formik.values.district}
                 options={districtOptions}
                 loading={districtLoading}
                 labelKey="district_name"
                 onSearch={searchDistrict}
-                onChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    district: val?.district_name,
-                  }))
-                }
+                onChange={(val) => {
+                  formik.setFieldValue("district", val?.district_name ?? "");
+                  formik.setFieldTouched("district", true, false);
+                }}
                 onCreate={createDistrict}
-                allowCreate={true}
-
+                allowCreate={false}
               />
+              {formik.touched.district && formik.errors.district && (
+                <FormHelperText>{formik.errors.district}</FormHelperText>
+              )}
             </FormControl>
           </Grid>
 
+          {/* Traditional Authority */}
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.traditionalAuthority &&
+                Boolean(formik.errors.traditionalAuthority)
+              }
+            >
               <FieldLabel
                 icon={AccountBalanceOutlinedIcon}
                 label="Traditional Authority"
+                required
               />
-              {/* <StyledSelect
-                value={form.traditionalAuthority}
-                onChange={handleChange("traditionalAuthority")}
-                options={authorityOptions}
-                disabled={authorityLoading}
-                placeholder="Select Authority"
-                valueKey="authority_id"
-                labelKey="authority_name"
-              /> */}
-
               <SearchableCreatableSelect
                 label="Search Authority"
-                value={form.traditionalAuthority}
+                value={formik.values.traditionalAuthority}
                 options={authorityOptions}
                 loading={authorityLoading}
                 labelKey="authority_name"
                 onSearch={searchAuthority}
-                onChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    traditionalAuthority: val?.authority_name,
-                  }))
-                }
+                onChange={(val) => {
+                  formik.setFieldValue(
+                    "traditionalAuthority",
+                    val?.authority_name ?? "",
+                  );
+                  formik.setFieldTouched("traditionalAuthority", true, false);
+                }}
                 onCreate={createDistrict}
                 allowCreate={false}
-
               />
+              {formik.touched.traditionalAuthority &&
+                formik.errors.traditionalAuthority && (
+                  <FormHelperText>
+                    {formik.errors.traditionalAuthority}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
+          {/* Group Village Head */}
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.groupVillageHead &&
+                Boolean(formik.errors.groupVillageHead)
+              }
+            >
               <FieldLabel
                 icon={PersonOutlineOutlinedIcon}
                 label="Group Village Head"
+                required
               />
               <StyledInput
-                value={form.groupVillageHead}
-                onChange={handleChange("groupVillageHead")}
+                value={formik.values.groupVillageHead}
+                onChange={formik.handleChange("groupVillageHead")}
+                onBlur={formik.handleBlur("groupVillageHead")}
                 placeholder="e.g. GVH Mwale"
+                error={
+                  formik.touched.groupVillageHead &&
+                  Boolean(formik.errors.groupVillageHead)
+                }
               />
+              {formik.touched.groupVillageHead &&
+                formik.errors.groupVillageHead && (
+                  <FormHelperText>
+                    {formik.errors.groupVillageHead}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
+          {/* Village Head Name */}
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.villageHeadName &&
+                Boolean(formik.errors.villageHeadName)
+              }
+            >
               <FieldLabel
                 icon={PersonOutlineOutlinedIcon}
                 label="Village Head Name"
+                required
               />
               <StyledInput
-                value={form.villageHeadName}
-                onChange={handleChange("villageHeadName")}
+                value={formik.values.villageHeadName}
+                onChange={formik.handleChange("villageHeadName")}
+                onBlur={formik.handleBlur("villageHeadName")}
                 placeholder="Full name"
+                error={
+                  formik.touched.villageHeadName &&
+                  Boolean(formik.errors.villageHeadName)
+                }
               />
+              {formik.touched.villageHeadName &&
+                formik.errors.villageHeadName && (
+                  <FormHelperText>
+                    {formik.errors.villageHeadName}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
-          {/* ── Statistics ── */}
-
+          {/* Total Cookstoves */}
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.totalCookstoves &&
+                Boolean(formik.errors.totalCookstoves)
+              }
+            >
               <FieldLabel
                 icon={LocalFireDepartmentOutlinedIcon}
                 label="Total Cookstoves"
+                required
               />
               <StyledInput
                 type="number"
-                value={form.totalCookstoves}
-                onChange={handleChange("totalCookstoves")}
+                value={formik.values.totalCookstoves}
+                onChange={formik.handleChange("totalCookstoves")}
+                onBlur={formik.handleBlur("totalCookstoves")}
                 placeholder="0"
+                error={
+                  formik.touched.totalCookstoves &&
+                  Boolean(formik.errors.totalCookstoves)
+                }
               />
+              {formik.touched.totalCookstoves &&
+                formik.errors.totalCookstoves && (
+                  <FormHelperText>
+                    {formik.errors.totalCookstoves}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
+          {/* Total Households */}
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <FieldLabel icon={HomeOutlinedIcon} label="Total Households" />
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.totalHouseHolds &&
+                Boolean(formik.errors.totalHouseHolds)
+              }
+            >
+              <FieldLabel
+                icon={HomeOutlinedIcon}
+                label="Total Households"
+                required
+              />
               <StyledInput
                 type="number"
-                value={form.totalHouseHolds}
-                onChange={handleChange("totalHouseHolds")}
+                value={formik.values.totalHouseHolds}
+                onChange={formik.handleChange("totalHouseHolds")}
+                onBlur={formik.handleBlur("totalHouseHolds")}
                 placeholder="0"
+                error={
+                  formik.touched.totalHouseHolds &&
+                  Boolean(formik.errors.totalHouseHolds)
+                }
               />
+              {formik.touched.totalHouseHolds &&
+                formik.errors.totalHouseHolds && (
+                  <FormHelperText>
+                    {formik.errors.totalHouseHolds}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
+          {/* Total People */}
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <FieldLabel icon={PeopleAltOutlinedIcon} label="Total People" />
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.totalPeople && Boolean(formik.errors.totalPeople)
+              }
+            >
+              <FieldLabel
+                icon={PeopleAltOutlinedIcon}
+                label="Total People"
+                required
+              />
               <StyledInput
                 type="number"
-                value={form.totalPeople}
-                onChange={handleChange("totalPeople")}
+                value={formik.values.totalPeople}
+                onChange={formik.handleChange("totalPeople")}
+                onBlur={formik.handleBlur("totalPeople")}
                 placeholder="0"
+                error={
+                  formik.touched.totalPeople &&
+                  Boolean(formik.errors.totalPeople)
+                }
               />
+              {formik.touched.totalPeople && formik.errors.totalPeople && (
+                <FormHelperText>{formik.errors.totalPeople}</FormHelperText>
+              )}
             </FormControl>
           </Grid>
 
+          {/* Household Radius */}
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              error={
+                formik.touched.houseHoldRadius &&
+                Boolean(formik.errors.houseHoldRadius)
+              }
+            >
               <FieldLabel
                 icon={RadarOutlinedIcon}
                 label="Household Radius (km)"
+                required
               />
               <StyledInput
                 type="number"
-                value={form.houseHoldRadius}
-                onChange={handleChange("houseHoldRadius")}
+                value={formik.values.houseHoldRadius}
+                onChange={formik.handleChange("houseHoldRadius")}
+                onBlur={formik.handleBlur("houseHoldRadius")}
                 placeholder="e.g. 2.5"
+                error={
+                  formik.touched.houseHoldRadius &&
+                  Boolean(formik.errors.houseHoldRadius)
+                }
               />
+              {formik.touched.houseHoldRadius &&
+                formik.errors.houseHoldRadius && (
+                  <FormHelperText>
+                    {formik.errors.houseHoldRadius}
+                  </FormHelperText>
+                )}
             </FormControl>
           </Grid>
 
@@ -689,17 +705,19 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                 border: "1.5px solid #e5e7eb",
                 borderRadius: "10px",
                 px: 1.75,
-                py: 1.1, // 👈 match StyledInput
+                py: 1.1,
                 background: "#ffffff",
-                minHeight: 46, // 👈 ensures same height
+                minHeight: 46,
                 display: "flex",
                 alignItems: "center",
               }}
             >
               <RadioGroup
                 row
-                value={form.roadAccess}
-                onChange={handleChange("roadAccess")}
+                value={formik.values.roadAccess}
+                onChange={(e) =>
+                  formik.setFieldValue("roadAccess", e.target.value)
+                }
                 sx={{ gap: 1 }}
               >
                 {["Yes", "No"].map((opt) => (
@@ -725,7 +743,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                             fontSize: "0.86rem",
                             fontWeight: 500,
                             color:
-                              form.roadAccess === opt
+                              formik.values.roadAccess === opt
                                 ? opt === "Yes"
                                   ? "#16a34a"
                                   : "#ef4444"
@@ -745,7 +763,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
         </Grid>
       </DialogContent>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <Box
         sx={{
           px: { xs: 2.5, sm: 4 },
@@ -760,7 +778,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
       >
         <Button
           onClick={onClose}
-          disabled={submitting}
+          disabled={formik.isSubmitting}
           sx={{
             color: "#6b7280",
             fontWeight: 500,
@@ -778,13 +796,16 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
         >
           Cancel
         </Button>
+        <Button variant="outlined" onClick={formik.handleReset} color="error">
+          Reset
+        </Button>
         <Button
           variant="contained"
-          onClick={handleSubmit}
-          disabled={submitting}
+          onClick={formik.handleSubmit}
+          disabled={formik.isSubmitting}
           disableElevation
           startIcon={
-            submitting ? (
+            formik.isSubmitting ? (
               <CircularProgress
                 size={14}
                 sx={{ color: "rgba(255,255,255,0.7)" }}
@@ -816,7 +837,11 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
             },
           }}
         >
-          {submitting ? "Saving..." : isEdit ? "Update Site" : "Create Site"}
+          {formik.isSubmitting
+            ? "Saving..."
+            : isEdit
+              ? "Update"
+              : "Create"}
         </Button>
       </Box>
     </Dialog>
@@ -824,14 +849,3 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
 };
 
 export default CreateTrainingSiteDialog;
-
-
-
-
-
-
-
-
-
-
-

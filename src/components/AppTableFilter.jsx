@@ -28,7 +28,8 @@ const OPERATORS = {
   ],
   searchable: [
     { value: "equals", label: "Equals" },
-    { value: "contains", label: "Contains" },
+    { value: "isEmpty", label: "Empty" },
+    { value: "is_not_empty", label: "Not Empty" },
   ],
 
   select: [
@@ -41,26 +42,39 @@ const OPERATORS = {
     { value: "after", label: "After" },
   ],
   number: [
-    { value: "equals", label: "=" },
-    { value: "gt", label: ">" },
-    { value: "lt", label: "<" },
-    { value: "gte", label: ">=" },
-    { value: "lte", label: "<=" },
+    { value: "equals", label: "Equals" },
+    { value: "gt", label: "Greater than" },
+    { value: "lt", label: "Less than" },
+    { value: "gte", label: "Greater than or equal" },
+    { value: "lte", label: "Less than or equal" },
+    // { value: "isEmpty", label: "Empty" },
+    // { value: "is_not_empty", label: "Not Empty" },
   ],
 };
 
 const NO_VALUE_OPERATORS = ["isEmpty", "is_not_empty"];
 
+// const buildEmptyRule = (fields, usedKeys = []) => {
+//   const firstAvailable = fields.find((f) => !usedKeys.includes(f.key));
+//   return {
+//     id: Date.now() + Math.random(),
+//     field: firstAvailable?.key || "",
+//     operator: "",
+//     value: "",
+//   };
+// };
 
 const buildEmptyRule = (fields, usedKeys = []) => {
   const firstAvailable = fields.find((f) => !usedKeys.includes(f.key));
+  const ops = OPERATORS[firstAvailable?.type || "text"] || OPERATORS.text;
   return {
     id: Date.now() + Math.random(),
     field: firstAvailable?.key || "",
-    operator: "",
+    operator: ops[0]?.value || "",  // ← KEY FIX
     value: "",
   };
 };
+
 const inputSx = {
   minWidth: 130,
   "& .MuiOutlinedInput-root": {
@@ -110,9 +124,7 @@ const ValueInput = ({ field, value, onChange, fullWidth = false }) => {
         size="small"
         options={field.options || []}
         getOptionLabel={(option) =>
-          typeof option === "string"
-            ? option
-            : option[field.labelKey] || ""
+          typeof option === "string" ? option : option[field.labelKey] || ""
         }
         value={value || null}
         onInputChange={(event, newValue) => {
@@ -122,10 +134,7 @@ const ValueInput = ({ field, value, onChange, fullWidth = false }) => {
           onChange(newValue?.[field.labelKey] || "");
         }}
         renderInput={(params) => (
-          <TextField
-            {...params}
-            placeholder={`Search ${field.label}`}
-          />
+          <TextField {...params} placeholder={`Search ${field.label}`} />
         )}
         sx={{ minWidth: 200 }}
       />
@@ -224,13 +233,13 @@ const RuleRowDesktop = ({
         </MenuItem>
       ))}
     </Select>
-  {!NO_VALUE_OPERATORS.includes(rule.operator) && (
-  <ValueInput
-    field={fields.find((f) => f.key === rule.field)}
-    value={rule.value}
-    onChange={onValueChange}
-  />
-)}
+    {!NO_VALUE_OPERATORS.includes(rule.operator) && (
+      <ValueInput
+        field={fields.find((f) => f.key === rule.field)}
+        value={rule.value}
+        onChange={onValueChange}
+      />
+    )}
     <Tooltip title="Remove">
       <IconButton
         size="small"
@@ -322,16 +331,16 @@ const RuleRowMobile = ({
           </MenuItem>
         ))}
       </Select>
-     {!NO_VALUE_OPERATORS.includes(rule.operator) && (
-  <Box sx={{ flex: 1 }}>
-    <ValueInput
-      field={fields.find((f) => f.key === rule.field)}
-      value={rule.value}
-      onChange={onValueChange}
-      fullWidth
-    />
-  </Box>
-)}
+      {!NO_VALUE_OPERATORS.includes(rule.operator) && (
+        <Box sx={{ flex: 1 }}>
+          <ValueInput
+            field={fields.find((f) => f.key === rule.field)}
+            value={rule.value}
+            onChange={onValueChange}
+            fullWidth
+          />
+        </Box>
+      )}
     </Box>
   </Box>
 );
@@ -579,7 +588,6 @@ const AppTableFilter = ({
     onApply?.(valid);
     setOpen(false);
   };
-
 
   const handleClear = () => {
     setDraft([buildEmptyRule(fields)]);
