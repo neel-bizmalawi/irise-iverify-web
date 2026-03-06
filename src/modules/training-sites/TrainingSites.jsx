@@ -26,6 +26,11 @@ const TrainingSites = () => {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState(null);
 
+  const [districtOptions, setDistrictOptions] = useState([]);
+  const [authorityOptions, setAuthorityOptions] = useState([]);
+  const [districtLoading, setDistrictLoading] = useState(false);
+  const [authorityLoading, setAuthorityLoading] = useState(false);
+
   // Memoize columns to prevent recreation on each render
   const columns = useMemo(
     () => [
@@ -56,12 +61,12 @@ const TrainingSites = () => {
         render: (value) =>
           value
             ? new Date(value).toLocaleString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : "-",
       },
       {
@@ -71,12 +76,12 @@ const TrainingSites = () => {
         render: (value) =>
           value
             ? new Date(value).toLocaleString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : "-",
       },
       {
@@ -110,11 +115,21 @@ const TrainingSites = () => {
   useEffect(() => {
     setFilterFields([
       { key: "training_site", label: "Training Site", type: "text" },
-      { key: "district", label: "District", type: "text" },
+      {
+        key: "district",
+        label: "District",
+        type: "searchable",
+        options: districtOptions,
+        labelKey: "district_name",
+        onSearch: searchDistrict,
+      },
       {
         key: "traditional_authority",
         label: "Traditional Authority",
-        type: "text",
+        type: "searchable",
+        options: authorityOptions,
+        labelKey: "authority_name",
+        onSearch: searchAuthority,
       },
       { key: "gvh_name", label: "Group Village Head", type: "text" },
       { key: "village_head_name", label: "Village Head Name", type: "text" },
@@ -139,7 +154,87 @@ const TrainingSites = () => {
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
     ]);
+  }, [districtOptions, authorityOptions]);
+
+
+  useEffect(() => {
+    fetchDistricts();
+    fetchAuthorities();
   }, []);
+
+
+
+  const searchDistrict = async (query) => {
+    try {
+      setDistrictLoading(true);
+
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/search-district`,
+        { params: { search: query } }
+      );
+
+      setDistrictOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District search error:", error);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+
+  const searchAuthority = async (query) => {
+    try {
+      setAuthorityLoading(true);
+
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/search-authority`,
+        { params: { search: query } }
+      );
+
+      setAuthorityOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District search error:", error);
+    } finally {
+      setAuthorityLoading(false);
+    }
+  };
+
+  const fetchDistricts = async (search = "") => {
+    try {
+      setDistrictLoading(true);
+
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/district_slug`,
+        {
+          params: { search },
+        }
+      );
+
+      setDistrictOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District fetch error:", error);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+
+  const fetchAuthorities = async (search = "") => {
+    try {
+      setAuthorityLoading(true);
+
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/authority_slug`,
+        {
+          params: { search },
+        }
+      );
+
+      setAuthorityOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("Authority fetch error:", error);
+    } finally {
+      setAuthorityLoading(false);
+    }
+  };
 
   // Fetch data with pagination and filters
   const fetchData = useCallback(
@@ -150,10 +245,10 @@ const TrainingSites = () => {
         const cleanFilters =
           Array.isArray(filters) && filters.length > 0
             ? filters.map(({ field, operator, value }) => ({
-                field,
-                operator,
-                value,
-              }))
+              field,
+              operator,
+              value,
+            }))
             : [];
 
         const res = await axios.post(

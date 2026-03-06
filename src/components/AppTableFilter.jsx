@@ -14,6 +14,7 @@ import {
   useMediaQuery,
   useTheme,
   Drawer,
+  Autocomplete,
 } from "@mui/material";
 import { SlidersHorizontal, X, Plus, Trash2, Filter } from "lucide-react";
 const OPERATORS = {
@@ -22,9 +23,14 @@ const OPERATORS = {
     { value: "equals", label: "Equals" },
     { value: "starts_with", label: "Starts with" },
     { value: "ends_with", label: "Ends with" },
-    {value:"isEmpty",label:"Empty"},
-    {value:"is_not_empty",label:"Not Empty"},
+    { value: "isEmpty", label: "Empty" },
+    { value: "is_not_empty", label: "Not Empty" },
   ],
+  searchable: [
+    { value: "equals", label: "Equals" },
+    { value: "contains", label: "Contains" },
+  ],
+
   select: [
     { value: "equals", label: "Equals" },
     { value: "not_equals", label: "Is not" },
@@ -42,6 +48,10 @@ const OPERATORS = {
     { value: "lte", label: "<=" },
   ],
 };
+
+const NO_VALUE_OPERATORS = ["isEmpty", "is_not_empty"];
+
+
 const buildEmptyRule = (fields, usedKeys = []) => {
   const firstAvailable = fields.find((f) => !usedKeys.includes(f.key));
   return {
@@ -93,6 +103,35 @@ const ValueInput = ({ field, value, onChange, fullWidth = false }) => {
       </Select>
     );
   }
+
+  if (field.type === "searchable") {
+    return (
+      <Autocomplete
+        size="small"
+        options={field.options || []}
+        getOptionLabel={(option) =>
+          typeof option === "string"
+            ? option
+            : option[field.labelKey] || ""
+        }
+        value={value || null}
+        onInputChange={(event, newValue) => {
+          field.onSearch?.(newValue);
+        }}
+        onChange={(event, newValue) => {
+          onChange(newValue?.[field.labelKey] || "");
+        }}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder={`Search ${field.label}`}
+          />
+        )}
+        sx={{ minWidth: 200 }}
+      />
+    );
+  }
+
   if (field.type === "date") {
     return (
       <TextField
@@ -185,11 +224,13 @@ const RuleRowDesktop = ({
         </MenuItem>
       ))}
     </Select>
-    <ValueInput
-      field={fields.find((f) => f.key === rule.field)}
-      value={rule.value}
-      onChange={onValueChange}
-    />
+  {!NO_VALUE_OPERATORS.includes(rule.operator) && (
+  <ValueInput
+    field={fields.find((f) => f.key === rule.field)}
+    value={rule.value}
+    onChange={onValueChange}
+  />
+)}
     <Tooltip title="Remove">
       <IconButton
         size="small"
@@ -281,14 +322,16 @@ const RuleRowMobile = ({
           </MenuItem>
         ))}
       </Select>
-      <Box sx={{ flex: 1 }}>
-        <ValueInput
-          field={fields.find((f) => f.key === rule.field)}
-          value={rule.value}
-          onChange={onValueChange}
-          fullWidth
-        />
-      </Box>
+     {!NO_VALUE_OPERATORS.includes(rule.operator) && (
+  <Box sx={{ flex: 1 }}>
+    <ValueInput
+      field={fields.find((f) => f.key === rule.field)}
+      value={rule.value}
+      onChange={onValueChange}
+      fullWidth
+    />
+  </Box>
+)}
     </Box>
   </Box>
 );
@@ -521,21 +564,21 @@ const AppTableFilter = ({
   // };
 
   const handleApply = () => {
-  const valid = draft.filter((r) => {
-    if (!r.field) return false;
+    const valid = draft.filter((r) => {
+      if (!r.field) return false;
 
-    // operators that don't need value
-    if (["isEmpty", "is_not_empty"].includes(r.operator)) {
-      return true;
-    }
+      // operators that don't need value
+      if (["isEmpty", "is_not_empty"].includes(r.operator)) {
+        return true;
+      }
 
-    return r.value !== "" && r.value !== null && r.value !== undefined;
-  });
+      return r.value !== "" && r.value !== null && r.value !== undefined;
+    });
 
-  onChange?.(valid);
-  onApply?.(valid);
-  setOpen(false);
-};
+    onChange?.(valid);
+    onApply?.(valid);
+    setOpen(false);
+  };
 
 
   const handleClear = () => {

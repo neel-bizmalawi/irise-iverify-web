@@ -14,6 +14,7 @@ const SearchableCreatableSelect = ({
   onChange,
   onCreate,
   labelKey,
+  allowCreate = true,
 }) => {
   const [inputValue, setInputValue] = useState("");
 
@@ -31,9 +32,9 @@ const SearchableCreatableSelect = ({
         onSearch?.(newInput);
       }}
       onChange={(event, newValue) => {
-        if (typeof newValue === "string") {
+        if (allowCreate && typeof newValue === "string") {
           onCreate?.(newValue);
-        } else if (newValue && newValue.inputValue) {
+        } else if (allowCreate && newValue?.inputValue) {
           onCreate?.(newValue.inputValue);
         } else {
           onChange?.(newValue);
@@ -47,6 +48,7 @@ const SearchableCreatableSelect = ({
         );
 
         if (
+          allowCreate &&
           params.inputValue !== "" &&
           !options.some(
             (opt) =>
@@ -64,7 +66,15 @@ const SearchableCreatableSelect = ({
       }}
       renderInput={(params) => (
         <TextField
-        sx={{width:"150px",paddingBottom:4}}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              width: "187px",
+              backgroundColor: "#ffffff",
+              paddingBottom: 4,
+              height: 47,
+              borderRadius: "10px",
+            }
+          }}
           {...params}
           label={label}
           size="small"

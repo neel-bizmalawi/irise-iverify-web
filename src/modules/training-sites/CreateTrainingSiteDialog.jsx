@@ -187,8 +187,8 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
   const [submitting, setSubmitting] = useState(false);
   // const [districtSearch, setDistrictSearch] = useState("");
 
-  console.log("district options are",districtOptions)
-  
+  console.log("district options are", districtOptions)
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -201,6 +201,8 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
       setForm(initialState);
     }
   }, [initialData, open]);
+
+  
 
   const handleChange = (key) => (event) => {
     setForm((prev) => ({ ...prev, [key]: event.target.value }));
@@ -271,6 +273,22 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
     }
   };
 
+  const searchAuthority = async (query) => {
+    try {
+      setAuthorityLoading(true);
+
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/search-authority`,
+        { params: { search: query } }
+      );
+
+      setAuthorityOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District search error:", error);
+    } finally {
+      setAuthorityLoading(false);
+    }
+  };
 
   const createDistrict = async (name) => {
     const token = localStorage.getItem("token");
@@ -340,7 +358,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
 
 
 
- 
+
 
   return (
     <Dialog
@@ -516,30 +534,32 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
           </Grid> */}
 
           <Grid item xs={12} md={6}>
-  <FormControl fullWidth>
-    <FieldLabel
-      icon={LocationOnOutlinedIcon}
-      label="District"
-      required
-    />
+            <FormControl fullWidth>
+              <FieldLabel
+                icon={LocationOnOutlinedIcon}
+                label="District"
+                required
+              />
 
-    <SearchableCreatableSelect
-      label="Search District" 
-      value={form.district}
-      options={districtOptions}
-      loading={districtLoading}
-      labelKey="district_name"
-      onSearch={searchDistrict}
-      onChange={(val) =>
-        setForm((prev) => ({
-          ...prev,
-          district: val?.district_name,
-        }))
-      }
-      onCreate={createDistrict}
-    />
-  </FormControl>
-</Grid>
+              <SearchableCreatableSelect
+                label="Search District"
+                value={form.district}
+                options={districtOptions}
+                loading={districtLoading}
+                labelKey="district_name"
+                onSearch={searchDistrict}
+                onChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    district: val?.district_name,
+                  }))
+                }
+                onCreate={createDistrict}
+                allowCreate={true}
+
+              />
+            </FormControl>
+          </Grid>
 
           <Grid item xs={12} md={6}>
             <FormControl fullWidth>
@@ -547,7 +567,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                 icon={AccountBalanceOutlinedIcon}
                 label="Traditional Authority"
               />
-              <StyledSelect
+              {/* <StyledSelect
                 value={form.traditionalAuthority}
                 onChange={handleChange("traditionalAuthority")}
                 options={authorityOptions}
@@ -555,6 +575,24 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                 placeholder="Select Authority"
                 valueKey="authority_id"
                 labelKey="authority_name"
+              /> */}
+
+              <SearchableCreatableSelect
+                label="Search Authority"
+                value={form.traditionalAuthority}
+                options={authorityOptions}
+                loading={authorityLoading}
+                labelKey="authority_name"
+                onSearch={searchAuthority}
+                onChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    traditionalAuthority: val?.authority_name,
+                  }))
+                }
+                onCreate={createDistrict}
+                allowCreate={false}
+
               />
             </FormControl>
           </Grid>
