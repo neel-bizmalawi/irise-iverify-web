@@ -442,6 +442,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
               <SearchableCreatableSelect
                 label="Search District"
                 value={formik.values.district}
+                error={formik.touched.district && Boolean(formik.errors.district)}
                 options={districtOptions}
                 loading={districtLoading}
                 labelKey="district_name"
@@ -454,7 +455,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                 allowCreate={false}
               />
               {formik.touched.district && formik.errors.district && (
-                <FormHelperText>{formik.errors.district}</FormHelperText>
+                <FormHelperText error>{formik.errors.district}</FormHelperText>
               )}
             </FormControl>
           </Grid>
@@ -476,6 +477,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
               <SearchableCreatableSelect
                 label="Search Authority"
                 value={formik.values.traditionalAuthority}
+                error={formik.touched.traditionalAuthority && Boolean(formik.errors.traditionalAuthority)}
                 options={authorityOptions}
                 loading={authorityLoading}
                 labelKey="authority_name"
@@ -796,9 +798,9 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
         >
           Cancel
         </Button>
-        <Button variant="outlined" onClick={formik.handleReset} color="error">
+        {/* <Button variant="outlined" onClick={formik.handleReset} color="error">
           Reset
-        </Button>
+        </Button> */}
         <Button
           variant="contained"
           onClick={formik.handleSubmit}
