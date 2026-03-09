@@ -684,7 +684,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                 value={formik.values.houseHoldRadius}
                 onChange={formik.handleChange("houseHoldRadius")}
                 onBlur={formik.handleBlur("houseHoldRadius")}
-                placeholder="e.g. 2.5"
+                placeholder="0"
                 error={
                   formik.touched.houseHoldRadius &&
                   Boolean(formik.errors.houseHoldRadius)

@@ -70,7 +70,7 @@ const buildEmptyRule = (fields, usedKeys = []) => {
   return {
     id: Date.now() + Math.random(),
     field: firstAvailable?.key || "",
-    operator: ops[0]?.value || "",  // ← KEY FIX
+    operator: ops[0]?.value || "", // ← KEY FIX
     value: "",
   };
 };
@@ -532,7 +532,13 @@ const AppTableFilter = ({
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
-  const activeCount = value.filter((r) => r.field && r.value).length;
+  //const activeCount = value.filter((r) => r.field && r.value).length;
+  const activeCount = value.filter((r) => {
+    if (!r.field) return false;
+    if (NO_VALUE_OPERATORS.includes(r.operator)) return true;
+    return r.value !== "" && r.value !== null && r.value !== undefined;
+  }).length;
+
   const usedKeys = draft.map((r) => r.field).filter(Boolean);
   const allFieldsUsed = usedKeys.length >= fields.length;
   const handleOpen = () => {
@@ -662,8 +668,17 @@ const AppTableFilter = ({
           )}
         </Button>
         {!isMobile &&
+          // value
+          //   .filter((r) => r.field && r.value)
+          //   .map((r) => {
           value
-            .filter((r) => r.field && r.value)
+            .filter((r) => {
+              if (!r.field) return false;
+              if (NO_VALUE_OPERATORS.includes(r.operator)) return true;
+              return (
+                r.value !== "" && r.value !== null && r.value !== undefined
+              );
+            })
             .map((r) => {
               const fieldDef = getFieldDef(r.field);
               return (
@@ -675,7 +690,8 @@ const AppTableFilter = ({
                       <span style={{ color: "#64748b" }}>
                         {r.operator.replace(/_/g, " ")}
                       </span>{" "}
-                      <b>{r.value}</b>
+                      {/* <b>{r.value}</b> */}
+                      {!NO_VALUE_OPERATORS.includes(r.operator) && <b>{r.value}</b>}
                     </Typography>
                   }
                   onDelete={() => {

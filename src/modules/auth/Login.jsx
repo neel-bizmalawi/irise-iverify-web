@@ -37,13 +37,10 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const response = await axios.post(
-        `${API_BASE_URL}/auth/verifyUser`,
-        {
-          validemail: username,
-          validPass: password,
-        },
-      );
+      const response = await axios.post(`${API_BASE_URL}/auth/verifyUser`, {
+        validemail: username,
+        validPass: password,
+      });
 
       const { AccessTokenss, user } = response.data;
 
@@ -159,6 +156,9 @@ export default function Login() {
           placeholder="Enter Your Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleLogin();
+          }}
           sx={{
             mb: 3,
             "& .MuiOutlinedInput-root": inputStyles,
