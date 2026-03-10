@@ -26,8 +26,21 @@ const Users = () => {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState(null);
 
+    const [createOptions, setCreateOptions] = useState([]);
+    const [modifiedByOptions, setModifiedByOptions] = useState([]);
+
   // roleOptions normalised to { role, roleName } for consistency
   const [roleOptions, setRoleOptions] = useState([]);
+
+   const fetchUsers = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/user/getAllUsers`);
+        setCreateOptions(res.data?.data || []);
+        setModifiedByOptions(res.data?.data || []);
+      } catch (error) {
+        console.error("fetchUsers error:", error);
+      }
+    };
 
   // ── Table Columns ────────────────────────────────────────────────────────────
   const columns = useMemo(
@@ -126,6 +139,7 @@ const Users = () => {
       { key: "name", label: "Name", type: "text" },
       { key: "userName", label: "Username", type: "text" },
       { key: "email", label: "Email", type: "text" },
+      { key: "mobile_no", label: "Contact No", type: "text" },
       {
         key: "status",
         label: "Status",
@@ -140,18 +154,30 @@ const Users = () => {
         labelKey: "roleName",
         onSearch: searchRoles,
       },
-      { key: "created_by", label: "Created By", type: "text" },
-      { key: "modified_by", label: "Modified By", type: "text" },
+      {
+        key: "created_by",
+        label: "Created By",
+        type: "searchable",
+        options: createOptions,
+        labelKey: "name",
+        onSearch: fetchUsers,
+      },
+      {
+        key: "modified_by",
+        label: "Modified By",
+        type: "searchable",
+        options: modifiedByOptions,
+        labelKey: "name",
+        onSearch: fetchUsers,
+      },
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
     ]);
-  }, [roleOptions]);
+  }, [roleOptions,createOptions, modifiedByOptions]);
 
-  // ── Fetch Roles  GET /user/get_role ──────────────────────────────────────────
-  // API returns: { data: [{ role_id, role_name, status }, ...] }
-  // We normalise to { role, roleName } so the rest of the code stays consistent
   useEffect(() => {
     fetchRoles();
+    fetchUsers();
   }, []);
 
   const normaliseRoles = (raw = []) =>
@@ -194,9 +220,13 @@ const Users = () => {
               }))
             : [];
 
-        const res = await axios.get(`${API_BASE_URL}/user/list`, {
-          params: { page: pageNum, limit: limitNum },
-        });
+        const res = await axios.post(
+          `${API_BASE_URL}/user/list`,
+          { filters: cleanFilters },
+          {
+            params: { page: pageNum, limit: limitNum },
+          },
+        );
 
         const response = res.data;
 

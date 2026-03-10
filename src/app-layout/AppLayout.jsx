@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Outlet,
   NavLink,
@@ -43,9 +43,14 @@ import {
   Shield,
   LogOut,
   UserCircle,
+  Monitor,
+  Check,
+  CheckCheckIcon,
 } from "lucide-react";
 import eStove from "../assets/images/eStove.png";
 import eStoveFire from "../assets/images/eStoveFire.png";
+import { checkTokenExpiry } from "../utils/checkTokenExpiry";
+import { FactCheck } from "@mui/icons-material";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const appTheme = createTheme({
@@ -83,6 +88,8 @@ const navItems = [
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
   { icon: Shield, label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
+  { icon: Monitor, label: "Monitoring Tasks", path: "/monitoring" },
+  { icon: FactCheck, label: "Audit Process", path: "/auditprocess" },
 ];
 
 const bottomNavItems = [
@@ -478,8 +485,23 @@ const AppLayoutInner = () => {
   const location = useLocation();
 
   // ── Auth Guard ──
+
   const token = localStorage.getItem("token");
+
   if (!token) return <Navigate to="/login" replace />;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentToken = localStorage.getItem("token");
+
+      if (checkTokenExpiry(currentToken)) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [navigate]);
 
   const sidebarWidth = desktopCollapsed
     ? SIDEBAR_COLLAPSED_WIDTH

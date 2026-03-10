@@ -52,7 +52,8 @@ const initialValues = {
 // ── Validation Schema ─────────────────────────────────────────────────────────
 const validationSchema = Yup.object({
   trainingSiteName: Yup.string()
-    .matches(/^[A-Za-z\s]+$/, "Only letters are allowed")
+   // .matches(/^[A-Za-z\s\W_]+$/, "Invalid characters")
+   .matches(/^[A-Za-z\s._,'&-]+$/, "Only letters and allowed special characters")
     .required("Training site name is required"),
   district: Yup.string().required("District is required"),
   traditionalAuthority: Yup.string().required(
@@ -442,7 +443,9 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
               <SearchableCreatableSelect
                 label="Search District"
                 value={formik.values.district}
-                error={formik.touched.district && Boolean(formik.errors.district)}
+                error={
+                  formik.touched.district && Boolean(formik.errors.district)
+                }
                 options={districtOptions}
                 loading={districtLoading}
                 labelKey="district_name"
@@ -477,7 +480,10 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
               <SearchableCreatableSelect
                 label="Search Authority"
                 value={formik.values.traditionalAuthority}
-                error={formik.touched.traditionalAuthority && Boolean(formik.errors.traditionalAuthority)}
+                error={
+                  formik.touched.traditionalAuthority &&
+                  Boolean(formik.errors.traditionalAuthority)
+                }
                 options={authorityOptions}
                 loading={authorityLoading}
                 labelKey="authority_name"
@@ -839,11 +845,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
             },
           }}
         >
-          {formik.isSubmitting
-            ? "Saving..."
-            : isEdit
-              ? "Update"
-              : "Create"}
+          {formik.isSubmitting ? "Saving..." : isEdit ? "Update" : "Create"}
         </Button>
       </Box>
     </Dialog>

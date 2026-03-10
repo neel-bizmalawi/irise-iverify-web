@@ -28,6 +28,7 @@ const SearchableCreatableSelect = ({
   return (
     <Autocomplete
       freeSolo
+      disablePortal={true}
       options={options}
       loading={loading}
       value={value || null}
@@ -50,6 +51,27 @@ const SearchableCreatableSelect = ({
           onChange?.(newValue);
         }
       }}
+
+      renderOption={(props, option) => {
+  const label =
+    typeof option === "string"
+      ? option
+      : option[labelKey] || option.inputValue || "";
+  const uniqueKey =
+    option.id != null
+      ? String(option.id)
+      : option.inputValue
+      ? `create-${option.inputValue}`
+      : label
+      ? label
+      : `opt-${Math.random()}`;
+  return (
+    <li {...props} key={uniqueKey}>
+      {label}
+    </li>
+  );
+}}
+
       filterOptions={(options, params) => {
         const filtered = filter(options, params);
 
