@@ -1,10 +1,12 @@
 /* eslint-disable prettier/prettier */
+import { Transform, Type } from 'class-transformer';
 import {
-    IsString,
-    IsOptional,
-    IsNumber,
-    IsEnum,
-    IsDateString,
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsEnum,
+  IsDateString,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateBeneficiarydto {
@@ -38,20 +40,25 @@ export class CreateBeneficiarydto {
   other_cookstove?: 'yes' | 'no';
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
-  femalesBelow18?: number;
+  females_below_18?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
-  femalesAbove18?: number;
+  females_above_18?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
-  malesBelow18?: number;
+  males_below_18?: number;
 
   @IsOptional()
+  @Type(() => Number)
+
   @IsNumber()
-  malesAbove18?: number;
+  males_above_18?: number;
 
   @IsOptional()
   @IsString()
@@ -162,4 +169,26 @@ export class CreateBeneficiarydto {
   @IsOptional()
   @IsString()
   s_is_sync?: string;
+
+    @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_national_id?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_signature?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_house_pic?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_cookstove_pic?: boolean;
+
+  
 }

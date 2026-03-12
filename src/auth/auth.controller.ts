@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/require-await */
 
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import type { Response, Request } from 'express';
@@ -54,5 +54,16 @@ export class AuthController {
     }
 
 
+@Post('logout')
+logout(@Req() req) {
+
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    throw new BadRequestException("Token missing");
+  }
+
+  return this.authService.logout(token);
+}
 
 }

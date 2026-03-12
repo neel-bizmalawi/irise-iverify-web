@@ -5,27 +5,41 @@ import { AuthRepositoryService } from './auth.repository.service';
 import * as bcrypt from 'bcrypt';
 
 
+
 @Injectable()
 export class AuthService {
 
-   constructor(
+  constructor(
     private jwtService: JwtService,
     private readonly Authrepo: AuthRepositoryService,
   ) { }
 
 
-   async generateTokens(user) {
+  async logout(token: string) {
+
+  const decoded: any = this.jwtService.decode(token);
+
+  await this.Authrepo.blacklistToken({
+    token,
+    expires_at: new Date(decoded.exp * 1000)
+  });
+
+  return { message: "Logged out successfully" };
+}
+
+
+  async generateTokens(user) {
 
     console.log("generatetoken called ")
-  const accessToken = this.jwtService.sign(
-  { sub: user.id, email: user.email },
-  { expiresIn: '5h' },
-);
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      { expiresIn: '24h' },
+    );
 
-const refreshToken = this.jwtService.sign(
-  { sub: user.id, type: 'refresh' },
-  { expiresIn: '7d' },
-);
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, type: 'refresh' },
+      { expiresIn: '7d' },
+    );
 
     // await this.saveRefreshToken(user.id, refreshToken);
 
@@ -39,7 +53,7 @@ const refreshToken = this.jwtService.sign(
 
 
     if (!rows || rows.length === 0) {
-      throw new UnauthorizedException('No Email Found');
+      throw new UnauthorizedException('Invalid username or email');
     }
 
     const user = rows[0];
@@ -49,11 +63,11 @@ const refreshToken = this.jwtService.sign(
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    
+
     // ✅ Use generateTokens
     const { accessToken, refreshToken } =
       await this.generateTokens({
-        id: user.id,
+        id: user.adminID,
         email: user.email,
       });
 
@@ -62,7 +76,7 @@ const refreshToken = this.jwtService.sign(
       accessToken,
       refreshToken,
       user: {
-        id: user.id,
+        id: user.adminID,
         email: user.email,
         name: user.name,
       },

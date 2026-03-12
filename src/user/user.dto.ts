@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+import { Type } from 'class-transformer';
 import {
     IsString,
     IsOptional,
@@ -14,9 +15,6 @@ export class CreateUserDto {
     @IsString()
     name?: string;
 
-    @IsOptional()
-    @IsEnum(['yes', 'no'])
-    is_approver?: 'yes' | 'no';
 
     @IsOptional()
     @IsString()
@@ -32,8 +30,12 @@ export class CreateUserDto {
     password: string;
 
     @IsOptional()
-    @IsNumber()
-    roleID?: number;
+    @IsString()
+    role: string;
+
+    @IsOptional()
+    @IsString()
+    mobile_number?: number;
 
     @IsOptional()
     @IsString()

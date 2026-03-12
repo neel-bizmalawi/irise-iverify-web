@@ -1,4 +1,5 @@
 /* eslint-disable prettier/prettier */
+import { Type } from 'class-transformer';
 import {
   IsString,
   IsOptional,
@@ -59,4 +60,12 @@ export class SyncTrainingSiteDto {
   @IsOptional()
   @IsNumber()
   longitude?: number;
+
+    @IsOptional()
+      @Type(() => Date)
+      created_date?: Date;
+  
+      @IsOptional()
+      @Type(() => Date)
+      server_time?: Date;
 }

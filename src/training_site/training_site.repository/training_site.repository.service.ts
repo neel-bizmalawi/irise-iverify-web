@@ -176,8 +176,9 @@ export class TrainingSiteRepositoryService {
   }
 
   async getUserById(userId: number) {
+    console.log("inside serivce of user getUserById")
     const [rows] = await this.db.query(
-      'SELECT * FROM users WHERE id = ? LIMIT 1',
+      'SELECT * FROM ab_admin WHERE adminID = ? LIMIT 1',
       [userId]
     );
     if (!rows || rows.length === 0) {
@@ -217,6 +218,33 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
+    async getcookstove() {
+
+    const [rows] = await this.db.query(
+      `SELECT cookstove_name from cookstove_methods`
+    );
+
+    return rows;
+  }
+
+    async getlangs() {
+
+    const [rows] = await this.db.query(
+      `SELECT lang_name from languages`
+    );
+
+    return rows;
+  }
+
+      async getTrainingAllsites() {
+
+    const [rows] = await this.db.query(
+      `SELECT training_site from training_sites`
+    );
+
+    return rows;
+  }
+
   async insertTraining(data: CreateTrainingSiteDto, username: string) {
 
     console.log("username is ", username)
@@ -234,8 +262,9 @@ export class TrainingSiteRepositoryService {
         road_access,
         total_people,
         latitude,
-        longitude,
+        longitude,        
       } = data;
+
 
       const [result] = await this.db.query(
 
@@ -274,6 +303,7 @@ export class TrainingSiteRepositoryService {
           username ?? null,
         ],
       );
+
 
       return result;
     }
@@ -314,6 +344,7 @@ export class TrainingSiteRepositoryService {
         total_people,
         latitude,
         longitude,
+        created_date,
       } = data;
 
       const [result] = await this.db.query(
@@ -334,9 +365,10 @@ export class TrainingSiteRepositoryService {
       total_people,
       latitude,
       longitude,
-      created_by
+      created_by,
+      created_date
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
     `,
         [
           offline_id ?? null,
@@ -353,6 +385,7 @@ export class TrainingSiteRepositoryService {
           latitude ?? null,   // ✅ FIX
           longitude ?? null,  // ✅ FIX
           username ?? null,
+          created_date ?? null,
         ],
       );
 
@@ -440,10 +473,9 @@ export class TrainingSiteRepositoryService {
         `
       SELECT COUNT(*) AS total
       FROM training_sites
-      WHERE created_date > ?
-         OR modified_date > ?
+      WHERE server_time > ?
       `,
-        [date, date],
+        [date],
       );
 
       return rows[0].total;
@@ -460,10 +492,9 @@ export class TrainingSiteRepositoryService {
         `
       SELECT *
       FROM training_sites
-      WHERE created_date > ?
-         OR modified_date > ?
+      WHERE server_time > ?
       `,
-        [date, date],
+        [date],
       );
 
       return rows

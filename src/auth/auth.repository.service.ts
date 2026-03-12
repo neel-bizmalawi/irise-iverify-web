@@ -11,10 +11,33 @@ export class AuthRepositoryService {
     async loginemail(email: string) {
 
         const [rows]: any = await this.db.query(
-            'SELECT id, email ,name,password FROM users WHERE email = ? LIMIT 1',
-            [email]
+            'SELECT adminID, email ,name,password FROM ab_admin WHERE email = ? or user_name =? LIMIT 1',
+            [email,email]
         );
 
         return rows;
     }
+
+    async blacklistToken(data) {
+
+  const query = `
+    INSERT INTO token_blacklist (token, expires_at)
+    VALUES (?, ?)
+  `;
+
+  await this.db.query(query, [data.token, data.expires_at]);
+}
+
+async isTokenBlacklisted(token: string) {
+
+  const query = `
+    SELECT id FROM token_blacklist
+    WHERE token = ?
+    LIMIT 1
+  `;
+
+  const [rows] = await this.db.query(query, [token]);
+
+  return rows.length > 0;
+}
 }

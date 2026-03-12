@@ -1,27 +1,42 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/require-await */
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { AuthRepositoryService } from './auth.repository.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-    constructor(config: ConfigService) {
+    constructor(config: ConfigService,    private readonly Authrepo: AuthRepositoryService,
+    ) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
                 ExtractJwt.fromAuthHeaderAsBearerToken(), // ✅ frontend
                 (req) => req?.cookies?.access_token,
             ]),
             secretOrKey: config.getOrThrow<string>('JWT_SECRET'), //it checks the jwt_secret and is token modified , token expired ex. 
+            passReqToCallback: true, // ✅ important
+
         });
     }
 
-    async validate(payload: any) {
-        // Minimal, clean, correct
+    async validate(req: any, payload: any) {
+
+        const token =
+            req.headers.authorization?.split(" ")[1] ||
+            req.cookies?.access_token;
+
+        const isBlacklisted = await this.Authrepo.isTokenBlacklisted(token);
+
+        if (isBlacklisted) {
+            throw new UnauthorizedException("Token expired");
+        }
+
         return {
             userId: payload.sub,
-            email: payload.email, // optional
+            email: payload.email,
         };
     }
 }
+

@@ -36,6 +36,24 @@ export class TrainingSiteController {
         return this.TrainingSiteService.getAuthority();
     }
 
+      @Get('cookstove_slug')
+    async fetchcCookstove() {
+
+        return this.TrainingSiteService.getCookStove();
+    }
+
+          @Get('lang_slug')
+    async fetchLangs() {
+
+        return this.TrainingSiteService.getLang();
+    }
+
+         @Get('getallSites')
+    async fetchTrainingSites() {
+
+        return this.TrainingSiteService.getTraningsites();
+    }
+
     @Get("search-district")
     async searchDistrict(@Query("search") search: string) {
         return this.TrainingSiteService.searchDistrict(search);
@@ -84,7 +102,7 @@ export class TrainingSiteController {
         return this.TrainingSiteService.getTrainingData(id)
     }
 
- 
+
 
     @Delete('delete_training/:id')
     async deleteTrainingData(@Param('id', ParseIntPipe) id: number,) {
@@ -127,8 +145,6 @@ export class TrainingSiteController {
     async getupdatedata(@Body('date') date: string) {
         return this.TrainingSiteService.getupdateData(new Date(date));
     }
-
-
 
 
 }

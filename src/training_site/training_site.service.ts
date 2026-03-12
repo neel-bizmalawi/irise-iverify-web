@@ -50,6 +50,8 @@ export class TrainingSiteService {
 
     const username = user.name;
 
+    console.log("username is",username);
+
     const data = await this.trainingSiteRepo.insertTraining(dto, username)
 
     return {
@@ -103,6 +105,34 @@ export class TrainingSiteService {
 
     return {
       message: 'Authority fetched',
+      data
+    };
+  }
+
+    async getCookStove() {
+    const data = await this.trainingSiteRepo.getcookstove();
+
+    return {
+      message: 'Cookstove fetched',
+      data
+    };
+  }
+
+      async getLang() {
+    const data = await this.trainingSiteRepo.getlangs();
+
+    return {
+      message: 'languages  fetched',
+      data
+    };
+  }
+
+
+        async getTraningsites() {
+    const data = await this.trainingSiteRepo.getTrainingAllsites();
+
+    return {
+      message: 'training sites fetched',
       data
     };
   }
@@ -327,6 +357,8 @@ export class TrainingSiteService {
       }
 
       const username = user.name;
+
+      console.log("username is",username)
 
       const insertDistrict = await this.trainingSiteRepo.insertDistrict(district, username);
 

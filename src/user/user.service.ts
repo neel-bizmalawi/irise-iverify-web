@@ -4,6 +4,7 @@ import { CreateUserDto } from './user.dto';
 import { UserRepositoryService } from './user.repository/user.repository.service';
 import { TrainingSiteRepositoryService } from 'src/training_site/training_site.repository/training_site.repository.service';
 import { TRAINING_SITES_FILTER_SCHEMA } from 'src/training_site/training-sites.filter.schema';
+import { USER_FILTER_SCHEMA } from './user.filter.schema';
 
 @Injectable()
 export class UserService {
@@ -18,7 +19,6 @@ export class UserService {
 
         const username = user.name;
 
-        console.log("user name20 is", username)
 
         try {
             const result: any = await this.userRepo.insertUser(dto, username);
@@ -43,11 +43,7 @@ export class UserService {
         }
     }
 
-
-
-
-
-
+    
     async UpdateUser(adminId: number, dto: CreateUserDto, userId: number) {
 
         const user = await this.trainingSiteRepo.getUserById(userId);
@@ -91,7 +87,7 @@ export class UserService {
 
         // 🔑 MAP FILTERS HERE
         const validatedFilters = filters.map((f) => {
-            const schema = TRAINING_SITES_FILTER_SCHEMA[f.field];
+            const schema = USER_FILTER_SCHEMA[f.field];
 
             if (!schema) {
                 throw new Error(`Invalid filter field: ${f.field}`);

@@ -1,9 +1,11 @@
 /* eslint-disable prettier/prettier */
+import { Type } from 'class-transformer';
 import {
     IsString,
     IsOptional,
     IsNumber,
     IsEnum,
+    IsDateString,
 } from 'class-validator';
 
 export class CreateTrainingSiteDto {
@@ -55,4 +57,13 @@ export class CreateTrainingSiteDto {
     @IsOptional()
     @IsNumber()
     longitude?: number;
+
+    @IsOptional()
+    @Type(() => Date)
+    created_date?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    server_time?: Date;
+
 }

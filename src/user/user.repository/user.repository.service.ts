@@ -15,36 +15,39 @@ export class UserRepositoryService {
   async insertUser(data: CreateUserDto, username: string) {
 
     try {
-      const { name, is_approver, user_name, email, password, roleID, user_setting, status } = data;
+      const { name, user_name, email, password, role, user_setting, status, mobile_number } = data;
 
       // 🔐 Hash password
       const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+
+
+
 
       const [result] = await this.db.query(
         `
      INSERT INTO ab_admin
     (
       name,
-      is_approver,
       user_name,
       email,
       password,
-      roleID,
+      role,
       user_setting,
       status,
+      mobile_number,
       created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?,?,?)
     `,
         [
           name ?? null,
-          is_approver,
           user_name ?? null,
           email ?? null,
           hashedPassword ?? null,
-          roleID ?? null,
+          role ?? null,
           user_setting ?? null,
           status ?? null,
+          mobile_number ?? null,
           username ?? null,
         ],
       );
@@ -63,13 +66,12 @@ export class UserRepositoryService {
     console.log("AID IS", AID);
     console.log("Username is", username)
 
-    const filteredDto = Object.fromEntries(
-      Object.entries(dto).filter(([_, value]) => value !== undefined),
+    const filteredDto = Object.fromEntries(  //This converts the array of pairs back into an object.
+      Object.entries(dto).filter(([_, value]) => value !== undefined), // converts dto object to array of key value pair
     );
 
     const fields = Object.keys(filteredDto);
 
-    console.log("field is", fields);
     // 🔐 If password exists → hash it
     if (filteredDto.password) {
       filteredDto.password = await bcrypt.hash(filteredDto.password, 10);
@@ -102,16 +104,55 @@ export class UserRepositoryService {
   }
 
 
-  async getFilteredCount(filters: any[]) {
+
+   async getFilteredCount(filters: any[]) {
     const where: string[] = [];
     const values: any[] = [];
 
     filters.forEach((f) => {
       let value = f.value;
 
+      // EMPTY
+      if (f.operator === 'isEmpty') {
+        where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
+        return;
+      }
+
+      // NOT EMPTY
+      if (f.operator === 'is_not_empty') {
+        where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
+        return;
+      }
+
+      // DATE
+      if (f.type === 'date') {
+        const startOfDay = `${f.value} 00:00:00`;
+        const endOfDay = `${f.value} 23:59:59`;
+
+        if (f.operator === 'equals') {
+          where.push(`(${f.column} BETWEEN ? AND ?)`);
+          values.push(startOfDay, endOfDay);
+          return;
+        }
+
+        if (f.operator === 'before') {
+          where.push(`${f.column} < ?`);
+          values.push(startOfDay);
+          return;
+        }
+
+        if (f.operator === 'after') {
+          where.push(`${f.column} > ?`);
+          values.push(endOfDay);
+          return;
+        }
+      }
+
+      // LIKE
       if (f.operator === 'contains') value = `%${value}%`;
       if (f.operator === 'starts_with') value = `${value}%`;
       if (f.operator === 'ends_with') value = `%${value}`;
+
       if (f.type === 'number') value = Number(value);
 
       where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
@@ -120,7 +161,7 @@ export class UserRepositoryService {
 
     const sql = `
         SELECT COUNT(*) as total
-        FROM ab_admin ts
+        FROM ab_admin us
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       `;
 
@@ -205,10 +246,10 @@ export class UserRepositoryService {
     const safeOffset = Math.max(0, Number((page - 1) * limit));
 
     const sql = `
-      SELECT ts.*
-      FROM ab_admin ts
+      SELECT us.*
+      FROM ab_admin us
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-      ORDER BY ts.adminID DESC
+      ORDER BY us.adminID DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
 
@@ -247,7 +288,7 @@ export class UserRepositoryService {
 
   async getAlluser() {
     try {
-      const [rows] = await this.db.query("select name from users");
+      const [rows] = await this.db.query("select name from ab_admin");
       return rows;
     }
     catch (error) {

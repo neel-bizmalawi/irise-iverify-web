@@ -14,8 +14,8 @@ export class UserController {
     @Post('create_user')
     @UseGuards(AuthGuard('jwt'))
     async CreateUser(@Body() dto: CreateUserDto, @Req() req: any,) {
+        console.log("CreateUser controller called");
         const userId = req.user.userId;
-        console.log("userid is", userId);
         return this.userService.CreateUser(dto, userId);
     }
 
@@ -32,12 +32,11 @@ export class UserController {
         @Body() dto: CreateUserDto, @Req() req: any,) {
         console.log("param id is", id);
         const userId = req.user.userId;
-        console.log("userid is", userId);
         return this.userService.UpdateUser(id, dto, userId);
     }
 
 
-    @Get('list')
+    @Post('list')
     async getTrainingSites(
         @Query('page') page = '1',
         @Query('limit') limit = '10',
@@ -49,7 +48,6 @@ export class UserController {
             filters,
         );
     }
-
 
 
     @Get('get_user/:id')
