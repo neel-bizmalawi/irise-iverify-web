@@ -4,7 +4,6 @@ import Breadcrumb from "../../components/Breadcrumb";
 import AppPagination from "../../components/AppPagination";
 import AppTable from "../../components/AppTable";
 import AppTableFilter from "../../components/AppTableFilter";
-import EditMonitoringDialog from "./EditMonitoringDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
@@ -20,7 +19,21 @@ const buildImageUrl = (src) => {
   return `${BASE_IMAGE_URL}${path}`;
 };
 
+// const buildImageUrl = (src) => {
+//   if (!src || src === "-" || src === "null" || src === null) return null;
+//   if (
+//     src.startsWith("/Users/") ||
+//     src.startsWith("/home/") ||
+//     src.match(/^[A-Z]:\\/i)
+//   )
+//     return null;
+//   if (src.startsWith("http://") || src.startsWith("https://")) return src;
+//   const path = src.startsWith("/") ? src : `/${src}`;
+//   return `${BASE_IMAGE_URL}${path}`;
+// };
+
 // ── Full-screen image preview modal ──────────────────────────────────────────
+
 const ImagePreviewModal = ({ open, src, alt, onClose }) => {
   if (!open || !src) return null;
   return (
@@ -184,10 +197,6 @@ const Monitoring = () => {
   const [totalPages, setTotalPages] = useState(0);
 
   const [loading, setLoading] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false);
-
-  const [editId, setEditId] = useState(null);
-  const [editData, setEditData] = useState(null);
 
   const [userOptions, setUserOptions] = useState([]);
 
@@ -219,12 +228,32 @@ const Monitoring = () => {
       { key: "stove_being_used", label: "Stove Being Used", align: "center" },
       { key: "times_used_today", label: "Times Used Today", align: "center" },
       { key: "stove_condition", label: "Stove Condition", align: "center" },
-      {
-        key: "photo_url",
-        label: "Photo URL",
-        align: "center",
-        render: (value) => <ImageThumb src={value} alt="Photo" />,
-      },
+      // {
+      //   key: "photo_url",
+      //   label: "Photo URL",
+      //   align: "center",
+      //   render: (value) => <ImageThumb src={value} alt="Photo" />,
+      // },
+//--------------------------
+      // {
+      //   key: "photo_url",
+      //   label: "Photo URL",
+      //   align: "center",
+      //   render: (value) =>
+      //     value && value !== "-" ? (
+      //       <a
+      //         href={value}
+      //         target="_blank"
+      //         rel="noreferrer"
+      //         style={{ fontSize: "0.75rem", wordBreak: "break-all" }}
+      //       >
+      //         {value}
+      //       </a>
+      //     ) : (
+      //       "-"
+      //     ),
+      // },
+
       { key: "nfc_tag_status", label: "NFC Tag Status", align: "center" },
       {
         key: "user_satisfaction",
@@ -263,12 +292,12 @@ const Monitoring = () => {
       },
       {
         key: "health_hospital_less",
-        label: "Health: Hospital Less",
+        label: "Health Hospital Less",
         align: "center",
       },
       {
         key: "health_better_air",
-        label: "Health: Better Air",
+        label: "Health Better Air",
         align: "center",
       },
       {
@@ -293,17 +322,10 @@ const Monitoring = () => {
       { key: "modified_by", label: "Modified By", align: "center" },
       {
         key: "actions",
-        label: "Actions",
+        label: "Action",
         align: "center",
         render: (_, row) => (
           <Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => handleEdit(row.id)}
-            >
-              Edit
-            </Button>
             <Button
               size="small"
               variant="outlined"
@@ -364,13 +386,7 @@ const Monitoring = () => {
         key: "fuel_type",
         label: "Fuel Type",
         type: "select",
-        options: [
-          "Indigenous Wood",
-          "Charcoal",
-          "Pellets",
-          "LPG",
-          "Other",
-        ],
+        options: ["Indigenous Wood", "Charcoal", "Pellets", "LPG", "Other"],
       },
       {
         key: "needs_training",
@@ -463,7 +479,7 @@ const Monitoring = () => {
         }
 
         const mappedData = response.data.map((item) => ({
-          id: item.id,
+          id: item.monitoring_id,
           user_id: item.user_id ?? "-",
           national_id: item.national_id ?? "-",
           agent_name: item.agent_name ?? "-",
@@ -529,136 +545,6 @@ const Monitoring = () => {
     setPage(1);
   };
 
-  const handleSubmitMonitoring = async (formData) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-
-      const fd = new FormData();
-
-      fd.append("national_id", formData.national_id);
-      fd.append("agent_name", formData.agent_name || "");
-      fd.append("device_serial_no", formData.device_serial_no || "");
-      fd.append("new_device_serial_no", formData.new_device_serial_no || "");
-      fd.append("hh_name_same", formData.hh_name_same);
-      fd.append("stoves_present", formData.stoves_present);
-      fd.append("stove_being_used", formData.stove_being_used);
-      fd.append("times_used_today", formData.times_used_today || "");
-      fd.append("stove_condition", formData.stove_condition || "");
-      fd.append("nfc_tag_status", formData.nfc_tag_status || "");
-      fd.append("user_satisfaction", formData.user_satisfaction || "");
-      fd.append("fuel_type", formData.fuel_type || "");
-      fd.append("daily_fuel_cost", formData.daily_fuel_cost || "");
-      fd.append("savings_3_months", formData.savings_3_months || "");
-      fd.append(
-        "est_fuel_last3meals_kg",
-        formData.est_fuel_last3meals_kg || "",
-      );
-      fd.append("needs_training", formData.needs_training);
-      fd.append("training_type", formData.training_type || "");
-      fd.append("training_performed", formData.training_performed || "");
-      fd.append(
-        "training_not_done_reason",
-        formData.training_not_done_reason || "",
-      );
-      fd.append("needs_more_visits", formData.needs_more_visits);
-      fd.append("more_visits_reason", formData.more_visits_reason || "");
-      fd.append("health_hospital_less", formData.health_hospital_less);
-      fd.append("health_better_air", formData.health_better_air);
-      if (formData.old_gps_lat) fd.append("old_gps_lat", formData.old_gps_lat);
-      if (formData.old_gps_lng) fd.append("old_gps_lng", formData.old_gps_lng);
-      if (formData.new_gps_lat) fd.append("new_gps_lat", formData.new_gps_lat);
-      if (formData.new_gps_lng) fd.append("new_gps_lng", formData.new_gps_lng);
-
-      if (formData.photo_path instanceof File) {
-        fd.append("photo_path", formData.photo_path);
-      } else if (formData.photo_path === "REMOVED") {
-        fd.append("photo_path", "");
-      }
-
-      if (formData.photo_url instanceof File) {
-        fd.append("photo_url", formData.photo_url);
-      } else if (formData.photo_url === "REMOVED") {
-        fd.append("photo_url", "");
-      }
-
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      if (editId) {
-        await axios.put(
-          `${API_BASE_URL}/monitoring/update/${editId}`,
-          fd,
-          config,
-        );
-        toast.success("Monitoring record updated successfully!");
-      }
-
-      setPage(1);
-      await fetchData(1, pageSize, activeFilters);
-      setOpenDialog(false);
-      setEditId(null);
-      setEditData(null);
-    } catch (error) {
-      console.error("Submit error:", error);
-      const raw = error?.response?.data?.message || "";
-      toast.error(raw || "Operation failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = async (id) => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/monitoring/get/${id}`);
-      const item = res.data?.data;
-      if (!item) {
-        toast.error("Monitoring record not found");
-        return;
-      }
-
-      setEditData({
-        national_id: item.national_id ?? "",
-        agent_name: item.agent_name ?? "",
-        device_serial_no: item.device_serial_no ?? "",
-        new_device_serial_no: item.new_device_serial_no ?? "",
-        hh_name_same: item.hh_name_same ?? "no",
-        stoves_present: item.stoves_present ?? "no",
-        stove_being_used: item.stove_being_used ?? "no",
-        times_used_today: item.times_used_today ?? "",
-        stove_condition: item.stove_condition ?? "",
-        nfc_tag_status: item.nfc_tag_status ?? "",
-        user_satisfaction: item.user_satisfaction ?? "",
-        fuel_type: item.fuel_type ?? "",
-        daily_fuel_cost: item.daily_fuel_cost ?? "",
-        savings_3_months: item.savings_3_months ?? "",
-        est_fuel_last3meals_kg: item.est_fuel_last3meals_kg ?? "",
-        needs_training: item.needs_training ?? "no",
-        training_type: item.training_type ?? "",
-        training_performed: item.training_performed ?? "",
-        training_not_done_reason: item.training_not_done_reason ?? "",
-        needs_more_visits: item.needs_more_visits ?? "no",
-        more_visits_reason: item.more_visits_reason ?? "",
-        health_hospital_less: item.health_hospital_less ?? "no",
-        health_better_air: item.health_better_air ?? "no",
-        old_gps_lat: item.old_gps_lat ?? "",
-        old_gps_lng: item.old_gps_lng ?? "",
-        new_gps_lat: item.new_gps_lat ?? "",
-        new_gps_lng: item.new_gps_lng ?? "",
-        photo_path: item.photo_path || null,
-        photo_url: item.photo_url || null,
-      });
-
-      setEditId(id);
-      setOpenDialog(true);
-    } catch (error) {
-      console.error("Get by ID error:", error);
-      toast.error("Failed to fetch monitoring record");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/monitoring/delete/${id}`);
@@ -667,6 +553,23 @@ const Monitoring = () => {
     } catch (error) {
       toast.error("Failed to delete monitoring record");
     }
+  };
+
+  const fetchAllForExport = async () => {
+    const cleanFilters =
+      Array.isArray(activeFilters) && activeFilters.length > 0
+        ? activeFilters.map(({ field, operator, value }) => ({
+            field,
+            operator,
+            value,
+          }))
+        : [];
+    const res = await axios.post(
+      `${API_BASE_URL}/monitoring/list`,
+      { filters: cleanFilters },
+      { params: { page: 1, limit: 100000 } },
+    );
+    return res.data?.data ?? [];
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -701,6 +604,7 @@ const Monitoring = () => {
             columns={columns}
             data={tableData}
             fileName="Monitoring"
+            onExportAll={fetchAllForExport}
           />
         </Box>
       </Box>
@@ -728,17 +632,6 @@ const Monitoring = () => {
           setPageSize(newSize);
           setPage(1);
         }}
-      />
-
-      <EditMonitoringDialog
-        open={openDialog}
-        onClose={() => {
-          setOpenDialog(false);
-          setEditId(null);
-          setEditData(null);
-        }}
-        onSubmit={handleSubmitMonitoring}
-        initialData={editData}
       />
     </Box>
   );

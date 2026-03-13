@@ -191,6 +191,9 @@ const Beneficiary = () => {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState(null);
 
+  // ── CHANGE 1: Add pendingFilesRef to cache File objects across failed attempts ──
+  const pendingFilesRef = React.useRef({});
+
   const [trainingSiteOptions, setTrainingSiteOptions] = useState([]);
   const [cookingMethodOptions, setCookingMethodOptions] = useState([]);
   const [languageOptions, setLanguageOptions] = useState([]);
@@ -676,38 +679,84 @@ const Beneficiary = () => {
 
       const now = new Date().toISOString();
 
-      if (formData.national_id_attachment instanceof File) {
-        fd.append("national_id_attachment", formData.national_id_attachment);
+      // ── CHANGE 2: Cache File objects so they survive a failed attempt & retry ──
+      const cache = pendingFilesRef.current;
+      if (formData.national_id_attachment instanceof File)
+        cache.national_id_attachment = formData.national_id_attachment;
+      if (formData.signature instanceof File)
+        cache.signature = formData.signature;
+      if (formData.house_pic instanceof File)
+        cache.house_pic = formData.house_pic;
+      if (formData.cookstove_pic instanceof File)
+        cache.cookstove_pic = formData.cookstove_pic;
+
+      // Resolve final file: prefer live File, fall back to cached File
+      const resolveFile = (field) =>
+        formData[field] instanceof File
+          ? formData[field]
+          : cache[field] instanceof File
+          ? cache[field]
+          : formData[field]; // "REMOVED" or null
+
+      const natId = resolveFile("national_id_attachment");
+      const sig   = resolveFile("signature");
+      const house = resolveFile("house_pic");
+      const stove = resolveFile("cookstove_pic");
+
+      if (natId instanceof File) {
+        fd.append("national_id_attachment", natId);
         fd.append("national_id_timestamp", now);
-      } else if (formData.national_id_attachment === "REMOVED") {
-        fd.append("national_id_attachment", null); // tells server to clear it
+      } else if (natId === "REMOVED") {
+        fd.append("remove_national_id", true);
       }
 
-      if (formData.signature instanceof File) {
-        fd.append("signature", formData.signature);
+      if (sig instanceof File) {
+        fd.append("signature", sig);
         fd.append("signature_timestamp", now);
-      } else if (formData.signature === "REMOVED") {
-        fd.append("signature", null);
+      } else if (sig === "REMOVED") {
+        fd.append("remove_signature", true);
       }
 
-      if (formData.house_pic instanceof File) {
-        fd.append("house_pic", formData.house_pic);
+      if (house instanceof File) {
+        fd.append("house_pic", house);
         fd.append("house_pic_timestamp", now);
-      } else if (formData.house_pic === "REMOVED") {
-        fd.append("house_pic", null);
+      } else if (house === "REMOVED") {
+        fd.append("remove_house_pic", true);
       }
 
-      if (formData.cookstove_pic instanceof File) {
-        fd.append("cookstove_pic", formData.cookstove_pic);
+      if (stove instanceof File) {
+        fd.append("cookstove_pic", stove);
         fd.append("cookstove_pic_timestamp", now);
-      } else if (formData.cookstove_pic === "REMOVED") {
-        fd.append("cookstove_pic", null);
+      } else if (stove === "REMOVED") {
+        fd.append("remove_cookstove_pic", true);
       }
+      // ── END CHANGE 2 ──
 
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
 
+      // if (editId) {
+      //   await axios.put(
+      //     `${API_BASE_URL}/beneficiary/update-beneficiary/${editId}`,
+      //     fd,
+      //     config,
+      //   );
+      //   toast.success("Beneficiary updated successfully!");
+      // } else {
+      //   await axios.post(
+      //     `${API_BASE_URL}/beneficiary/create_beneficiary`,
+      //     fd,
+      //     config,
+      //   );
+      //   toast.success("Beneficiary created successfully!");
+      // }
+
+      // setPage(1);
+      // await fetchData(1, pageSize, activeFilters);
+      // setOpenDialog(false);
+      // setEditId(null);
+      // setEditData(null);
       if (editId) {
         await axios.put(
           `${API_BASE_URL}/beneficiary/update-beneficiary/${editId}`,
@@ -726,14 +775,42 @@ const Beneficiary = () => {
 
       setPage(1);
       await fetchData(1, pageSize, activeFilters);
+
+      // Re-fetch fresh image URLs so the dialog shows updated images if reopened
+      if (editId) {
+        try {
+          const fresh = await axios.get(
+            `${API_BASE_URL}/beneficiary/get_beneficiary/${editId}`,
+          );
+          const item = fresh.data?.data;
+          if (item) {
+            setEditData((prev) => ({
+              ...prev,
+              national_id_attachment: item.national_id_attachment || null,
+              signature: item.signature || null,
+              house_pic: item.house_pic || null,
+              cookstove_pic: item.cookstove_pic || null,
+            }));
+          }
+        } catch (_) {
+          // non-critical, ignore
+        }
+      }
+
+      // ── CHANGE 3: Clear cache on success ──
+      pendingFilesRef.current = {};
+
       setOpenDialog(false);
       setEditId(null);
       setEditData(null);
     } catch (error) {
-      //  catch (error) {
-      //   console.error("Submit error:", error);
-      //   toast.error("Operation failed. Please try again.");
       console.error("Submit error:", error);
+      if (!error?.response) {
+        toast.error(
+          "No internet connection.",
+        );
+        return;
+      }
       const raw = error?.response?.data?.message || "";
       const message = raw.includes("already exists")
         ? "National ID already exists"
@@ -809,6 +886,24 @@ const Beneficiary = () => {
     }
   };
 
+  const fetchAllForExport = async () => {
+    // ← ADD THIS BLOCK
+    const cleanFilters =
+      Array.isArray(activeFilters) && activeFilters.length > 0
+        ? activeFilters.map(({ field, operator, value }) => ({
+            field,
+            operator,
+            value,
+          }))
+        : [];
+    const res = await axios.post(
+      `${API_BASE_URL}/beneficiary/list`,
+      { filters: cleanFilters },
+      { params: { page: 1, limit: 100000 } },
+    );
+    return res.data?.data ?? [];
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Box>
@@ -841,6 +936,7 @@ const Beneficiary = () => {
             columns={columns}
             data={tableData}
             fileName="Beneficiary"
+            onExportAll={fetchAllForExport}
           />
           <Button
             variant="contained"
@@ -887,6 +983,8 @@ const Beneficiary = () => {
       <CreateBeneficiaryDialog
         open={openDialog}
         onClose={() => {
+          // ── CHANGE 4: Clear cache on dialog cancel/close ──
+          pendingFilesRef.current = {};
           setOpenDialog(false);
           setEditId(null);
           setEditData(null);

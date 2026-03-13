@@ -52,8 +52,8 @@ const AppTable = ({
     >
       <TableContainer
         sx={{
-          maxHeight: 640,
-          minHeight: 640,
+          maxHeight: 420,
+          minHeight: 420,
           overflowY: "auto",
           overflowX: "auto",
           "&::-webkit-scrollbar": { height: 5, width: 6 },

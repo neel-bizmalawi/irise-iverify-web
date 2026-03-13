@@ -26,21 +26,21 @@ const Users = () => {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState(null);
 
-    const [createOptions, setCreateOptions] = useState([]);
-    const [modifiedByOptions, setModifiedByOptions] = useState([]);
+  const [createOptions, setCreateOptions] = useState([]);
+  const [modifiedByOptions, setModifiedByOptions] = useState([]);
 
   // roleOptions normalised to { role, roleName } for consistency
   const [roleOptions, setRoleOptions] = useState([]);
 
-   const fetchUsers = async () => {
-      try {
-        const res = await axios.get(`${API_BASE_URL}/user/getAllUsers`);
-        setCreateOptions(res.data?.data || []);
-        setModifiedByOptions(res.data?.data || []);
-      } catch (error) {
-        console.error("fetchUsers error:", error);
-      }
-    };
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/user/getAllUsers`);
+      setCreateOptions(res.data?.data || []);
+      setModifiedByOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("fetchUsers error:", error);
+    }
+  };
 
   // ── Table Columns ────────────────────────────────────────────────────────────
   const columns = useMemo(
@@ -173,7 +173,7 @@ const Users = () => {
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
     ]);
-  }, [roleOptions,createOptions, modifiedByOptions]);
+  }, [roleOptions, createOptions, modifiedByOptions]);
 
   useEffect(() => {
     fetchRoles();
@@ -374,6 +374,23 @@ const Users = () => {
     }
   };
 
+  const fetchAllForExport = async () => {
+    const cleanFilters =
+      Array.isArray(activeFilters) && activeFilters.length > 0
+        ? activeFilters.map(({ field, operator, value }) => ({
+            field,
+            operator,
+            value,
+          }))
+        : [];
+    const res = await axios.post(
+      `${API_BASE_URL}/user/list`,
+      { filters: cleanFilters },
+      { params: { page: 1, limit: 100000 } },
+    );
+    return res.data?.data ?? [];
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <Box>
@@ -402,7 +419,12 @@ const Users = () => {
           onClear={handleClearFilters}
         />
         <Box sx={{ display: "flex", gap: 2 }}>
-          <ExportButtons columns={columns} data={tableData} fileName="Users" />
+          <ExportButtons
+            columns={columns}
+            data={tableData}
+            fileName="Users"
+            onExportAll={fetchAllForExport}
+          />
           <Button
             variant="contained"
             sx={{

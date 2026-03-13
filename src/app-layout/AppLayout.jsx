@@ -43,9 +43,10 @@ import {
   Shield,
   LogOut,
   UserCircle,
-  Monitor,
-  Check,
-  CheckCheckIcon,
+  UserCog,
+  ClipboardList,
+  FileCheck,
+  UserCheck,
 } from "lucide-react";
 import eStove from "../assets/images/eStove.png";
 import eStoveFire from "../assets/images/eStoveFire.png";
@@ -86,14 +87,15 @@ const SIDEBAR_COLLAPSED_WIDTH = 72;
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
-  { icon: Shield, label: "Beneficiary", path: "/beneficiary" },
+  { icon: UserCheck , label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
-  { icon: Monitor, label: "Monitoring Tasks", path: "/monitoring" },
-  { icon: FactCheck, label: "Audit Process", path: "/auditprocess" },
+  { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
+  { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
+  // { icon: UserCog , label: "User Role Management", path: "/userrolemanagement" },
 ];
 
 const bottomNavItems = [
-  { icon: Settings, label: "Settings", path: "/settings" },
+  // { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -507,20 +509,26 @@ const AppLayoutInner = () => {
     ? SIDEBAR_COLLAPSED_WIDTH
     : SIDEBAR_WIDTH;
 
-  // ── Page title from path ──
-  // const pageTitle =
-  //   navItems.find((item) =>
-  //     item.path === "/"
-  //       ? location.pathname === "/"
-  //       : location.pathname.startsWith(item.path),
-  //   )?.label || "Dashboard";
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    await fetch("http://192.168.0.106:3000/auth/logout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Logout API error:", error);
+  } finally {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("userName");
     navigate("/login");
-  };
+  }
+};
 
   return (
     <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>

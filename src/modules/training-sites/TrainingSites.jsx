@@ -458,6 +458,24 @@ const TrainingSites = () => {
     }
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
+  const fetchAllForExport = async () => {
+    const cleanFilters =
+      Array.isArray(activeFilters) && activeFilters.length > 0
+        ? activeFilters.map(({ field, operator, value }) => ({
+            field,
+            operator,
+            value,
+          }))
+        : [];
+    const res = await axios.post(
+      `${API_BASE_URL}/training-site/list`,
+      { filters: cleanFilters },
+      { params: { page: 1, limit: 100000 } },
+    );
+    return res.data?.data ?? [];
+  };
+
   return (
     <Box>
       <h1 style={{ margin: 0 }}>Training Sites</h1>
@@ -489,6 +507,7 @@ const TrainingSites = () => {
             columns={columns}
             data={tableData}
             fileName="Training_Sites"
+            onExportAll={fetchAllForExport}
           />
           <Button
             variant="contained"
