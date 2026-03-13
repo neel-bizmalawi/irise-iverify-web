@@ -6,7 +6,9 @@ import { DatabaseService } from 'src/database/database.service';
 import { CreateAuditDto } from './createAudit.dto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { v4 as uuid } from 'uuid';
+// import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+
 import { AUDIT_FILTER_SCHEMA } from './audit.filter.schema';
 
 
@@ -34,7 +36,7 @@ export class AuditService {
       throw new BadRequestException("Invalid file type");
     }
 
-    const fileName = `${prefix}_${AuditId}_${uuid()}${path.extname(file.originalname)}`;
+    const fileName = `${prefix}_${AuditId}_${uuidv4()}${path.extname(file.originalname)}`;
     const filePath = path.join(folderPath, fileName);
     const dbPath = `/${folderPath}/${fileName}`;
 

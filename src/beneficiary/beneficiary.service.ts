@@ -8,7 +8,9 @@ import { TrainingSiteRepositoryService } from 'src/training_site/training_site.r
 import { DatabaseService } from 'src/database/database.service';
 import { UpdateBeneficiaryDto } from './update-beneficiary-site-dto';
 import { BENEFICIARY_FILTER_SCHEMA } from './beneficiary.filter.schema';
-import { v4 as uuid } from 'uuid';
+// import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+
 
 
 @Injectable()
@@ -168,7 +170,7 @@ export class BeneficiaryService {
     }
 
 
-    const fileName = `${prefix}_${beneficiaryId}_${uuid()}${path.extname(file.originalname)}`;
+    const fileName = `${prefix}_${beneficiaryId}_${uuidv4()}${path.extname(file.originalname)}`;
     const filePath = path.join(folderPath, fileName);
     const dbPath = `/${folderPath}/${fileName}`;
 
@@ -400,7 +402,7 @@ export class BeneficiaryService {
 
     // case 2:new upload 
     if (file) {
-      const fileName = `${prefix}_${beneficiaryId}_${uuid()}${path.extname(file.originalname)}`;
+      const fileName = `${prefix}_${beneficiaryId}_${uuidv4()}${path.extname(file.originalname)}`;
       const filePath = path.join(folderPath, fileName);
       const dbPath = `/${folderPath}/${fileName}`;
 

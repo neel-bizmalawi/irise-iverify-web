@@ -6,7 +6,9 @@ import { TrainingSiteRepositoryService } from 'src/training_site/training_site.r
 import { DatabaseService } from 'src/database/database.service';
 import * as fs from 'fs';
 import * as path from 'path';
-import { v4 as uuid } from 'uuid';
+// import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+
 import { MONITORING_FILTER_SCHEMA } from './monitoring.filter.schema';
 
 
@@ -37,7 +39,7 @@ export class MonitoringService {
         }
 
 
-        const fileName = `${prefix}_${beneficiaryId}_${uuid()}${path.extname(file.originalname)}`;
+        const fileName = `${prefix}_${beneficiaryId}_${uuidv4()}${path.extname(file.originalname)}`;
         const filePath = path.join(folderPath, fileName);
         const dbPath = `/${folderPath}/${fileName}`;
 
