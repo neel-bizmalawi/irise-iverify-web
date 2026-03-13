@@ -6,13 +6,14 @@ import { CreateTrainingSiteDto } from './create-training-site.dto';
 import { UpdateTrainingSiteDto } from './update-training-site.dto';
 import { TRAINING_SITES_FILTER_SCHEMA } from './training-sites.filter.schema';
 import { SyncTrainingSiteDto } from './sync-training-site.dto';
+import { DatabaseService } from 'src/database/database.service';
 
 
 @Injectable()
 export class TrainingSiteService {
 
 
-  constructor(private readonly trainingSiteRepo: TrainingSiteRepositoryService,) { }
+  constructor(private readonly trainingSiteRepo: TrainingSiteRepositoryService, private readonly db: DatabaseService) { }
 
 
   async getAll(page: number = 1, limit: number = 100) {
@@ -53,20 +54,20 @@ export class TrainingSiteService {
 
   async createTraining(dto: CreateTrainingSiteDto, userId: number) {
 
-try{
-    const user = await this.trainingSiteRepo.getUserById(userId);
+    try {
+      const user = await this.trainingSiteRepo.getUserById(userId);
 
-    const username = user.name;
+      const username = user.name;
 
-    console.log("username is", username);
+      console.log("username is", username);
 
-    const data = await this.trainingSiteRepo.insertTraining(dto, username)
+      const data = await this.trainingSiteRepo.insertTraining(dto, username)
 
-    return {
-      message: 'Training site created successfully',
+      return {
+        message: 'Training site created successfully',
+      }
     }
-  }
- catch (error) {
+    catch (error) {
       console.error("createTraining error", error)
       throw new InternalServerErrorException("Failed to create sites");
 
@@ -75,20 +76,20 @@ try{
 
 
   async getTrainingData(trainingId: number) {
-    try{
+    try {
 
-    if (!trainingId) {
-      throw new BadRequestException("Training id is missing");
+      if (!trainingId) {
+        throw new BadRequestException("Training id is missing");
+      }
+
+      const data = await this.trainingSiteRepo.getTrainingbyID(trainingId);
+      return {
+        message: "data fetched succesfully"
+        , data
+      }
     }
 
-    const data = await this.trainingSiteRepo.getTrainingbyID(trainingId);
-    return {
-      message: "data fetched succesfully"
-      , data
-    }
-  }
-  
-   catch (error) {
+    catch (error) {
       console.error("getTrainingData error", error)
       throw new InternalServerErrorException("Failed to get training sites by id");
 
@@ -101,15 +102,15 @@ try{
 
   async deleteTraining(trainingId: number) {
 
-    try{
-    if (!trainingId) {
-      throw new BadRequestException("Training id is missing");
-    }
+    try {
+      if (!trainingId) {
+        throw new BadRequestException("Training id is missing");
+      }
 
-    const data = await this.trainingSiteRepo.deleteTrainginId(trainingId);
-    return { message: "data deleted successfully" }
-  }
-  catch (error) {
+      const data = await this.trainingSiteRepo.deleteTrainginId(trainingId);
+      return { message: "data deleted successfully" }
+    }
+    catch (error) {
       console.error("deleteTraining error", error)
       throw new InternalServerErrorException("Failed to delete training");
 
@@ -167,16 +168,16 @@ try{
 
   async updateTrain(trainingId: number, dto: UpdateTrainingSiteDto, userId: number) {
 
-    try{
-    const user = await this.trainingSiteRepo.getUserById(userId);
+    try {
+      const user = await this.trainingSiteRepo.getUserById(userId);
 
-    const username = user.name;
+      const username = user.name;
 
 
-    return this.trainingSiteRepo.updateTraining(trainingId, dto, username);
+      return this.trainingSiteRepo.updateTraining(trainingId, dto, username);
     }
 
-      catch (error) {
+    catch (error) {
       console.error("updateTrain error", error)
       throw new InternalServerErrorException("Failed to update training");
 
@@ -192,62 +193,62 @@ try{
     filters: any[] = [],
   ) {
 
-    try{
+    try {
 
-    if (page < 1) page = 1;
-    if (limit < 1) limit = 10;
+      if (page < 1) page = 1;
+      if (limit < 1) limit = 10;
 
-    // 🔑 MAP FILTERS HERE
-    const validatedFilters = filters.map((f) => {
-      const schema = TRAINING_SITES_FILTER_SCHEMA[f.field];
+      // 🔑 MAP FILTERS HERE
+      const validatedFilters = filters.map((f) => {
+        const schema = TRAINING_SITES_FILTER_SCHEMA[f.field];
 
-      if (!schema) {
-        throw new Error(`Invalid filter field: ${f.field}`);
-      }
+        if (!schema) {
+          throw new Error(`Invalid filter field: ${f.field}`);
+        }
 
-      if (!schema.operators.includes(f.operator)) {
-        throw new Error(`Invalid operator for field: ${f.field}`);
-      }
+        if (!schema.operators.includes(f.operator)) {
+          throw new Error(`Invalid operator for field: ${f.field}`);
+        }
+
+        return {
+          column: schema.column,
+          type: schema.type,
+          operator: f.operator,
+          value: f.value,
+        };
+      });
+
+
+
+      const totalRecords =
+        validatedFilters.length > 0
+          ? await this.trainingSiteRepo.getFilteredCount(validatedFilters)
+          : await this.trainingSiteRepo.getTotalCount();
+
+      const totalPages = Math.ceil(totalRecords / limit);
+
+      const data =
+        validatedFilters.length > 0
+          ? await this.trainingSiteRepo.findWithFilters(validatedFilters, page, limit)
+          : await this.trainingSiteRepo.findAll(page, limit);
+
+      const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
+      const end = Math.min(page * limit, totalRecords);
 
       return {
-        column: schema.column,
-        type: schema.type,
-        operator: f.operator,
-        value: f.value,
+        currentPage: page,
+        limit,
+        start,
+        end,
+        totalRecords,
+        totalPages,
+        nextPage: page < totalPages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null,
+        data,
       };
-    });
+    }
 
-
-
-    const totalRecords =
-      validatedFilters.length > 0
-        ? await this.trainingSiteRepo.getFilteredCount(validatedFilters)
-        : await this.trainingSiteRepo.getTotalCount();
-
-    const totalPages = Math.ceil(totalRecords / limit);
-
-    const data =
-      validatedFilters.length > 0
-        ? await this.trainingSiteRepo.findWithFilters(validatedFilters, page, limit)
-        : await this.trainingSiteRepo.findAll(page, limit);
-
-    const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
-    const end = Math.min(page * limit, totalRecords);
-
-    return {
-      currentPage: page,
-      limit,
-      start,
-      end,
-      totalRecords,
-      totalPages,
-      nextPage: page < totalPages ? page + 1 : null,
-      previousPage: page > 1 ? page - 1 : null,
-      data,
-    };
-  }
-
-     catch (error) {
+    catch (error) {
       console.error("getTrainingSites error", error)
       throw new InternalServerErrorException("Failed to getTraining by filter");
 
@@ -257,64 +258,96 @@ try{
 
 
   async syncTrainings(trainings: SyncTrainingSiteDto[], userId: number) {
-    try{
 
-    const user = await this.trainingSiteRepo.getUserById(userId);
+    const connection = await this.db.getConnection();
+    await connection.beginTransaction();
 
-    const username = user.name;
+    try {
 
-    let syncedCount = 0;
-    let skippedCount = 0;
-    const failed: any[] = [];
+      let skippedCount = 0;
+      const failed: any[] = [];
 
+      const user = await this.trainingSiteRepo.getUserById(userId);
 
-    for (const training of trainings) {
+      const username = user.name;
 
-      try {
-        // ✅ Skip if already synced
-        if (training.offline_id) {
-          const exists = await this.trainingSiteRepo.existsByOfflineId(
-            training.offline_id,
-          );
+      const offlineids = trainings.map((t) => t.offline_id).filter((id) => id !== null && id !== undefined);
 
-          if (exists) {
-            skippedCount++;
-            continue;
-          }
+      const existingIds = await this.trainingSiteRepo.getExistingOfflineIds(offlineids, connection);
+      const existingSet = new Set(existingIds);
+
+      const newRecords = trainings.filter(training => {
+        if (training.offline_id && existingSet.has(training.offline_id)) {
+          skippedCount++;
+          return false;
         }
+        return true;
+      });
 
-        await this.trainingSiteRepo.insertTrainingsync(
-          training,
+      let syncedCount = 0;
+
+
+      if (newRecords.length > 0) {
+        syncedCount = await this.trainingSiteRepo.bulkInsertTrainings(
+          newRecords,
           username,
+          connection
         );
+      }
 
-        syncedCount++;
-      }
-      catch (error: any) {
-        failed.push({
-          offline_id: training.offline_id,
-          error: error.message,
-        })
-      }
+      // for (const training of trainings) {
+
+      //   try {
+      //     // ✅ Skip if already synced
+      //     if (training.offline_id) {
+      //       const exists = await this.trainingSiteRepo.existsByOfflineId(
+      //         training.offline_id,
+      //       );
+
+      //       if (exists) {
+      //         skippedCount++;
+      //         continue;
+      //       }
+      //     }
+
+      //     await this.trainingSiteRepo.insertTrainingsync(
+      //       training,
+      //       username,
+      //     );
+
+      //     syncedCount++;
+      //   }
+      //   catch (error: any) {
+      //     failed.push({
+      //       offline_id: training.offline_id,
+      //       error: error.message,
+      //     })
+      //   }
+      // }
+
+      const totalTraining =
+        await this.trainingSiteRepo.getTotalTrainingCount(connection);
+
+      await connection.commit();
+
+      return {
+        success: failed.length === 0,
+        syncedCount,
+        skippedCount,
+        failedCount: failed.length,
+        failedRecords: failed,
+        totalTraining,
+      };
     }
 
-    const totalTraining =
-      await this.trainingSiteRepo.getTotalTrainingCount();
-
-    return {
-      success: failed.length === 0,
-      syncedCount,
-      skippedCount,
-      failedCount: failed.length,
-      failedRecords: failed,
-      totalTraining,
-    };
-  }
-
-     catch (error) {
+    catch (error) {
       console.error("syncTrainings error", error)
       throw new InternalServerErrorException("Failed to sync training data");
 
+    }
+
+    finally {
+      connection.release();
     }
   }
 

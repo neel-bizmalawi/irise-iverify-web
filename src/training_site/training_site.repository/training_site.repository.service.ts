@@ -327,10 +327,116 @@ export class TrainingSiteRepositoryService {
     }
   }
 
-  async insertTrainingsync(data: SyncTrainingSiteDto, username: string) {
+  // async insertTrainingsync(data: SyncTrainingSiteDto, username: string) {
 
-    try {
-      const {
+  //   try {
+  //     const {
+  //       offline_id,
+  //       training_site,
+  //       district,
+  //       gvh_name,
+  //       village_head_name,
+  //       traditional_authority,
+  //       cookstoves_count,
+  //       house_holds_count,
+  //       house_hold_radius,
+  //       road_access,
+  //       total_people,
+  //       latitude,
+  //       longitude,
+  //       created_date,
+  //     } = data;
+
+  //     const [result] = await this.db.query(
+
+  //       `
+  //   INSERT INTO training_sites
+  //   (
+  //         offline_id,
+  //     training_site,
+  //     district,
+  //     gvh_name,
+  //     village_head_name,
+  //     traditional_authority,
+  //     cookstoves_count,
+  //     house_holds_count,
+  //     house_hold_radius,
+  //     road_access,
+  //     total_people,
+  //     latitude,
+  //     longitude,
+  //     created_by,
+  //     created_date
+  //   )
+  //   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
+  //   `,
+  //       [
+  //         offline_id ?? null,
+  //         training_site ?? null,
+  //         district ?? null,
+  //         gvh_name ?? null,
+  //         village_head_name ?? null,
+  //         traditional_authority ?? null,
+  //         cookstoves_count ?? null,
+  //         house_holds_count ?? null,
+  //         house_hold_radius ?? null,
+  //         road_access ?? null,
+  //         total_people ?? null,
+  //         latitude ?? null,   // ✅ FIX
+  //         longitude ?? null,  // ✅ FIX
+  //         username ?? null,
+  //         created_date ?? null,
+  //       ],
+  //     );
+
+  //     return result;
+  //   }
+  //   catch (error: any) {
+
+  //     console.error('❌ insertTraining DB error:', error);
+
+  //     if (error.code === 'ER_DUP_ENTRY') {
+  //       throw new ConflictException('Training site already exists');
+  //     }
+
+  //     // Foreign key constraint (created_by user missing)
+  //     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+  //       throw new ConflictException('Invalid user reference');
+  //     }
+
+  //     // Fallback
+  //     throw new InternalServerErrorException(
+  //       'Failed to create training site',
+  //     );
+  //   }
+
+
+  // }
+
+  async bulkInsertTrainings(data: SyncTrainingSiteDto[], username: string,connection) {
+  try {
+    const values = data.map(t => [
+      t.offline_id ?? null,
+      t.training_site ?? null,
+      t.district ?? null,
+      t.gvh_name ?? null,
+      t.village_head_name ?? null,
+      t.traditional_authority ?? null,
+      t.cookstoves_count ?? null,
+      t.house_holds_count ?? null,
+      t.house_hold_radius ?? null,
+      t.road_access ?? null,
+      t.total_people ?? null,
+      t.latitude ?? null,
+      t.longitude ?? null,
+      username ?? null,
+      t.created_date ?? null,
+    ]);
+
+    const [result]: any = await connection.query(
+      `
+      INSERT INTO training_sites
+      (
         offline_id,
         training_site,
         district,
@@ -344,74 +450,35 @@ export class TrainingSiteRepositoryService {
         total_people,
         latitude,
         longitude,
-        created_date,
-      } = data;
+        created_by,
+        created_date
+      )
+      VALUES ?
+      `,
+      [values],
+    );
 
-      const [result] = await this.db.query(
+    return result.affectedRows;
 
-        `
-    INSERT INTO training_sites
-    (
-          offline_id,
-      training_site,
-      district,
-      gvh_name,
-      village_head_name,
-      traditional_authority,
-      cookstoves_count,
-      house_holds_count,
-      house_hold_radius,
-      road_access,
-      total_people,
-      latitude,
-      longitude,
-      created_by,
-      created_date
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
-    `,
-        [
-          offline_id ?? null,
-          training_site ?? null,
-          district ?? null,
-          gvh_name ?? null,
-          village_head_name ?? null,
-          traditional_authority ?? null,
-          cookstoves_count ?? null,
-          house_holds_count ?? null,
-          house_hold_radius ?? null,
-          road_access ?? null,
-          total_people ?? null,
-          latitude ?? null,   // ✅ FIX
-          longitude ?? null,  // ✅ FIX
-          username ?? null,
-          created_date ?? null,
-        ],
-      );
-
-      return result;
-    }
-    catch (error: any) {
-
-      console.error('❌ insertTraining DB error:', error);
-
-      if (error.code === 'ER_DUP_ENTRY') {
-        throw new ConflictException('Training site already exists');
-      }
-
-      // Foreign key constraint (created_by user missing)
-      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-        throw new ConflictException('Invalid user reference');
-      }
-
-      // Fallback
-      throw new InternalServerErrorException(
-        'Failed to create training site',
-      );
-    }
-
-
+  } catch (error: any) {
+    console.error("❌ bulkInsertTrainings error:", error);
+    throw new InternalServerErrorException("Failed to bulk insert trainings");
   }
+}
+
+
+  async getExistingOfflineIds(offlineIds: string[],connection) {
+  if (!offlineIds.length) return [];
+    const placeholders = offlineIds.map(() => '?').join(',');
+
+
+  const [rows]: any = await connection.query(
+    `SELECT DISTINCT offline_id FROM training_sites WHERE offline_id IN (${placeholders})`,
+    offlineIds
+  );
+
+  return rows.map((r: any) => r.offline_id);
+}
 
 
   async updateTraining(
@@ -459,8 +526,8 @@ export class TrainingSiteRepositoryService {
     return rows.length > 0;
   }
 
-  async getTotalTrainingCount(): Promise<number> {
-    const [rows]: any = await this.db.query(
+  async getTotalTrainingCount(connection): Promise<number> {
+    const [rows]: any = await connection.query(
       'SELECT COUNT(*) as total FROM training_sites',
     );
 

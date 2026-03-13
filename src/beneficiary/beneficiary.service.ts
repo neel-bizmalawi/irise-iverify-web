@@ -208,12 +208,7 @@ export class BeneficiaryService {
 
       // create folder once
       beneficiaryFolderPath = `uploads/beneficiary/${beneficiaryId}`;
-      //       beneficiaryFolderPath = path.join(
-      //   process.cwd(),
-      //   "uploads",
-      //   "beneficiary",
-      //   String(beneficiaryId)
-      // );
+    
       fs.mkdirSync(beneficiaryFolderPath, { recursive: true });
 
       // save files using helper
