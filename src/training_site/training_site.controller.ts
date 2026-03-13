@@ -36,19 +36,19 @@ export class TrainingSiteController {
         return this.TrainingSiteService.getAuthority();
     }
 
-      @Get('cookstove_slug')
+    @Get('cookstove_slug')
     async fetchcCookstove() {
 
         return this.TrainingSiteService.getCookStove();
     }
 
-          @Get('lang_slug')
+    @Get('lang_slug')
     async fetchLangs() {
 
         return this.TrainingSiteService.getLang();
     }
 
-         @Get('getallSites')
+    @Get('getallSites')
     async fetchTrainingSites() {
 
         return this.TrainingSiteService.getTraningsites();
@@ -70,7 +70,7 @@ export class TrainingSiteController {
     @UseGuards(AuthGuard('jwt'))
     async CreateDsitrict(@Body('district') district: string, @Req() req: any,) {
         const userId = req.user.userId;
-        console.log("user id is", userId)
+        console.log("user id is", userId);
         return this.TrainingSiteService.CreateDistrict(district, userId);
     }
 
@@ -128,7 +128,7 @@ export class TrainingSiteController {
 
     @Post('sync')
     @UseGuards(AuthGuard('jwt'))
-    async syncTrainings(
+    async syncTrainings(   
         @Body('trainings') trainings: SyncTrainingSiteDto[],
         @Req() req: any,
     ) {
@@ -145,6 +145,5 @@ export class TrainingSiteController {
     async getupdatedata(@Body('date') date: string) {
         return this.TrainingSiteService.getupdateData(new Date(date));
     }
-
 
 }

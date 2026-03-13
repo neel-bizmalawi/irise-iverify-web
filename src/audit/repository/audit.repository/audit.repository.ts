@@ -1,20 +1,17 @@
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { CreateAuditDto } from 'src/audit/createAudit.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
-import { CreateMonitoringDto } from 'src/monitoring/createmonitoring.dto';
 
 @Injectable()
-export class MonitoringRepositoryService {
+export class AuditRepository {
 
-    constructor(private readonly db: DatabaseService) {
+    constructor(private readonly db: DatabaseService) { }
 
-    }
 
-    async insertMonitoring(
-        data: CreateMonitoringDto,
+    async insertDataAudit(
+        data: CreateAuditDto,
         username: string,
         connection
     ) {
@@ -37,12 +34,11 @@ export class MonitoringRepositoryService {
             const placeholders = Object.keys(payload).map(() => "?").join(", ");
             const values = Object.values(payload);
 
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const [result] = await connection.query(
-                `INSERT INTO monitoring_data (${columns}) VALUES (${placeholders})`,
+                `INSERT INTO audit (${columns}) VALUES (${placeholders})`,
                 values
             );
-
-
 
             return result;
 
@@ -50,22 +46,11 @@ export class MonitoringRepositoryService {
 
             console.error("❌ insertBeneficiary DB error:", error);
 
-            if (error.code === "ER_DUP_ENTRY") {
-
-                throw new ConflictException("Duplicate value detected");
-            }
-
-            if (error.code === "ER_NO_REFERENCED_ROW_2") {
-                throw new ConflictException("Invalid foreign key reference");
-            }
-
             throw new InternalServerErrorException(
                 "Failed to create beneficiary"
             );
         }
     }
-
-
 
     async updateFilesPath(monitoringId: number, files: any, connection) {
         try {
@@ -84,9 +69,9 @@ export class MonitoringRepositoryService {
             }
 
             const sql = `
-      UPDATE monitoring_data
+      UPDATE audit
       SET ${fields.join(', ')}
-      WHERE monitoring_id = ?
+      WHERE audit_id = ?
     `;
 
             values.push(monitoringId);
@@ -161,17 +146,17 @@ export class MonitoringRepositoryService {
         });
 
         const sql = `
-            SELECT COUNT(*) as total
-            FROM monitoring_data md
-            ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-          `;
+                SELECT COUNT(*) as total
+                FROM audit af
+                ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+              `;
 
         const [[result]] = await this.db.query(sql, values);
         return result.total;
     }
 
     async getTotalCount(): Promise<number> {
-        const [rows]: any = await this.db.query('select count(*) as total from monitoring_data',);
+        const [rows]: any = await this.db.query('select count(*) as total from audit',);
         return rows[0].total;
     }
 
@@ -229,10 +214,10 @@ export class MonitoringRepositoryService {
         const safeOffset = Math.max(0, Number((page - 1) * limit));
 
         const sql = `
-            SELECT md.*
-            FROM monitoring_data md
+            SELECT af.*
+            FROM audit af
             ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-            ORDER BY md.monitoring_id DESC
+            ORDER BY af.audit_id DESC
             LIMIT ${safeLimit} OFFSET ${safeOffset}
           `;
 
@@ -251,8 +236,8 @@ export class MonitoringRepositoryService {
 
         const sql = `
   SELECT *
-  FROM monitoring_data
-  ORDER BY monitoring_id DESC
+  FROM audit
+  ORDER BY audit_id DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
 
@@ -260,18 +245,13 @@ export class MonitoringRepositoryService {
         return rows;
     }
 
-    async deleteMonitoringbyId(mid: number) {
-        try {
-            const [rows] = await this.db.query(
-                'delete FROM monitoring_data WHERE monitoring_id = ? LIMIT 1',
-                [mid]
-            );
-            return rows;
-        }
-        catch (error) {
-            console.error("delete monitoring repository error", error)
-            throw new InternalServerErrorException("failed to delte monitoring in repo");
-        }
+
+    async deleteAuditId(aid: number) {
+        const [rows] = await this.db.query(
+            'delete FROM audit WHERE audit_id = ? LIMIT 1',
+            [aid]
+        );
+        return rows;
     }
 
 }

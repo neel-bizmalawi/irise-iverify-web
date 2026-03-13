@@ -218,7 +218,7 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
-    async getcookstove() {
+  async getcookstove() {
 
     const [rows] = await this.db.query(
       `SELECT cookstove_name from cookstove_methods`
@@ -227,7 +227,7 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
-    async getlangs() {
+  async getlangs() {
 
     const [rows] = await this.db.query(
       `SELECT lang_name from languages`
@@ -236,7 +236,7 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
-      async getTrainingAllsites() {
+  async getTrainingAllsites() {
 
     const [rows] = await this.db.query(
       `SELECT training_site from training_sites`
@@ -262,7 +262,7 @@ export class TrainingSiteRepositoryService {
         road_access,
         total_people,
         latitude,
-        longitude,        
+        longitude,
       } = data;
 
 

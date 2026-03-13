@@ -12,10 +12,14 @@ import { UserRepositoryService } from './user/user.repository/user.repository.se
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { AuditModule } from './audit/audit.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
   imports: [ TrainingSiteModule,
+        ScheduleModule.forRoot(),
+
      ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
@@ -27,7 +31,8 @@ import { MonitoringModule } from './monitoring/monitoring.module';
     AuthModule,
     BeneficiaryModule,
     UserModule,
-    MonitoringModule
+    MonitoringModule,
+    AuditModule
   ],
   controllers: [AppController],
   providers: [AppService, UserRepositoryService],

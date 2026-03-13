@@ -28,7 +28,7 @@ export class AuthRepositoryService {
   await this.db.query(query, [data.token, data.expires_at]);
 }
 
-async isTokenBlacklisted(token: string) {
+async isTokenBlacklisted(token: string): Promise<boolean> {
 
   const query = `
     SELECT id FROM token_blacklist
@@ -40,4 +40,16 @@ async isTokenBlacklisted(token: string) {
 
   return rows.length > 0;
 }
+
+
+async deleteExpiredTokens() {
+  const query = `
+    DELETE FROM token_blacklist
+    WHERE expires_at < NOW()
+  `;
+
+  await this.db.query(query);
+}
+
+
 }

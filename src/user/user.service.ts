@@ -43,7 +43,7 @@ export class UserService {
         }
     }
 
-    
+
     async UpdateUser(adminId: number, dto: CreateUserDto, userId: number) {
 
         const user = await this.trainingSiteRepo.getUserById(userId);
@@ -67,7 +67,6 @@ export class UserService {
         }
         catch (error) {
             console.error("CreateUser error", error)
-            console.log("error is inside catch", error);
 
             throw new InternalServerErrorException(
                 'Failed to update user',
@@ -82,57 +81,63 @@ export class UserService {
         filters: any[] = [],
     ) {
 
-        if (page < 1) page = 1;
-        if (limit < 1) limit = 10;
+        try {
+            if (page < 1) page = 1;
+            if (limit < 1) limit = 10;
 
-        // 🔑 MAP FILTERS HERE
-        const validatedFilters = filters.map((f) => {
-            const schema = USER_FILTER_SCHEMA[f.field];
+            // 🔑 MAP FILTERS HERE
+            const validatedFilters = filters.map((f) => {
+                const schema = USER_FILTER_SCHEMA[f.field];
 
-            if (!schema) {
-                throw new Error(`Invalid filter field: ${f.field}`);
-            }
+                if (!schema) {
+                    throw new Error(`Invalid filter field: ${f.field}`);
+                }
 
-            if (!schema.operators.includes(f.operator)) {
-                throw new Error(`Invalid operator for field: ${f.field}`);
-            }
+                if (!schema.operators.includes(f.operator)) {
+                    throw new Error(`Invalid operator for field: ${f.field}`);
+                }
+
+                return {
+                    column: schema.column,
+                    type: schema.type,
+                    operator: f.operator,
+                    value: f.value,
+                };
+            });
+
+
+
+            const totalRecords =
+                validatedFilters.length > 0
+                    ? await this.userRepo.getFilteredCount(validatedFilters)
+                    : await this.userRepo.getTotalCount();
+
+            const totalPages = Math.ceil(totalRecords / limit);
+
+            const data =
+                validatedFilters.length > 0
+                    ? await this.userRepo.findWithFilters(validatedFilters, page, limit)
+                    : await this.userRepo.findAll(page, limit);
+
+            const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
+            const end = Math.min(page * limit, totalRecords);
 
             return {
-                column: schema.column,
-                type: schema.type,
-                operator: f.operator,
-                value: f.value,
+                currentPage: page,
+                limit,
+                start,
+                end,
+                totalRecords,
+                totalPages,
+                nextPage: page < totalPages ? page + 1 : null,
+                previousPage: page > 1 ? page - 1 : null,
+                data,
             };
-        });
-
-
-
-        const totalRecords =
-            validatedFilters.length > 0
-                ? await this.userRepo.getFilteredCount(validatedFilters)
-                : await this.userRepo.getTotalCount();
-
-        const totalPages = Math.ceil(totalRecords / limit);
-
-        const data =
-            validatedFilters.length > 0
-                ? await this.userRepo.findWithFilters(validatedFilters, page, limit)
-                : await this.userRepo.findAll(page, limit);
-
-        const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
-        const end = Math.min(page * limit, totalRecords);
-
-        return {
-            currentPage: page,
-            limit,
-            start,
-            end,
-            totalRecords,
-            totalPages,
-            nextPage: page < totalPages ? page + 1 : null,
-            previousPage: page > 1 ? page - 1 : null,
-            data,
-        };
+        }
+        catch (error) {
+            console.error("get user error is", error);
+            throw new InternalServerErrorException("falied to get user list",);
+        }
     }
 
 
@@ -151,61 +156,65 @@ export class UserService {
 
     async deleteUser(userId: number) {
 
-        if (!userId) {
-            throw new BadRequestException("User id is missing");
-        }
+        try {
+            if (!userId) {
+                throw new BadRequestException("User id is missing");
+            }
 
-        const data = await this.userRepo.deleteUserId(userId);
-        return { message: "data deleted successfully" }
+            const data = await this.userRepo.deleteUserId(userId);
+            return { message: "data deleted successfully" }
+        }
+        catch (error) {
+            console.error("failed to delete user", error);
+            throw new InternalServerErrorException("falied to delte user",);
+        }
     }
 
     async getUserRoles() {
         try {
-            const roles=await this.userRepo.getRoles();
+            const roles = await this.userRepo.getRoles();
 
-            if(!roles || roles.length===0)
-            {
+            if (!roles || roles.length === 0) {
                 return {
-                    success:false,
-                    message:"no roles found",
-                    data:[],
+                    success: false,
+                    message: "no roles found",
+                    data: [],
                 }
             }
 
-            return{
-                success:true,
-                message:"roles fetched succesfully",
-                data : roles,
+            return {
+                success: true,
+                message: "roles fetched succesfully",
+                data: roles,
             }
         } catch (error) {
-            console.error("getUserRles error",error)
+            console.error("getUserRles error", error)
 
             throw new InternalServerErrorException("Failed to fetch roles",);
         }
     }
 
-        async getAll() {
+    async getAll() {
         try {
             const users = await this.userRepo.getAlluser();
 
-            if(!users || users.length===0)
-            {
+            if (!users || users.length === 0) {
                 return {
-                    success:false,
-                    message:"no users found",
-                    data:[],
+                    success: false,
+                    message: "no users found",
+                    data: [],
                 }
             }
 
-            return{
-                success:true,
-                message:"user fetched succesfully",
-                data : users,
+            return {
+                success: true,
+                message: "user fetched succesfully",
+                data: users,
             }
         } catch (error) {
-            console.error("getUserRles error",error)
+            console.error("getUserRles error", error)
 
-            throw new InternalServerErrorException("Failed to fetch roles",);
+            throw new InternalServerErrorException("Failed to get all users",);
         }
     }
 }

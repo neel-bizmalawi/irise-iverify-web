@@ -16,52 +16,66 @@ export class TrainingSiteService {
 
 
   async getAll(page: number = 1, limit: number = 100) {
-    if (page < 1) page = 1;
-    if (limit < 1) limit = 10;
 
-    const totalRecords = await this.trainingSiteRepo.getTotalCount();
-    const totalPages = Math.ceil(totalRecords / limit)
+    try {
+      if (page < 1) page = 1;
+      if (limit < 1) limit = 10;
 
-    const data = await this.trainingSiteRepo.findAll(page, limit);
+      const totalRecords = await this.trainingSiteRepo.getTotalCount();
+      const totalPages = Math.ceil(totalRecords / limit)
 
-    const start =
-      totalRecords === 0 ? 0 : (page - 1) * limit + 1;
+      const data = await this.trainingSiteRepo.findAll(page, limit);
 
-    const end = Math.min(page * limit, totalRecords);
+      const start =
+        totalRecords === 0 ? 0 : (page - 1) * limit + 1;
 
-    return {
-      currentPage: page,
-      limit: limit,
-      start,
-      end,
-      totalRecords,
-      totalPages,
-      nextPage: page < totalPages ? page + 1 : null,
-      previousPage: page > 1 ? page - 1 : null,
-      data,
-    };
+      const end = Math.min(page * limit, totalRecords);
+
+      return {
+        currentPage: page,
+        limit: limit,
+        start,
+        end,
+        totalRecords,
+        totalPages,
+        nextPage: page < totalPages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null,
+        data,
+      };
+    }
+    catch (error) {
+      console.error("getAll error", error)
+      throw new InternalServerErrorException("Failed to fetch training sites");
+
+    }
 
   }
 
   async createTraining(dto: CreateTrainingSiteDto, userId: number) {
 
-
+try{
     const user = await this.trainingSiteRepo.getUserById(userId);
 
     const username = user.name;
 
-    console.log("username is",username);
+    console.log("username is", username);
 
     const data = await this.trainingSiteRepo.insertTraining(dto, username)
 
     return {
       message: 'Training site created successfully',
     }
+  }
+ catch (error) {
+      console.error("createTraining error", error)
+      throw new InternalServerErrorException("Failed to create sites");
 
+    }
   }
 
 
   async getTrainingData(trainingId: number) {
+    try{
 
     if (!trainingId) {
       throw new BadRequestException("Training id is missing");
@@ -73,6 +87,13 @@ export class TrainingSiteService {
       , data
     }
   }
+  
+   catch (error) {
+      console.error("getTrainingData error", error)
+      throw new InternalServerErrorException("Failed to get training sites by id");
+
+    }
+  }
 
 
 
@@ -80,12 +101,19 @@ export class TrainingSiteService {
 
   async deleteTraining(trainingId: number) {
 
+    try{
     if (!trainingId) {
       throw new BadRequestException("Training id is missing");
     }
 
     const data = await this.trainingSiteRepo.deleteTrainginId(trainingId);
     return { message: "data deleted successfully" }
+  }
+  catch (error) {
+      console.error("deleteTraining error", error)
+      throw new InternalServerErrorException("Failed to delete training");
+
+    }
   }
 
 
@@ -109,7 +137,7 @@ export class TrainingSiteService {
     };
   }
 
-    async getCookStove() {
+  async getCookStove() {
     const data = await this.trainingSiteRepo.getcookstove();
 
     return {
@@ -118,7 +146,7 @@ export class TrainingSiteService {
     };
   }
 
-      async getLang() {
+  async getLang() {
     const data = await this.trainingSiteRepo.getlangs();
 
     return {
@@ -128,7 +156,7 @@ export class TrainingSiteService {
   }
 
 
-        async getTraningsites() {
+  async getTraningsites() {
     const data = await this.trainingSiteRepo.getTrainingAllsites();
 
     return {
@@ -139,41 +167,23 @@ export class TrainingSiteService {
 
   async updateTrain(trainingId: number, dto: UpdateTrainingSiteDto, userId: number) {
 
+    try{
     const user = await this.trainingSiteRepo.getUserById(userId);
 
     const username = user.name;
 
 
     return this.trainingSiteRepo.updateTraining(trainingId, dto, username);
+    }
+
+      catch (error) {
+      console.error("updateTrain error", error)
+      throw new InternalServerErrorException("Failed to update training");
+
+    }
+
   }
 
-
-  //       async getFilteredUsers(filters: any[]) {
-  //     // 1️⃣ Validate filters
-  //     const validatedFilters = filters.map((f) => {
-  //       const schema = TRAINING_SITES_FILTER_SCHEMA[f.field];
-
-  //       if (!schema) {
-  //         throw new BadRequestException(`Invalid field: ${f.field}`);
-  //       }
-
-  //       if (!schema.operators.includes(f.operator)) {
-  //         throw new BadRequestException(
-  //           `Invalid operator for field ${f.field}`,
-  //         );
-  //       }
-
-  //       return {
-  //         column: schema.column,
-  //         type: schema.type,
-  //         value: f.value,
-  //         operator: f.operator,
-  //       };
-  //     });
-
-  //     // 2️⃣ Send safe data to repository
-  //     return  this.trainingSiteRepo.findWithFilters(validatedFilters);
-  //   }
 
 
   async getTrainingSites(
@@ -181,6 +191,8 @@ export class TrainingSiteService {
     limit: number,
     filters: any[] = [],
   ) {
+
+    try{
 
     if (page < 1) page = 1;
     if (limit < 1) limit = 10;
@@ -235,9 +247,17 @@ export class TrainingSiteService {
     };
   }
 
+     catch (error) {
+      console.error("getTrainingSites error", error)
+      throw new InternalServerErrorException("Failed to getTraining by filter");
+
+    }
+  }
+
 
 
   async syncTrainings(trainings: SyncTrainingSiteDto[], userId: number) {
+    try{
 
     const user = await this.trainingSiteRepo.getUserById(userId);
 
@@ -289,7 +309,13 @@ export class TrainingSiteService {
       failedRecords: failed,
       totalTraining,
     };
+  }
 
+     catch (error) {
+      console.error("syncTrainings error", error)
+      throw new InternalServerErrorException("Failed to sync training data");
+
+    }
   }
 
   async getupdateDataCount(dates: Date) {
@@ -358,7 +384,7 @@ export class TrainingSiteService {
 
       const username = user.name;
 
-      console.log("username is",username)
+      console.log("username is", username)
 
       const insertDistrict = await this.trainingSiteRepo.insertDistrict(district, username);
 
@@ -378,7 +404,7 @@ export class TrainingSiteService {
   }
 
 
-   async searchDistrict(search: string) {
+  async searchDistrict(search: string) {
     try {
 
       const record = await this.trainingSiteRepo.getSearchDistrict(search);
@@ -402,7 +428,7 @@ export class TrainingSiteService {
     }
   }
 
-    async searchAuthority(search: string) {
+  async searchAuthority(search: string) {
     try {
 
       const record = await this.trainingSiteRepo.getSearchAuthority(search);

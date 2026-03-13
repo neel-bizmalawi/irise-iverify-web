@@ -123,7 +123,7 @@ export class MonitoringService {
             limit: number,
             filters: any[] = [],
         ) {
-    
+            try{
             if (page < 1) page = 1;
             if (limit < 1) limit = 10;
     
@@ -176,12 +176,19 @@ export class MonitoringService {
                 data,
             };
         }
+        catch(error)
+        {
+            console.error("getMonitorings error is",error)
+            throw new InternalServerErrorException("failed to get monitoring data")
+        }
+        }
 
 
 
 
          async deleteMonitroing(mid: number) {
         
+            try{
             if (!mid) {
               throw new BadRequestException("Monitoring id is missing");
             }
@@ -205,5 +212,10 @@ export class MonitoringService {
             }
         
             return { message: "Monitorings deleted successfully" };
+        }
+        catch(error){
+            console.error("delete monitoring error",error);
+            throw error;
+        }
           }
 }

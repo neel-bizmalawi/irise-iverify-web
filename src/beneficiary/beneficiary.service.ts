@@ -1,12 +1,11 @@
 /* eslint-disable prettier/prettier */
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { BeneficiaryRepositoryService } from './beneficiary.repository/beneficiary.repository.service';
 import { CreateBeneficiarydto } from './create-benificiary.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { TrainingSiteRepositoryService } from 'src/training_site/training_site.repository/training_site.repository.service';
 import { DatabaseService } from 'src/database/database.service';
-import { TRAINING_SITES_FILTER_SCHEMA } from 'src/training_site/training-sites.filter.schema';
 import { UpdateBeneficiaryDto } from './update-beneficiary-site-dto';
 import { BENEFICIARY_FILTER_SCHEMA } from './beneficiary.filter.schema';
 import { v4 as uuid } from 'uuid';
@@ -269,7 +268,7 @@ export class BeneficiaryService {
       return { message: "Beneficiary created successfully" };
 
     } catch (error) {
-
+      console.error("createBeneficiary error", error)
       await connection.rollback();
 
       // delete entire folder
@@ -309,6 +308,8 @@ export class BeneficiaryService {
       }
     } catch (error) {
       console.error("get benficiary data error ", error)
+      throw new InternalServerErrorException("Failed to fetch getBeneficiary Data");
+
     }
   }
 
@@ -317,58 +318,64 @@ export class BeneficiaryService {
     limit: number,
     filters: any[] = [],
   ) {
+    try {
 
-    if (page < 1) page = 1;
-    if (limit < 1) limit = 10;
+      if (page < 1) page = 1;
+      if (limit < 1) limit = 10;
 
-    // 🔑 MAP FILTERS HERE
-    const validatedFilters = filters.map((f) => {
-      const schema = BENEFICIARY_FILTER_SCHEMA[f.field];
+      // 🔑 MAP FILTERS HERE
+      const validatedFilters = filters.map((f) => {
+        const schema = BENEFICIARY_FILTER_SCHEMA[f.field];
 
-      if (!schema) {
-        throw new Error(`Invalid filter field: ${f.field}`);
-      }
+        if (!schema) {
+          throw new Error(`Invalid filter field: ${f.field}`);
+        }
 
-      if (!schema.operators.includes(f.operator)) {
-        throw new Error(`Invalid operator for field: ${f.field}`);
-      }
+        if (!schema.operators.includes(f.operator)) {
+          throw new Error(`Invalid operator for field: ${f.field}`);
+        }
+
+        return {
+          column: schema.column,
+          type: schema.type,
+          operator: f.operator,
+          value: f.value,
+        };
+      });
+
+
+      const totalRecords =
+        validatedFilters.length > 0
+          ? await this.beneficiaryRepo.getFilteredCount(validatedFilters)
+          : await this.beneficiaryRepo.getTotalCount();
+
+      const totalPages = Math.ceil(totalRecords / limit);
+
+      const data =
+        validatedFilters.length > 0
+          ? await this.beneficiaryRepo.findWithFilters(validatedFilters, page, limit)
+          : await this.beneficiaryRepo.findAll(page, limit);
+
+      const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
+      const end = Math.min(page * limit, totalRecords);
 
       return {
-        column: schema.column,
-        type: schema.type,
-        operator: f.operator,
-        value: f.value,
+        currentPage: page,
+        limit,
+        start,
+        end,
+        totalRecords,
+        totalPages,
+        nextPage: page < totalPages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null,
+        data,
       };
-    });
+    }
+    catch (error) {
+      console.error("getBeneficiarylist error", error)
+      throw new InternalServerErrorException("Failed to fetch Beneficiary list");
 
-
-
-    const totalRecords =
-      validatedFilters.length > 0
-        ? await this.beneficiaryRepo.getFilteredCount(validatedFilters)
-        : await this.beneficiaryRepo.getTotalCount();
-
-    const totalPages = Math.ceil(totalRecords / limit);
-
-    const data =
-      validatedFilters.length > 0
-        ? await this.beneficiaryRepo.findWithFilters(validatedFilters, page, limit)
-        : await this.beneficiaryRepo.findAll(page, limit);
-
-    const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
-    const end = Math.min(page * limit, totalRecords);
-
-    return {
-      currentPage: page,
-      limit,
-      start,
-      end,
-      totalRecords,
-      totalPages,
-      nextPage: page < totalPages ? page + 1 : null,
-      previousPage: page > 1 ? page - 1 : null,
-      data,
-    };
+    }
   }
 
 
@@ -747,30 +754,36 @@ export class BeneficiaryService {
   // }
 
   async deleteBeneficiary(bid: number) {
+    try {
+      if (!bid) {
+        throw new BadRequestException("Beneficiary id is missing");
+      }
 
-    if (!bid) {
-      throw new BadRequestException("Beneficiary id is missing");
+      const result = await this.beneficiaryRepo.deleteBeneficiaryId(bid);
+
+      // If no rows were deleted
+      if (!result || result.affectedRows === 0) {
+        throw new BadRequestException("Beneficiary not found or already deleted");
+      }
+
+      const folderPath = path.join(
+        process.cwd(),
+        "uploads",
+        "beneficiary",
+        String(bid)
+      );
+
+      if (fs.existsSync(folderPath)) {
+        await fs.promises.rm(folderPath, { recursive: true, force: true });//rmSync means remove
+      }
+
+      return { message: "Beneficiary deleted successfully" };
     }
+    catch (error) {
+      console.error("deleteBeneficairy error is", error);
+      throw new InternalServerErrorException("Failed to Delete Beneficiary");
 
-    const result = await this.beneficiaryRepo.deleteBeneficiaryId(bid);
-
-    // If no rows were deleted
-    if (!result || result.affectedRows === 0) {
-      throw new BadRequestException("Beneficiary not found or already deleted");
     }
-
-    const folderPath = path.join(
-      process.cwd(),
-      "uploads",
-      "beneficiary",
-      String(bid)
-    );
-
-    if (fs.existsSync(folderPath)) {
-      await fs.promises.rm(folderPath, { recursive: true, force: true });//rmSync means remove
-    }
-
-    return { message: "Beneficiary deleted successfully" };
   }
 
 }

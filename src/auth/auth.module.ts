@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepositoryService } from './auth.repository.service';
 import { DatabaseModule } from 'src/database/database.module';
+import { TokenCleanupService } from './token-cleanup.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { DatabaseModule } from 'src/database/database.module';
     ConfigModule,
     DatabaseModule
   ],
-  providers: [JwtStrategy, AuthService,AuthRepositoryService],
+  providers: [JwtStrategy, AuthService,AuthRepositoryService, TokenCleanupService,], 
 
   exports: [PassportModule], 
   controllers: [AuthController],
