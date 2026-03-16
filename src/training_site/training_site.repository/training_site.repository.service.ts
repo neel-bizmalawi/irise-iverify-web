@@ -74,11 +74,13 @@ export class TrainingSiteRepositoryService {
       values.push(value);
     });
 
-    const sql = `
-    SELECT COUNT(*) as total
-    FROM training_sites ts
-    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-  `;
+const sql = `
+  SELECT COUNT(*) as total
+  FROM training_sites ts
+  LEFT JOIN ab_admin a ON ts.created_by = a.adminID
+  LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
+  ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+`;
 
     const [[result]] = await this.db.query(sql, values);
     return result.total;
@@ -137,13 +139,26 @@ export class TrainingSiteRepositoryService {
     const safeLimit = Math.max(1, Number(limit));
     const safeOffset = Math.max(0, Number((page - 1) * limit));
 
-    const sql = `
-    SELECT ts.*
-    FROM training_sites ts
-    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-    ORDER BY ts.training_point_id DESC
-    LIMIT ${safeLimit} OFFSET ${safeOffset}
-  `;
+    //   const sql = `
+    //   SELECT ts.*
+    //   FROM training_sites ts
+    //   ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    //   ORDER BY ts.training_point_id DESC
+    //   LIMIT ${safeLimit} OFFSET ${safeOffset}
+    // `;
+
+const sql = `
+  SELECT 
+    ts.*,
+    a.name AS created_by_name,
+    a2.name AS modified_by_name
+  FROM training_sites ts
+  LEFT JOIN ab_admin a ON ts.created_by = a.adminID
+  LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
+  ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+  ORDER BY ts.training_point_id DESC
+  LIMIT ${safeLimit} OFFSET ${safeOffset}
+`;
 
     const [rows] = await this.db.query(sql, values);
     return rows;
@@ -158,12 +173,24 @@ export class TrainingSiteRepositoryService {
       throw new Error('Invalid pagination parameters');
     }
 
+    //     const sql = `
+    //   SELECT *
+    //   FROM training_sites
+    //   ORDER BY training_point_id DESC
+    //   LIMIT ${safeLimit} OFFSET ${safeOffset}
+    // `;
+
     const sql = `
-  SELECT *
-  FROM training_sites
-  ORDER BY training_point_id DESC
-  LIMIT ${safeLimit} OFFSET ${safeOffset}
-`;
+    SELECT 
+      ts.*,
+      a.name AS created_by_name,
+      a2.name AS modified_by_name
+    FROM training_sites ts
+    LEFT JOIN ab_admin a ON ts.created_by = a.adminID
+    LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
+    ORDER BY ts.training_point_id DESC
+    LIMIT ${safeLimit} OFFSET ${safeOffset}
+  `;
 
     const [rows] = await this.db.query(sql);
     return rows;
@@ -261,9 +288,8 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
-  async insertTraining(data: CreateTrainingSiteDto, username: string) {
+  async insertTraining(data: CreateTrainingSiteDto, userid: number) {
 
-    console.log("username is ", username)
 
     try {
       const {
@@ -316,7 +342,7 @@ export class TrainingSiteRepositoryService {
           total_people ?? null,
           latitude ?? null,   // ✅ FIX
           longitude ?? null,  // ✅ FIX
-          username ?? null,
+          userid ?? null,
         ],
       );
 
@@ -431,6 +457,8 @@ export class TrainingSiteRepositoryService {
 
   async bulkInsertTrainings(data: SyncTrainingSiteDto[], username: string, connection) {
     try {
+
+
       const values = data.map(t => [
         t.offline_id ?? null,
         t.training_site ?? null,
@@ -446,8 +474,9 @@ export class TrainingSiteRepositoryService {
         t.latitude ?? null,
         t.longitude ?? null,
         username ?? null,
-        t.created_date ?? null,
+        t.created_date ?? new Date(),  // Default to current date if null
       ]);
+
 
       const [result]: any = await connection.query(
         `
@@ -479,20 +508,27 @@ export class TrainingSiteRepositoryService {
     } catch (error: any) {
       Sentry.captureException(error);
 
-      console.error("❌ bulkInsertTrainings error:", error);
+      console.error("❌ bulkInsertTrainings error:", {
+        message: error.message,
+        code: error.code,
+        sqlMessage: error.sqlMessage,
+        sqlState: error.sqlState,
+        errno: error.errno,
+        sql: error.sql,  // If available
+      });
+
       throw new InternalServerErrorException({
-        message: "Bulk insert failed",
-        error: error,
+        message: "Failed to bulk insert trainings",
+        error: error.message || error.sqlMessage || error || "Unknown error",
       });
     }
   }
 
 
-  async getExistingOfflineIds(offlineIds: string[], connection) {
+  async getExistingOfflineIds(offlineIds: number[], connection) {
     try {
       if (!offlineIds.length) return [];
       const placeholders = offlineIds.map(() => '?').join(',');
-
 
       const [rows]: any = await connection.query(
         `SELECT DISTINCT offline_id FROM training_sites WHERE offline_id IN (${placeholders})`,
@@ -512,7 +548,7 @@ export class TrainingSiteRepositoryService {
   async updateTraining(
     id: number,
     dto: UpdateTrainingSiteDto,
-    username: string,
+    userid: number,
 
   ) {
 
@@ -541,7 +577,7 @@ export class TrainingSiteRepositoryService {
     WHERE training_point_id= ?
   `;
 
-      await this.db.query(sql, [...values, username, id]);
+      await this.db.query(sql, [...values, userid, id]);
 
       return { message: 'Training site updated successfully' };
     }
@@ -589,7 +625,7 @@ export class TrainingSiteRepositoryService {
       SELECT COUNT(*) AS total
       FROM training_sites
       WHERE server_time > ?
-      OR modified_time > ?
+      OR modified_date > ?
       `,
         [date, date],
       );
@@ -611,7 +647,7 @@ export class TrainingSiteRepositoryService {
       SELECT *
       FROM training_sites
       WHERE server_time > ?
-      OR modified_time > ?
+      OR modified_date > ?
       `,
         [date, date],
       );

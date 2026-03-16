@@ -55,13 +55,9 @@ export class TrainingSiteService {
   async createTraining(dto: CreateTrainingSiteDto, userId: number) {
 
     try {
-      const user = await this.trainingSiteRepo.getUserById(userId);
 
-      const username = user.name;
 
-      console.log("username is", username);
-
-      const data = await this.trainingSiteRepo.insertTraining(dto, username)
+      const data = await this.trainingSiteRepo.insertTraining(dto, userId)
 
       return {
         message: 'Training site created successfully',
@@ -170,11 +166,9 @@ export class TrainingSiteService {
   async updateTrain(trainingId: number, dto: UpdateTrainingSiteDto, userId: number) {
 
     try {
-      const user = await this.trainingSiteRepo.getUserById(userId);
 
-      const username = user.name;
 
-      return this.trainingSiteRepo.updateTraining(trainingId, dto, username);
+      return this.trainingSiteRepo.updateTraining(trainingId, dto, userId);
     }
 
     catch (error) {
@@ -274,8 +268,13 @@ export class TrainingSiteService {
 
       const offlineids = trainings.map((t) => t.offline_id).filter((id) => id !== null && id !== undefined);
 
+      console.log("offline ids are",offlineids)
+
       const existingIds = await this.trainingSiteRepo.getExistingOfflineIds(offlineids, connection);
       const existingSet = new Set(existingIds);
+
+      console.log("existing ids are",existingIds);
+      console.log("exisitngSet is",existingSet)
 
       const newRecords = trainings.filter(training => {
         if (training.offline_id && existingSet.has(training.offline_id)) {
@@ -285,10 +284,12 @@ export class TrainingSiteService {
         return true;
       });
 
+      console.log("new Records are",newRecords)
+
       let syncedCount = 0;
 
-
       if (newRecords.length > 0) {
+        console.log("inside newRecords.length > 0");
         syncedCount = await this.trainingSiteRepo.bulkInsertTrainings(
           newRecords,
           username,

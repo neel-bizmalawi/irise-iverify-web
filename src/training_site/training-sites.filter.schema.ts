@@ -7,14 +7,26 @@ export const TRAINING_SITES_FILTER_SCHEMA = {
     operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
   },
 
-  created_by: {
-    column: 'ts.created_by',
-    type: 'text',
-    operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
-  },
+  // created_by: {
+  //   column: 'ts.created_by',
+  //   type: 'text',
+  //   operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  // },
 
-  modified_by: {
-    column: 'ts.modified_by',
+  created_by: {
+  column: 'a.name',
+  type: 'text',
+  operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+},
+
+  // modified_by: {
+  //   column: 'ts.modified_by',
+  //   type: 'text',
+  //   operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  // },
+
+    modified_by: {
+    column: 'a2.name',
     type: 'text',
     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
   },

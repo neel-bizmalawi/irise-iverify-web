@@ -10,8 +10,8 @@ import {
 export class SyncTrainingSiteDto {
 
   @IsOptional()
-  @IsString()
-  offline_id?: string;  
+  @IsNumber()
+  offline_id?: number;
 
   @IsOptional()
   @IsString()
@@ -61,11 +61,11 @@ export class SyncTrainingSiteDto {
   @IsNumber()
   longitude?: number;
 
-    @IsOptional()
-      @Type(() => Date)
-      created_date?: Date;
-  
-      @IsOptional()
-      @Type(() => Date)
-      server_time?: Date;
+  @IsOptional()
+  @Type(() => Date)
+  created_date?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  server_time?: Date;
 }
