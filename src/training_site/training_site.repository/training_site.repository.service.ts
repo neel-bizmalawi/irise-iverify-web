@@ -6,6 +6,8 @@ import { CreateTrainingSiteDto } from '../create-training-site.dto';
 import { UpdateTrainingSiteDto } from '../update-training-site.dto';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
 import { SyncTrainingSiteDto } from '../sync-training-site.dto';
+import * as Sentry from "@sentry/node";
+
 
 @Injectable()
 export class TrainingSiteRepositoryService {
@@ -176,26 +178,40 @@ export class TrainingSiteRepositoryService {
   }
 
   async getUserById(userId: number) {
-    console.log("inside serivce of user getUserById")
-    const [rows] = await this.db.query(
-      'SELECT * FROM ab_admin WHERE adminID = ? LIMIT 1',
-      [userId]
-    );
-    if (!rows || rows.length === 0) {
-      throw new NotFoundException(`User with id ${userId} not found`);
-    }
+    try {
+      console.log("inside serivce of user getUserById")
+      const [rows] = await this.db.query(
+        'SELECT * FROM ab_admin WHERE adminID = ? LIMIT 1',
+        [userId]
+      );
+      if (!rows || rows.length === 0) {
+        throw new NotFoundException(`User with id ${userId} not found`);
+      }
 
-    return rows[0]; // return single user, not array
+      return rows[0]; // return single user, not array
+    }
+    catch (error) {
+      Sentry.captureException(error);
+      console.error("getUserById error is", error)
+    }
 
   }
 
 
   async deleteTrainginId(training_id: number) {
-    const [rows] = await this.db.query(
-      'delete FROM training_sites WHERE training_point_id = ? LIMIT 1',
-      [training_id]
-    );
-    return rows;
+    try {
+      const [rows] = await this.db.query(
+        'delete FROM training_sites WHERE training_point_id = ? LIMIT 1',
+        [training_id]
+      );
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+      console.error("deleteTrainingId error is", error)
+      throw new InternalServerErrorException("failed to delete training site")
+
+    }
   }
 
 
@@ -413,28 +429,28 @@ export class TrainingSiteRepositoryService {
 
   // }
 
-  async bulkInsertTrainings(data: SyncTrainingSiteDto[], username: string,connection) {
-  try {
-    const values = data.map(t => [
-      t.offline_id ?? null,
-      t.training_site ?? null,
-      t.district ?? null,
-      t.gvh_name ?? null,
-      t.village_head_name ?? null,
-      t.traditional_authority ?? null,
-      t.cookstoves_count ?? null,
-      t.house_holds_count ?? null,
-      t.house_hold_radius ?? null,
-      t.road_access ?? null,
-      t.total_people ?? null,
-      t.latitude ?? null,
-      t.longitude ?? null,
-      username ?? null,
-      t.created_date ?? null,
-    ]);
+  async bulkInsertTrainings(data: SyncTrainingSiteDto[], username: string, connection) {
+    try {
+      const values = data.map(t => [
+        t.offline_id ?? null,
+        t.training_site ?? null,
+        t.district ?? null,
+        t.gvh_name ?? null,
+        t.village_head_name ?? null,
+        t.traditional_authority ?? null,
+        t.cookstoves_count ?? null,
+        t.house_holds_count ?? null,
+        t.house_hold_radius ?? null,
+        t.road_access ?? null,
+        t.total_people ?? null,
+        t.latitude ?? null,
+        t.longitude ?? null,
+        username ?? null,
+        t.created_date ?? null,
+      ]);
 
-    const [result]: any = await connection.query(
-      `
+      const [result]: any = await connection.query(
+        `
       INSERT INTO training_sites
       (
         offline_id,
@@ -455,30 +471,42 @@ export class TrainingSiteRepositoryService {
       )
       VALUES ?
       `,
-      [values],
-    );
+        [values],
+      );
 
-    return result.affectedRows;
+      return result.affectedRows;
 
-  } catch (error: any) {
-    console.error("❌ bulkInsertTrainings error:", error);
-    throw new InternalServerErrorException("Failed to bulk insert trainings");
+    } catch (error: any) {
+      Sentry.captureException(error);
+
+      console.error("❌ bulkInsertTrainings error:", error);
+      throw new InternalServerErrorException({
+        message: "Bulk insert failed",
+        error: error,
+      });
+    }
   }
-}
 
 
-  async getExistingOfflineIds(offlineIds: string[],connection) {
-  if (!offlineIds.length) return [];
-    const placeholders = offlineIds.map(() => '?').join(',');
+  async getExistingOfflineIds(offlineIds: string[], connection) {
+    try {
+      if (!offlineIds.length) return [];
+      const placeholders = offlineIds.map(() => '?').join(',');
 
 
-  const [rows]: any = await connection.query(
-    `SELECT DISTINCT offline_id FROM training_sites WHERE offline_id IN (${placeholders})`,
-    offlineIds
-  );
+      const [rows]: any = await connection.query(
+        `SELECT DISTINCT offline_id FROM training_sites WHERE offline_id IN (${placeholders})`,
+        offlineIds
+      );
 
-  return rows.map((r: any) => r.offline_id);
-}
+      return rows.map((r: any) => r.offline_id);
+    }
+    catch (error) {
+      Sentry.captureException(error);
+      console.error("get ExistingOfflineIds error", error)
+
+    }
+  }
 
 
   async updateTraining(
@@ -489,32 +517,42 @@ export class TrainingSiteRepositoryService {
   ) {
 
     // 🔥 Remove undefined fields
-    const filteredDto = Object.fromEntries(
-      Object.entries(dto).filter(([_, value]) => value !== undefined),
-    );
+    try {
+      const filteredDto = Object.fromEntries(
+        Object.entries(dto).filter(([_, value]) => value !== undefined),
+      );
 
-    const fields = Object.keys(filteredDto);
+      const fields = Object.keys(filteredDto);
 
-    if (!fields.length) {
-      return { message: 'Nothing to update' };
-    }
+      if (!fields.length) {
+        return { message: 'Nothing to update' };
+      }
 
-    const setClause = fields
-      .map((field) => `${field} = ?`)
-      .join(', ');
+      const setClause = fields
+        .map((field) => `${field} = ?`)
+        .join(', ');
 
-    // 🔥 Convert remaining values (safe)
-    const values = Object.values(filteredDto);
+      // 🔥 Convert remaining values (safe)
+      const values = Object.values(filteredDto);
 
-    const sql = `
+      const sql = `
     UPDATE training_sites
     SET ${setClause}, modified_date = NOW(),modified_by=?
-    WHERE training_point_id = ?
+    WHERE training_point_id= ?
   `;
 
-    await this.db.query(sql, [...values, username, id]);
+      await this.db.query(sql, [...values, username, id]);
 
-    return { message: 'Training site updated successfully' };
+      return { message: 'Training site updated successfully' };
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("update error", error)
+      throw new InternalServerErrorException("Failed to update training");
+
+
+    }
   }
 
   async existsByOfflineId(offlineId: string): Promise<boolean> {
@@ -527,11 +565,21 @@ export class TrainingSiteRepositoryService {
   }
 
   async getTotalTrainingCount(connection): Promise<number> {
-    const [rows]: any = await connection.query(
-      'SELECT COUNT(*) as total FROM training_sites',
-    );
+    try {
+      const [rows]: any = await connection.query(
+        'SELECT COUNT(*) as total FROM training_sites',
+      );
 
-    return rows[0].total;
+      return rows[0].total;
+    }
+    catch (error: any) {
+      Sentry.captureException(error);
+
+      throw new InternalServerErrorException({
+        message: "Bulk insert failed",
+        error: error.message || error,
+      });
+    }
   }
 
   async getUpdatedCountByDate(date: Date): Promise<number> {
@@ -541,12 +589,15 @@ export class TrainingSiteRepositoryService {
       SELECT COUNT(*) AS total
       FROM training_sites
       WHERE server_time > ?
+      OR modified_time > ?
       `,
-        [date],
+        [date, date],
       );
 
       return rows[0].total;
     } catch (error) {
+      Sentry.captureException(error);
+
       console.error('getUpdatedCountByDate error', error);
       throw error;
     }
@@ -560,12 +611,15 @@ export class TrainingSiteRepositoryService {
       SELECT *
       FROM training_sites
       WHERE server_time > ?
+      OR modified_time > ?
       `,
-        [date],
+        [date, date],
       );
 
       return rows
     } catch (error) {
+      Sentry.captureException(error);
+
       console.error('getUpdatedDataByDate error', error);
       throw error;
     }

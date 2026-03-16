@@ -112,6 +112,7 @@ export class TrainingSiteService {
     }
     catch (error) {
       console.error("deleteTraining error", error)
+
       throw new InternalServerErrorException("Failed to delete training");
 
     }
@@ -173,12 +174,12 @@ export class TrainingSiteService {
 
       const username = user.name;
 
-
       return this.trainingSiteRepo.updateTraining(trainingId, dto, username);
     }
 
     catch (error) {
       console.error("updateTrain error", error)
+
       throw new InternalServerErrorException("Failed to update training");
 
     }

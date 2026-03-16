@@ -128,7 +128,7 @@ export class TrainingSiteController {
 
     @Post('sync')
     @UseGuards(AuthGuard('jwt'))
-    async syncTrainings(   
+    async syncTrainings(
         @Body('trainings') trainings: SyncTrainingSiteDto[],
         @Req() req: any,
     ) {
