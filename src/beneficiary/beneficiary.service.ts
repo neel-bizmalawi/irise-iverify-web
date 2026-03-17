@@ -195,10 +195,9 @@ export class BeneficiaryService {
 
     try {
 
-      const user = await this.trainingSiteRepo.getUserById(userId);
-      const username = user.name;
+     
 
-      const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, username, connection);
+      const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId, connection);
 
       console.log("beneficiary result is", beneficiary);
 
@@ -445,8 +444,7 @@ export class BeneficiaryService {
 
     try {
 
-      const user = await this.trainingSiteRepo.getUserById(userId);
-      const username = user.name;
+
 
       const beneficiaryId = bid;
 
@@ -543,7 +541,7 @@ export class BeneficiaryService {
         udto,
         fileUpdates,
         connection,
-        username
+        userId
       );
 
       await connection.commit();

@@ -258,7 +258,7 @@ export class TrainingSiteService {
     await connection.beginTransaction();
 
     try {
-      
+
 
       let skippedCount = 0;
       const failed: any[] = [];
@@ -268,6 +268,9 @@ export class TrainingSiteService {
       const createdByUserId = user.adminID ?? userId;
 
       const offlineids = trainings.map((t) => t.offline_id).filter((id) => id !== null && id !== undefined);
+      for (const t of trainings) {
+        console.log("Incoming created_date:", t.created_date);
+      }
 
       console.log("offline ids are", offlineids)
 

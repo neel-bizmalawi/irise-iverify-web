@@ -23,7 +23,7 @@ export class UserRepositoryService {
 
 
 
-      const [result] = await this.db.query(
+      const result = await this.db.query(
         `
      INSERT INTO ab_admin
     (
@@ -95,7 +95,7 @@ export class UserRepositoryService {
     WHERE adminID = ?
   `;
 
-    const [result]: any = await this.db.query(
+    const result: any = await this.db.query(
       sql,
       [...values, username, AID],
     );
@@ -165,12 +165,12 @@ export class UserRepositoryService {
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       `;
 
-    const [[result]] = await this.db.query(sql, values);
+    const result = await this.db.query(sql, values);
     return result.total;
   }
 
   async getTotalCount(): Promise<number> {
-    const [rows]: any = await this.db.query('select count(*) as total from ab_admin',);
+    const rows: any = await this.db.query('select count(*) as total from ab_admin',);
     return rows[0].total;
   }
 
@@ -189,7 +189,7 @@ export class UserRepositoryService {
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
 
-    const [rows] = await this.db.query(sql);
+    const rows = await this.db.query(sql);
     return rows;
   }
 
@@ -253,13 +253,13 @@ export class UserRepositoryService {
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
 
-    const [rows] = await this.db.query(sql, values);
+    const rows = await this.db.query(sql, values);
     return rows;
   }
 
 
   async getUsersByid(userid: number) {
-    const [rows] = await this.db.query(
+    const rows = await this.db.query(
       'SELECT * FROM ab_admin WHERE adminID = ? LIMIT 1',
       [userid]
     );
@@ -277,7 +277,7 @@ export class UserRepositoryService {
 
   async getRoles() {
     try {
-      const [rows] = await this.db.query("select role_id, role_name, status from roles");
+      const rows = await this.db.query("select role_id, role_name, status from roles");
       return rows;
     }
     catch (error) {

@@ -163,14 +163,14 @@ export class BeneficiaryRepositoryService {
 
   async insertDataBeneficiary(
     data: CreateBeneficiarydto,
-    username: string,
+    userId: number,
     connection
   ) {
     try {
 
       const payload = {
         ...data,
-        created_by: username
+        created_by: userId
       };
 
       // ❗ remove flags (not DB columns)
@@ -283,7 +283,7 @@ export class BeneficiaryRepositoryService {
 
 
   async getBeneficiaryById(bid: number) {
-    const [rows] = await this.db.query(
+    const rows = await this.db.query(
       'SELECT * FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
       [bid]
     );
@@ -353,6 +353,8 @@ export class BeneficiaryRepositoryService {
     const sql = `
       SELECT COUNT(*) as total
       FROM beneficiaries bf
+      LEFT JOIN ab_admin a ON bf.created_by = a.adminID
+      LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     `;
 
@@ -414,8 +416,12 @@ export class BeneficiaryRepositoryService {
     const safeOffset = Math.max(0, Number((page - 1) * limit));
 
     const sql = `
-        SELECT bf.*
+        SELECT bf.*,
+            a.name AS created_by_name,
+        a2.name AS modified_by_name
         FROM beneficiaries bf
+           LEFT JOIN ab_admin a ON bf.created_by = a.adminID
+      LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
         ORDER BY bf.beneficiary_id DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset}
@@ -435,8 +441,12 @@ export class BeneficiaryRepositoryService {
     }
 
     const sql = `
-      SELECT *
-      FROM beneficiaries
+      SELECT bf.*,
+      a.name AS created_by_name,
+        a2.name AS modified_by_name
+      FROM beneficiaries bf
+       LEFT JOIN ab_admin a ON bf.created_by = a.adminID
+      LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
       ORDER BY beneficiary_id DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
@@ -451,7 +461,7 @@ export class BeneficiaryRepositoryService {
     dto: any,
     filePaths: any,
     connection: any,
-    username: string,
+    userid: number,
   ) {
 
     // merge dto + file paths
@@ -491,7 +501,7 @@ export class BeneficiaryRepositoryService {
     WHERE beneficiary_id = ?
   `;
 
-      await connection.query(sql, [...values, username, beneficiaryId]);
+      await connection.query(sql, [...values, userid, beneficiaryId]);
     }
     catch (error) {
       console.error("updateBeneficiary error is", error)

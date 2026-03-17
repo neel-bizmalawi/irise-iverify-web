@@ -123,14 +123,27 @@ export const BENEFICIARY_FILTER_SCHEMA = {
         operators: ['equals', 'not_equals'],
     },
 
-    created_by: {
-        column: 'bf.created_by',
+    // created_by: {
+    //     column: 'bf.created_by',
+    //     type: 'text',
+    //     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+    // },
+
+       created_by: {
+        column: 'a.name',
         type: 'text',
         operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
     },
 
+    // modified_by: {
+    //     column: 'bf.modified_by',
+    //     type: 'text',
+    //     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+    // },
+
+    
     modified_by: {
-        column: 'bf.modified_by',
+        column: 'a2.name',
         type: 'text',
         operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
     },
