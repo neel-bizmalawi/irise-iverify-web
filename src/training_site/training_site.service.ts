@@ -57,7 +57,6 @@ export class TrainingSiteService {
 
     try {
 
-
       const data = await this.trainingSiteRepo.insertTraining(dto, userId)
 
       return {
@@ -73,6 +72,7 @@ export class TrainingSiteService {
 
 
   async getTrainingData(trainingId: number) {
+
     try {
 
       if (!trainingId) {
@@ -258,6 +258,7 @@ export class TrainingSiteService {
     await connection.beginTransaction();
 
     try {
+      
 
       let skippedCount = 0;
       const failed: any[] = [];

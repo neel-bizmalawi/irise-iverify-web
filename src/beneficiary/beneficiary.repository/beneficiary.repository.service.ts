@@ -292,7 +292,7 @@ export class BeneficiaryRepositoryService {
 
 
   async getTotalCount(): Promise<number> {
-    const [rows]: any = await this.db.query('select count(*) as total from beneficiaries',);
+    const rows: any = await this.db.query('select count(*) as total from beneficiaries',);
     return rows[0].total;
   }
 
@@ -356,7 +356,7 @@ export class BeneficiaryRepositoryService {
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     `;
 
-    const [[result]] = await this.db.query(sql, values);
+    const result = await this.db.query(sql, values);
     return result.total;
   }
 
@@ -421,7 +421,7 @@ export class BeneficiaryRepositoryService {
         LIMIT ${safeLimit} OFFSET ${safeOffset}
       `;
 
-    const [rows] = await this.db.query(sql, values);
+    const rows = await this.db.query(sql, values);
     return rows;
   }
 
@@ -441,7 +441,7 @@ export class BeneficiaryRepositoryService {
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
 
-    const [rows] = await this.db.query(sql);
+    const rows = await this.db.query(sql);
     return rows;
   }
 

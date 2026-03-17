@@ -288,7 +288,7 @@ export class UserRepositoryService {
 
   async getAlluser() {
     try {
-      const [rows] = await this.db.query("select name from ab_admin");
+      const rows = await this.db.query("select name from ab_admin");
       return rows;
     }
     catch (error) {
