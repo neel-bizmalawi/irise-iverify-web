@@ -299,8 +299,8 @@ const Beneficiary = () => {
       { key: "device_serial_no", label: "Device Serial No", align: "center" },
       { key: "latitude", label: "Latitude", align: "center" },
       { key: "longitude", label: "Longitude", align: "center" },
-      { key: "created_by", label: "Created By", align: "center" },
-      { key: "modified_by", label: "Modified By", align: "center" },
+      { key: "created_by_name", label: "Created By", align: "center" },
+      { key: "modified_by_name", label: "Modified By", align: "center" },
       {
         key: "created_date",
         label: "Created Date",
@@ -604,8 +604,8 @@ const Beneficiary = () => {
           device_serial_no: item.device_serial_no,
           latitude: item.latitude ?? "-",
           longitude: item.longitude ?? "-",
-          created_by: item.created_by,
-          modified_by: item.modified_by,
+          created_by_name: item.created_by_name,
+          modified_by_name: item.modified_by_name,
           created_date: item.created_date ?? null,
           modified_date: item.modified_date ?? null,
         }));
