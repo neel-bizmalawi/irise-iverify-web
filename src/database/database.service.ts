@@ -1,27 +1,82 @@
 /* eslint-disable @typescript-eslint/require-await */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as mysql from 'mysql2/promise';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class DatabaseService {
-  private pool;
+export class DatabaseService implements OnModuleDestroy {
+  private pool: mysql.Pool;
 
   constructor(private config: ConfigService) {
     this.pool = mysql.createPool({
-    host: config.get('DB_HOST'),
-      user: config.get('DB_USER'),
-      password: config.get('DB_PASSWORD'),
-      database: config.get('DB_NAME'),
+      host: this.config.get<string>('DB_HOST'),
+      user: this.config.get<string>('DB_USER'),
+      password: this.config.get<string>('DB_PASSWORD'),
+      database: this.config.get<string>('DB_NAME'),
+
+      waitForConnections: true,
+      connectionLimit: 10,   // 🔥 important
+      queueLimit: 0,
+
+      connectTimeout: 10000, // optional safety
+    });
+
+    // ✅ Optional debug logs (remove in production if noisy)
+    this.pool.on('acquire', () => {
+      console.log('MySQL connection acquired');
+    });
+
+    this.pool.on('release', () => {
+      console.log('MySQL connection released');
     });
   }
 
-  query(sql: string, params: any[] = []) {
-    return this.pool.execute(sql, params);
+  // ✅ Safe query execution
+  async query<T = any>(sql: string, params: any[] = []): Promise<T> {
+    try {
+      const [result] = await this.pool.execute(sql, params);
+      return result as T;
+    } catch (error) {
+      console.error('❌ DB QUERY ERROR');
+      console.error('SQL:', sql);
+      console.error('PARAMS:', params);
+      console.error('ERROR:', error);
+      throw error;
+    }
   }
 
-  async getConnection() {
-    return this.pool.getConnection();
+  // ⚠️ Use only if you REALLY need manual control (transactions)
+  async getConnection(): Promise<mysql.PoolConnection> {
+    const connection = await this.pool.getConnection();
+    return connection;
+  }
+
+  // ✅ Helper for safe transactions (recommended way)
+  async transaction<T>(callback: (conn: mysql.PoolConnection) => Promise<T>): Promise<T> {
+    const connection = await this.pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const result = await callback(connection);
+
+      await connection.commit();
+      return result;
+    } catch (error) {
+      await connection.rollback();
+      console.error('❌ TRANSACTION ERROR:', error);
+      throw error;
+    } finally {
+      connection.release(); // 🚨 critical
+    }
+  }
+
+  // ✅ Graceful shutdown
+  async onModuleDestroy() {
+    if (this.pool) {
+      await this.pool.end();
+      console.log('MySQL pool closed');
+    }
   }
 }

@@ -10,7 +10,7 @@ export class AuthRepositoryService {
 
     async loginemail(email: string) {
 
-        const [rows]: any = await this.db.query(
+      const rows: any = await this.db.query(
             'SELECT adminID, email ,name,password FROM ab_admin WHERE email = ? or user_name =? LIMIT 1',
             [email,email]
         );
@@ -30,15 +30,19 @@ export class AuthRepositoryService {
 
 async isTokenBlacklisted(token: string): Promise<boolean> {
 
+  if (!token) {
+    return false;
+  }
+
   const query = `
     SELECT id FROM token_blacklist
     WHERE token = ?
     LIMIT 1
   `;
 
-  const [rows] = await this.db.query(query, [token]);
+  const rows: any = await this.db.query(query, [token]);
 
-  return rows.length > 0;
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 

@@ -262,6 +262,9 @@ export class TrainingSiteService {
       let skippedCount = 0;
       const failed: any[] = [];
 
+      const user = await this.trainingSiteRepo.getUserById(userId);
+
+      const createdByUserId = user.adminID ?? userId;
 
       const offlineids = trainings.map((t) => t.offline_id).filter((id) => id !== null && id !== undefined);
 
@@ -289,7 +292,7 @@ export class TrainingSiteService {
         console.log("inside newRecords.length > 0");
         syncedCount = await this.trainingSiteRepo.bulkInsertTrainings(
           newRecords,
-          userId,
+          createdByUserId,
           connection
         );
       }

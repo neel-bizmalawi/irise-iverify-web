@@ -7,7 +7,6 @@ import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepositoryService } from './auth.repository.service';
-import { DatabaseModule } from 'src/database/database.module';
 import { TokenCleanupService } from './token-cleanup.service';
 
 @Module({
@@ -20,7 +19,6 @@ import { TokenCleanupService } from './token-cleanup.service';
       }),
     }),
     ConfigModule,
-    DatabaseModule
   ],
   providers: [JwtStrategy, AuthService,AuthRepositoryService, TokenCleanupService,], 
 
