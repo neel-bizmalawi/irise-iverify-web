@@ -55,7 +55,7 @@ const TrainingSites = () => {
       },
       { key: "latitude", label: "Latitude", align: "center" },
       { key: "longitude", label: "Longitude", align: "center" },
-      { key: "created_by", label: "Created By", align: "center" },
+      { key: "created_by_name", label: "Created By", align: "center" },
       { key: "modified_by", label: "Modified By", align: "center" },
       {
         key: "created_date",
@@ -318,7 +318,7 @@ const TrainingSites = () => {
           latitude: item.latitude,
           longitude: item.longitude,
           status: item.status,
-          created_by: item.created_by,
+          created_by_name: item.created_by_name,
           modified_by: item.modified_by,
           created_date: item.created_date ?? null,
           modified_date: item.modified_date ?? null,

@@ -52,8 +52,9 @@ const initialValues = {
 // ── Validation Schema ─────────────────────────────────────────────────────────
 const validationSchema = Yup.object({
   trainingSiteName: Yup.string()
-   // .matches(/^[A-Za-z\s\W_]+$/, "Invalid characters")
-   .matches(/^[A-Za-z\s._,'&-]+$/, "Only letters and special characters")
+    // .matches(/^[A-Za-z\s\W_]+$/, "Invalid characters")
+    //.matches(/^[A-Za-z\s._,'&-]+$/, "Only letters and special characters")
+    .matches(/^[A-Za-z0-9\s._,'&()\-/]+$/, "Invalid characters")
     .required("Training site name is required"),
   district: Yup.string().required("District is required"),
   traditionalAuthority: Yup.string().required(
