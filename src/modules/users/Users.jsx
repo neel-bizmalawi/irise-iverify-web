@@ -318,6 +318,21 @@ const Users = () => {
       setEditId(null);
       setEditData(null);
     } catch (error) {
+      // catch (error) {
+      //   const errData = error?.response?.data;
+      //   const messages = Array.isArray(errData?.message)
+      //     ? errData.message
+      //     : [errData?.message || "Unknown error"];
+      //   console.error("Validation errors from server:", messages);
+      //   toast.error(messages.join(" | "));
+      // }
+      // AFTER
+      if (!error?.response) {
+        toast.error(
+          "No internet connection.",
+        );
+        return;
+      }
       const errData = error?.response?.data;
       const messages = Array.isArray(errData?.message)
         ? errData.message

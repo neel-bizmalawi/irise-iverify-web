@@ -157,47 +157,48 @@ const ValueInput = ({ field, value, onChange, fullWidth = false }) => {
   //   );
   // }
   if (field.type === "searchable") {
-  // Deduplicate options by labelKey to avoid React duplicate key warnings
-  const rawOptions = field.options || [];
-  const seen = new Set();
-  const dedupedOptions = rawOptions.filter((opt) => {
-    const label = typeof opt === "string" ? opt : opt[field.labelKey] || "";
-    if (seen.has(label)) return false;
-    seen.add(label);
-    return true;
-  });
+    // Deduplicate options by labelKey to avoid React duplicate key warnings
+    // const rawOptions = field.options || [];
+    const rawOptions = Array.isArray(field.options) ? field.options : [];
+    const seen = new Set();
+    const dedupedOptions = rawOptions.filter((opt) => {
+      const label = typeof opt === "string" ? opt : opt[field.labelKey] || "";
+      if (seen.has(label)) return false;
+      seen.add(label);
+      return true;
+    });
 
-  return (
-    <Autocomplete
-      size="small"
-      options={dedupedOptions}
-      getOptionLabel={(option) =>
-        typeof option === "string" ? option : option[field.labelKey] || ""
-      }
-      value={value || null}
-      onInputChange={(event, newValue) => {
-        field.onSearch?.(newValue);
-      }}
-      onChange={(event, newValue) => {
-        onChange(newValue?.[field.labelKey] || "");
-      }}
-      renderOption={(props, option) => {
-        const label =
-          typeof option === "string" ? option : option[field.labelKey] || "";
-        const uniqueKey = option?.id ?? option?.training_site ?? label;
-        return (
-          <li {...props} key={uniqueKey}>
-            {label}
-          </li>
-        );
-      }}
-      renderInput={(params) => (
-        <TextField {...params} placeholder={`Search ${field.label}`} />
-      )}
-      sx={{ minWidth: 200 }}
-    />
-  );
-}
+    return (
+      <Autocomplete
+        size="small"
+        options={dedupedOptions}
+        getOptionLabel={(option) =>
+          typeof option === "string" ? option : option[field.labelKey] || ""
+        }
+        value={value || null}
+        onInputChange={(event, newValue) => {
+          field.onSearch?.(newValue);
+        }}
+        onChange={(event, newValue) => {
+          onChange(newValue?.[field.labelKey] || "");
+        }}
+        renderOption={(props, option) => {
+          const label =
+            typeof option === "string" ? option : option[field.labelKey] || "";
+          const uniqueKey = option?.id ?? option?.training_site ?? label;
+          return (
+            <li {...props} key={uniqueKey}>
+              {label}
+            </li>
+          );
+        }}
+        renderInput={(params) => (
+          <TextField {...params} placeholder={`Search ${field.label}`} />
+        )}
+        sx={{ minWidth: 200 }}
+      />
+    );
+  }
 
   if (field.type === "date") {
     return (
@@ -274,12 +275,12 @@ const RuleRowDesktop = ({
       sx={{ ...selectSx, minWidth: 130 }}
     > */}
     <Select
-  size="small"
-  value={rule.field}
-  onChange={(e) => onFieldChange(e.target.value)}
-  sx={{ ...selectSx, minWidth: 130 }}
-  MenuProps={FIELD_MENU_PROPS}
->
+      size="small"
+      value={rule.field}
+      onChange={(e) => onFieldChange(e.target.value)}
+      sx={{ ...selectSx, minWidth: 130 }}
+      MenuProps={FIELD_MENU_PROPS}
+    >
       {availableFields.map((f) => (
         <MenuItem key={f.key} value={f.key} sx={{ fontSize: 13 }}>
           {f.label}
@@ -378,12 +379,12 @@ const RuleRowMobile = ({
       sx={{ ...selectSx, width: "100%", minWidth: "unset" }}
     > */}
     <Select
-  size="small"
-  value={rule.field}
-  onChange={(e) => onFieldChange(e.target.value)}
-  sx={{ ...selectSx, width: "100%", minWidth: "unset" }}
-  MenuProps={FIELD_MENU_PROPS}
->
+      size="small"
+      value={rule.field}
+      onChange={(e) => onFieldChange(e.target.value)}
+      sx={{ ...selectSx, width: "100%", minWidth: "unset" }}
+      MenuProps={FIELD_MENU_PROPS}
+    >
       {availableFields.map((f) => (
         <MenuItem key={f.key} value={f.key} sx={{ fontSize: 13 }}>
           {f.label}
@@ -763,7 +764,9 @@ const AppTableFilter = ({
                         {r.operator.replace(/_/g, " ")}
                       </span>{" "}
                       {/* <b>{r.value}</b> */}
-                      {!NO_VALUE_OPERATORS.includes(r.operator) && <b>{r.value}</b>}
+                      {!NO_VALUE_OPERATORS.includes(r.operator) && (
+                        <b>{r.value}</b>
+                      )}
                     </Typography>
                   }
                   onDelete={() => {

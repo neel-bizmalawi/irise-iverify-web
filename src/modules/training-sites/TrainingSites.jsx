@@ -402,7 +402,13 @@ const TrainingSites = () => {
       setEditData(null);
     } catch (error) {
       console.error("Submit error:", error);
-      toast.error("Operation failed. Please try again.");
+      if (!error?.response) {
+        toast.error("No internet connection.");
+        return;
+      }
+      const raw = error?.response?.data?.message || "";
+      const message = raw || "Operation failed. Please try again.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
