@@ -89,8 +89,8 @@ const navItems = [
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
   { icon: UserCheck , label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
-  { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
-  { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
+  // { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
+  // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
   // { icon: UserCog , label: "User Role Management", path: "/userrolemanagement" },
 ];
 

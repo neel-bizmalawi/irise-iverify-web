@@ -6,9 +6,9 @@ import Beneficiary from "./modules/beneficiary/Beneficiary";
 import Users from "./modules/users/Users";
 import Login from "./modules/auth/Login";
 import { ToastContainer } from "react-toastify";
-import Monitoring from "./modules/Monitoring/Monitoring";
-import AuditProcess from "./modules/Aduit-Process/Auditprocess";
-import UserRoleManagement from "./modules/user-role-management/UserRoleManagement";
+// import Monitoring from "./modules/Monitoring/Monitoring";
+// import AuditProcess from "./modules/Aduit-Process/Auditprocess";
+// import UserRoleManagement from "./modules/user-role-management/UserRoleManagement";
 
 function App() {
   return (
@@ -23,8 +23,8 @@ function App() {
           <Route path="/training" element={<TrainingSites />} />
           <Route path="/beneficiary" element={<Beneficiary />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/monitoring" element={<Monitoring />} />
-          <Route path="/auditprocess" element={<AuditProcess />} />
+          {/* <Route path="/monitoring" element={<Monitoring />} />
+          <Route path="/auditprocess" element={<AuditProcess />} /> */}
           {/* <Route path="/userrolemanagement" element={<UserRoleManagement />} /> */}
         </Route>
 
