@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
-import { webcrypto } from "crypto";
+// import { webcrypto } from "crypto";
 
-(global as any).crypto = webcrypto;
+// (global as any).crypto = webcrypto;
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';

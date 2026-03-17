@@ -88,6 +88,7 @@ const sql = `
 
 
   async findWithFilters(filters: any[], page: number, limit: number) {
+    try{
     const where: string[] = [];
     const values: any[] = [];
 
@@ -163,9 +164,16 @@ const sql = `
     const [rows] = await this.db.query(sql, values);
     return rows;
   }
+  catch(error)
+  {
+    Sentry.captureException(error);
+        console.error("findAll error is",error);
+  }
+  }
 
 
   async findAll(page: number, limit: number) {
+    try{
     const safeLimit = Number(limit);
     const safeOffset = Number((page - 1) * limit);
 
@@ -194,6 +202,12 @@ const sql = `
 
     const [rows] = await this.db.query(sql);
     return rows;
+  }
+  catch(error)
+  {
+          Sentry.captureException(error);
+        console.error("findAll error is",error);
+  }
   }
 
   async getTrainingbyID(training_id: number) {
@@ -350,6 +364,7 @@ const sql = `
       return result;
     }
     catch (error: any) {
+            Sentry.captureException(error);
 
       console.error('❌ insertTraining DB error:', error);
 
@@ -455,7 +470,7 @@ const sql = `
 
   // }
 
-  async bulkInsertTrainings(data: SyncTrainingSiteDto[], username: string, connection) {
+  async bulkInsertTrainings(data: SyncTrainingSiteDto[], userId: number, connection) {
     try {
 
 
@@ -473,7 +488,7 @@ const sql = `
         t.total_people ?? null,
         t.latitude ?? null,
         t.longitude ?? null,
-        username ?? null,
+        userId ?? null,
         t.created_date ?? new Date(),  // Default to current date if null
       ]);
 
@@ -624,8 +639,8 @@ const sql = `
         `
       SELECT COUNT(*) AS total
       FROM training_sites
-      WHERE server_time > ?
-      OR modified_date > ?
+      WHERE server_time >= ?
+      OR modified_date >= ?
       `,
         [date, date],
       );
@@ -646,8 +661,8 @@ const sql = `
         `
       SELECT *
       FROM training_sites
-      WHERE server_time > ?
-      OR modified_date > ?
+      WHERE server_time >= ?
+      OR modified_date >= ?
       `,
         [date, date],
       );

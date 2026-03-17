@@ -65,7 +65,6 @@ export class TrainingSiteController {
     }
 
 
-
     @Post('create_district')
     @UseGuards(AuthGuard('jwt'))
     async CreateDsitrict(@Body('district') district: string, @Req() req: any,) {

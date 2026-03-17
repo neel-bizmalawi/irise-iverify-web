@@ -7,6 +7,7 @@ import { UpdateTrainingSiteDto } from './update-training-site.dto';
 import { TRAINING_SITES_FILTER_SCHEMA } from './training-sites.filter.schema';
 import { SyncTrainingSiteDto } from './sync-training-site.dto';
 import { DatabaseService } from 'src/database/database.service';
+import * as Sentry from "@sentry/node";
 
 
 @Injectable()
@@ -214,7 +215,6 @@ export class TrainingSiteService {
       });
 
 
-
       const totalRecords =
         validatedFilters.length > 0
           ? await this.trainingSiteRepo.getFilteredCount(validatedFilters)
@@ -262,19 +262,16 @@ export class TrainingSiteService {
       let skippedCount = 0;
       const failed: any[] = [];
 
-      const user = await this.trainingSiteRepo.getUserById(userId);
-
-      const username = user.name;
 
       const offlineids = trainings.map((t) => t.offline_id).filter((id) => id !== null && id !== undefined);
 
-      console.log("offline ids are",offlineids)
+      console.log("offline ids are", offlineids)
 
       const existingIds = await this.trainingSiteRepo.getExistingOfflineIds(offlineids, connection);
       const existingSet = new Set(existingIds);
 
-      console.log("existing ids are",existingIds);
-      console.log("exisitngSet is",existingSet)
+      console.log("existing ids are", existingIds);
+      console.log("exisitngSet is", existingSet)
 
       const newRecords = trainings.filter(training => {
         if (training.offline_id && existingSet.has(training.offline_id)) {
@@ -284,7 +281,7 @@ export class TrainingSiteService {
         return true;
       });
 
-      console.log("new Records are",newRecords)
+      console.log("new Records are", newRecords)
 
       let syncedCount = 0;
 
@@ -292,7 +289,7 @@ export class TrainingSiteService {
         console.log("inside newRecords.length > 0");
         syncedCount = await this.trainingSiteRepo.bulkInsertTrainings(
           newRecords,
-          username,
+          userId,
           connection
         );
       }
@@ -381,6 +378,10 @@ export class TrainingSiteService {
   async getupdateData(dates: Date) {
     try {
 
+      console.log("Input date (raw):", dates);
+      console.log("ISO format:", dates.toISOString());
+      console.log("Locale string:", dates.toString());
+
       const record = await this.trainingSiteRepo.getUpdatedDataByDate(dates);
 
       if (!record || record.length === 0) {
@@ -397,6 +398,8 @@ export class TrainingSiteService {
       }
     } catch (error) {
       console.error("getUserRles error", error)
+      Sentry.captureException(error);
+
 
       throw new InternalServerErrorException("Failed to get updated data",);
     }
