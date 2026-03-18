@@ -374,6 +374,7 @@ export class TrainingSiteRepositoryService {
         t.longitude ?? null,
         createdByUserId ?? null,
         t.created_date ?? new Date(),
+        t.s_is_sync ?? 0
       ]);
 
       const sql = `
@@ -392,7 +393,8 @@ export class TrainingSiteRepositoryService {
           latitude,
           longitude,
           created_by,
-          created_date
+          created_date,
+          s_is_sync
         )
         VALUES ?
       `;

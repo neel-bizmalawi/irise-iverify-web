@@ -18,6 +18,10 @@ export class SyncTrainingSiteDto {
   training_site?: string;
 
   @IsOptional()
+  @IsNumber()
+  s_is_sync?: number;
+
+  @IsOptional()
   @IsString()
   district?: string;
 
