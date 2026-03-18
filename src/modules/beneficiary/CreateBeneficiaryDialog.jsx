@@ -40,6 +40,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SearchableCreatableSelect from "../../components/SearchableCreatableSelect";
+import { API_BASE_URL } from "../../config";
 
 const BASE_IMAGE_URL = API_BASE_URL;
 
