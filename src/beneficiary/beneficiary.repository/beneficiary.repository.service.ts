@@ -175,11 +175,19 @@ export class BeneficiaryRepositoryService {
         created_by: userId
       };
 
+      console.log("FINAL PAYLOAD:", payload);
+
       // ❗ remove flags (not DB columns)
       delete payload.remove_national_id;
       delete payload.remove_signature;
       delete payload.remove_house_pic;
       delete payload.remove_cookstove_pic;
+
+      //remove timestamps
+      delete payload.national_id_timestamp;
+      delete payload.signature_timestamp;
+      delete payload.house_pic_timestamp;
+      delete payload.cookstove_pic_timestamp;
 
       // convert undefined → null
       Object.keys(payload).forEach(key => {
