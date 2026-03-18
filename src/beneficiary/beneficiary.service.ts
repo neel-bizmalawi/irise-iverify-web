@@ -10,6 +10,8 @@ import { UpdateBeneficiaryDto } from './update-beneficiary-site-dto';
 import { BENEFICIARY_FILTER_SCHEMA } from './beneficiary.filter.schema';
 // import { v4 as uuid } from 'uuid';
 import { v4 as uuidv4 } from 'uuid';
+import * as Sentry from '@sentry/node';
+
 
 
 
@@ -195,7 +197,7 @@ export class BeneficiaryService {
 
     try {
 
-     
+
 
       const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId, connection);
 
@@ -209,7 +211,7 @@ export class BeneficiaryService {
 
       // create folder once
       beneficiaryFolderPath = `uploads/beneficiary/${beneficiaryId}`;
-    
+
       fs.mkdirSync(beneficiaryFolderPath, { recursive: true });
 
       // save files using helper
@@ -264,6 +266,8 @@ export class BeneficiaryService {
       return { message: "Beneficiary created successfully" };
 
     } catch (error) {
+            Sentry.captureException(error);
+      
       console.error("createBeneficiary error", error)
       await connection.rollback();
 
@@ -303,6 +307,8 @@ export class BeneficiaryService {
         , data
       }
     } catch (error) {
+            Sentry.captureException(error);
+      
       console.error("get benficiary data error ", error)
       throw new InternalServerErrorException("Failed to fetch getBeneficiary Data");
 
@@ -368,6 +374,8 @@ export class BeneficiaryService {
       };
     }
     catch (error) {
+            Sentry.captureException(error);
+      
       console.error("getBeneficiarylist error", error)
       throw new InternalServerErrorException("Failed to fetch Beneficiary list");
 
@@ -549,7 +557,8 @@ export class BeneficiaryService {
       return { message: "Beneficiary updated successfully" };
 
     } catch (error) {
-
+            Sentry.captureException(error);
+      
       await connection.rollback();
 
       // delete uploaded files
@@ -775,6 +784,8 @@ export class BeneficiaryService {
       return { message: "Beneficiary deleted successfully" };
     }
     catch (error) {
+            Sentry.captureException(error);
+      
       console.error("deleteBeneficairy error is", error);
       throw new InternalServerErrorException("Failed to Delete Beneficiary");
 

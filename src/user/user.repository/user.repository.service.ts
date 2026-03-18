@@ -267,7 +267,7 @@ export class UserRepositoryService {
   }
 
   async deleteUserId(userId: number) {
-    const [rows] = await this.db.query(
+    const rows = await this.db.query(
       'delete FROM ab_admin WHERE adminID = ? LIMIT 1',
       [userId]
     );

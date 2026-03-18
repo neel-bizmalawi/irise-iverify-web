@@ -16,7 +16,7 @@ export class DatabaseService implements OnModuleDestroy {
       database: this.config.get<string>('DB_NAME'),
 
       waitForConnections: true,
-      connectionLimit: 10,   // 🔥 important
+      connectionLimit: 20,   // 🔥 important
       queueLimit: 0,
 
       connectTimeout: 10000, // optional safety

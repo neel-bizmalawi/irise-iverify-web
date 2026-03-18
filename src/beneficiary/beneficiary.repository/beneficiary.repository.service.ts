@@ -5,6 +5,8 @@ import { DatabaseService } from 'src/database/database.service';
 import { CreateBeneficiarydto } from '../create-benificiary.dto';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
 import { UpdateBeneficiaryDto } from '../update-beneficiary-site-dto';
+import * as Sentry from '@sentry/node';
+
 
 
 @Injectable()
@@ -199,6 +201,8 @@ export class BeneficiaryRepositoryService {
 
     } catch (error: any) {
 
+      Sentry.captureException(error);
+
       console.error("❌ insertBeneficiary DB error:", error);
 
       if (error.code === "ER_DUP_ENTRY") {
@@ -270,6 +274,7 @@ export class BeneficiaryRepositoryService {
       return result;
 
     } catch (error) {
+      Sentry.captureException(error);
 
       console.error("UpdateFilepath error", error);
 
@@ -283,74 +288,90 @@ export class BeneficiaryRepositoryService {
 
 
   async getBeneficiaryById(bid: number) {
-    const rows = await this.db.query(
-      'SELECT * FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
-      [bid]
-    );
-    return rows[0];
+    try {
+      const rows = await this.db.query(
+        'SELECT * FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+        [bid]
+      );
+      return rows[0];
+    }
+    catch (error) {
+      Sentry.captureException(error);
+      console.error("getBeneficiaryById error", error)
+    }
   }
 
 
   async getTotalCount(): Promise<number> {
-    const rows: any = await this.db.query('select count(*) as total from beneficiaries',);
-    return rows[0].total;
+    try {
+      const rows: any = await this.db.query('select count(*) as total from beneficiaries',);
+      return rows[0].total;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("getTotalCount error is", error)
+      throw error;
+    }
   }
 
   async getFilteredCount(filters: any[]) {
-    const where: string[] = [];
-    const values: any[] = [];
+    try {
+      const where: string[] = [];
+      const values: any[] = [];
 
-    filters.forEach((f) => {
-      let value = f.value;
+      filters.forEach((f) => {
+        let value = f.value;
 
-      // EMPTY
-      if (f.operator === 'isEmpty') {
-        where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
-        return;
-      }
-
-      // NOT EMPTY
-      if (f.operator === 'is_not_empty') {
-        where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
-        return;
-      }
-
-      // DATE
-      if (f.type === 'date') {
-        const startOfDay = `${f.value} 00:00:00`;
-        const endOfDay = `${f.value} 23:59:59`;
-
-        if (f.operator === 'equals') {
-          where.push(`(${f.column} BETWEEN ? AND ?)`);
-          values.push(startOfDay, endOfDay);
+        // EMPTY
+        if (f.operator === 'isEmpty') {
+          where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
           return;
         }
 
-        if (f.operator === 'before') {
-          where.push(`${f.column} < ?`);
-          values.push(startOfDay);
+        // NOT EMPTY
+        if (f.operator === 'is_not_empty') {
+          where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
           return;
         }
 
-        if (f.operator === 'after') {
-          where.push(`${f.column} > ?`);
-          values.push(endOfDay);
-          return;
+        // DATE
+        if (f.type === 'date') {
+          const startOfDay = `${f.value} 00:00:00`;
+          const endOfDay = `${f.value} 23:59:59`;
+
+          if (f.operator === 'equals') {
+            where.push(`(${f.column} BETWEEN ? AND ?)`);
+            values.push(startOfDay, endOfDay);
+            return;
+          }
+
+          if (f.operator === 'before') {
+            where.push(`${f.column} < ?`);
+            values.push(startOfDay);
+            return;
+          }
+
+          if (f.operator === 'after') {
+            where.push(`${f.column} > ?`);
+            values.push(endOfDay);
+            return;
+          }
         }
-      }
 
-      // LIKE
-      if (f.operator === 'contains') value = `%${value}%`;
-      if (f.operator === 'starts_with') value = `${value}%`;
-      if (f.operator === 'ends_with') value = `%${value}`;
+        // LIKE
+        if (f.operator === 'contains') value = `%${value}%`;
+        if (f.operator === 'starts_with') value = `${value}%`;
+        if (f.operator === 'ends_with') value = `%${value}`;
 
-      if (f.type === 'number') value = Number(value);
+        if (f.type === 'number') value = Number(value);
 
-      where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
-      values.push(value);
-    });
+        where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
+        values.push(value);
 
-    const sql = `
+      });
+
+      const sql = `
       SELECT COUNT(*) as total
       FROM beneficiaries bf
       LEFT JOIN ab_admin a ON bf.created_by = a.adminID
@@ -358,64 +379,71 @@ export class BeneficiaryRepositoryService {
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     `;
 
-    const result = await this.db.query(sql, values);
-    return result.total;
+      const result = await this.db.query(sql, values);
+      return result.total;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("getFilteredCount is", error)
+    }
   }
 
 
   async findWithFilters(filters: any[], page: number, limit: number) {
-    const where: string[] = [];
-    const values: any[] = [];
+    try {
+      const where: string[] = [];
+      const values: any[] = [];
 
-    filters.forEach((f) => {
-      let value = f.value;
+      filters.forEach((f) => {
+        let value = f.value;
 
-      if (f.operator === 'isEmpty') {
-        where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
-        return;
-      }
-
-      if (f.operator === 'is_not_empty') {
-        where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
-        return;
-      }
-
-      if (f.type === 'date') {
-        const startOfDay = `${f.value} 00:00:00`;
-        const endOfDay = `${f.value} 23:59:59`;
-
-        if (f.operator === 'equals') {
-          where.push(`(${f.column} BETWEEN ? AND ?)`);
-          values.push(startOfDay, endOfDay);
+        if (f.operator === 'isEmpty') {
+          where.push(`(${f.column} IS NULL OR ${f.column} = '')`);
           return;
         }
 
-        if (f.operator === 'before') {
-          where.push(`${f.column} < ?`);
-          values.push(startOfDay);
+        if (f.operator === 'is_not_empty') {
+          where.push(`(${f.column} IS NOT NULL AND ${f.column} != '')`);
           return;
         }
 
-        if (f.operator === 'after') {
-          where.push(`${f.column} > ?`);
-          values.push(endOfDay);
-          return;
+        if (f.type === 'date') {
+          const startOfDay = `${f.value} 00:00:00`;
+          const endOfDay = `${f.value} 23:59:59`;
+
+          if (f.operator === 'equals') {
+            where.push(`(${f.column} BETWEEN ? AND ?)`);
+            values.push(startOfDay, endOfDay);
+            return;
+          }
+
+          if (f.operator === 'before') {
+            where.push(`${f.column} < ?`);
+            values.push(startOfDay);
+            return;
+          }
+
+          if (f.operator === 'after') {
+            where.push(`${f.column} > ?`);
+            values.push(endOfDay);
+            return;
+          }
         }
-      }
 
-      if (f.operator === 'contains') value = `%${value}%`;
-      if (f.operator === 'starts_with') value = `${value}%`;
-      if (f.operator === 'ends_with') value = `%${value}`;
-      if (f.type === 'number') value = Number(value);
+        if (f.operator === 'contains') value = `%${value}%`;
+        if (f.operator === 'starts_with') value = `${value}%`;
+        if (f.operator === 'ends_with') value = `%${value}`;
+        if (f.type === 'number') value = Number(value);
 
-      where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
-      values.push(value);
-    });
+        where.push(`${f.column} ${OPERATOR_SQL[f.operator]} ?`);
+        values.push(value);
+      });
 
-    const safeLimit = Math.max(1, Number(limit));
-    const safeOffset = Math.max(0, Number((page - 1) * limit));
+      const safeLimit = Math.max(1, Number(limit));
+      const safeOffset = Math.max(0, Number((page - 1) * limit));
 
-    const sql = `
+      const sql = `
         SELECT bf.*,
             a.name AS created_by_name,
         a2.name AS modified_by_name
@@ -427,20 +455,27 @@ export class BeneficiaryRepositoryService {
         LIMIT ${safeLimit} OFFSET ${safeOffset}
       `;
 
-    const rows = await this.db.query(sql, values);
-    return rows;
+      const rows = await this.db.query(sql, values);
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("FindWithFilters error is", error)
+    }
   }
 
 
   async findAll(page: number, limit: number) {
-    const safeLimit = Number(limit);
-    const safeOffset = Number((page - 1) * limit);
+    try {
+      const safeLimit = Number(limit);
+      const safeOffset = Number((page - 1) * limit);
 
-    if (isNaN(safeLimit) || isNaN(safeOffset)) {
-      throw new Error('Invalid pagination parameters');
-    }
+      if (isNaN(safeLimit) || isNaN(safeOffset)) {
+        throw new Error('Invalid pagination parameters');
+      }
 
-    const sql = `
+      const sql = `
       SELECT bf.*,
       a.name AS created_by_name,
         a2.name AS modified_by_name
@@ -451,8 +486,14 @@ export class BeneficiaryRepositoryService {
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
 
-    const rows = await this.db.query(sql);
-    return rows;
+      const rows = await this.db.query(sql);
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("findAll is", error)
+    }
   }
 
 
@@ -504,6 +545,8 @@ export class BeneficiaryRepositoryService {
       await connection.query(sql, [...values, userid, beneficiaryId]);
     }
     catch (error) {
+      Sentry.captureException(error);
+
       console.error("updateBeneficiary error is", error)
       if (error.code === "ER_DUP_ENTRY") {
 
@@ -532,11 +575,19 @@ export class BeneficiaryRepositoryService {
   }
 
   async deleteBeneficiaryId(bid: number) {
-    const [rows] = await this.db.query(
-      'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
-      [bid]
-    );
-    return rows;
+    try {
+      const [rows] = await this.db.query(
+        'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+        [bid]
+      );
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("getFilteredCount is", error)
+    }
   }
+
 }
 
