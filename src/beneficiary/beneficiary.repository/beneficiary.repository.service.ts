@@ -576,7 +576,7 @@ export class BeneficiaryRepositoryService {
 
   async deleteBeneficiaryId(bid: number) {
     try {
-      const [rows] = await this.db.query(
+      const rows = await this.db.query(
         'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
         [bid]
       );
