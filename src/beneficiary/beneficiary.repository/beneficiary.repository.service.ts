@@ -388,7 +388,7 @@ export class BeneficiaryRepositoryService {
     `;
 
       const result = await this.db.query(sql, values);
-      return result.total;
+    return result[0]?.total ?? 0;
     }
     catch (error) {
       Sentry.captureException(error);

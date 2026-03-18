@@ -356,7 +356,7 @@ export class TrainingSiteRepositoryService {
   ) {
 
     try {
-      
+
 
       const values = data.map((t) => [
         t.offline_id ?? null,

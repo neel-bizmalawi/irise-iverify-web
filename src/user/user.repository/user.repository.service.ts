@@ -1,18 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { CreateUserDto } from '../user.dto';
 import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from '../updateuser.dto';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
+import * as Sentry from '@sentry/node';
+
 
 
 @Injectable()
 export class UserRepositoryService {
   constructor(private readonly db: DatabaseService) { }
 
-  async insertUser(data: CreateUserDto, username: string) {
+  async insertUser(data: CreateUserDto, userid: number) {
 
     try {
       const { name, user_name, email, password, role, user_setting, status, mobile_number } = data;
@@ -48,17 +50,34 @@ export class UserRepositoryService {
           user_setting ?? null,
           status ?? null,
           mobile_number ?? null,
-          username ?? null,
+          userid ?? null,
         ],
       );
 
       return result;
 
-    } catch (error) {
-      console.error('❌ insertUser DB error:', error);
-      throw error;
+    }    
+     catch (error) {
+          Sentry.captureException(error);
+    
+          console.error("Create user  error is", error)
+          if (error.code === "ER_DUP_ENTRY") {
+    
+            const msg = error.sqlMessage;
+    
+            if (msg.includes("unique_email")) {
+              throw new ConflictException("Email ID already exists");
+            }
+    
+    
+            throw new ConflictException("Duplicate value detected");
+          }
 
-    }
+    
+          throw new InternalServerErrorException(
+            "Failed to create beneficiary"
+          );
+        }
   }
 
   async UpdateById(AID: number, dto: UpdateUserDto, username: string) {
@@ -105,7 +124,7 @@ export class UserRepositoryService {
 
 
 
-   async getFilteredCount(filters: any[]) {
+  async getFilteredCount(filters: any[]) {
     const where: string[] = [];
     const values: any[] = [];
 
@@ -162,11 +181,15 @@ export class UserRepositoryService {
     const sql = `
         SELECT COUNT(*) as total
         FROM ab_admin us
+        LEFT JOIN ab_admin creator 
+    ON us.created_by = creator.adminID
+  LEFT JOIN ab_admin modifier 
+    ON us.modified_by = modifier.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       `;
 
     const result = await this.db.query(sql, values);
-    return result.total;
+    return result[0]?.total ?? 0;
   }
 
   async getTotalCount(): Promise<number> {
@@ -183,8 +206,14 @@ export class UserRepositoryService {
     }
 
     const sql = `
-  SELECT *
-  FROM ab_admin
+  SELECT u.*,
+  creator.name AS created_by_name,
+  modifier.name AS modified_by_name
+  FROM ab_admin u
+  LEFT JOIN ab_admin creator 
+  ON u.created_by = creator.adminID
+  LEFT JOIN ab_admin modifier 
+  ON u.modified_by = modifier.adminID
   ORDER BY adminID DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
@@ -246,8 +275,14 @@ export class UserRepositoryService {
     const safeOffset = Math.max(0, Number((page - 1) * limit));
 
     const sql = `
-      SELECT us.*
+      SELECT us.*,
+       creator.name AS created_by_name,
+    modifier.name AS modified_by_name
       FROM ab_admin us
+       LEFT JOIN ab_admin creator 
+    ON us.created_by = creator.adminID
+  LEFT JOIN ab_admin modifier 
+    ON us.modified_by = modifier.adminID
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       ORDER BY us.adminID DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}

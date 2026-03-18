@@ -15,13 +15,11 @@ export class UserService {
 
     async CreateUser(dto: CreateUserDto, userId: number) {
 
-        const user = await this.trainingSiteRepo.getUserById(userId);
-
-        const username = user.name;
+ 
 
 
         try {
-            const result: any = await this.userRepo.insertUser(dto, username);
+            const result: any = await this.userRepo.insertUser(dto, userId);
 
             // 3️⃣ Check success
             if (result && result.affectedRows === 1) {
@@ -36,10 +34,7 @@ export class UserService {
         }
         catch (error) {
             console.error("CreateUser error", error)
-
-            throw new InternalServerErrorException(
-                'Failed to add user',
-            )
+            throw error;
         }
     }
 
@@ -111,6 +106,8 @@ export class UserService {
                 validatedFilters.length > 0
                     ? await this.userRepo.getFilteredCount(validatedFilters)
                     : await this.userRepo.getTotalCount();
+
+                    console.log("total records for filtered data are",totalRecords)
 
             const totalPages = Math.ceil(totalRecords / limit);
 

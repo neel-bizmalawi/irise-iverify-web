@@ -38,14 +38,26 @@ export const USER_FILTER_SCHEMA = {
     operators: ['equals', 'contains', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
   },
  
-  created_by: {
-    column: 'us.created_by',
+  // created_by: {
+  //   column: 'us.created_by',
+  //   type: 'text',
+  //   operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  // },
+ 
+  // modified_by: {
+  //   column: 'us.modified_by',
+  //   type: 'text',
+  //   operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  // },
+
+   created_by: {
+    column: 'creator.name',
     type: 'text',
     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
   },
  
   modified_by: {
-    column: 'us.modified_by',
+    column: 'modifier.name',
     type: 'text',
     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
   },
