@@ -8,7 +8,7 @@ import CreateUserDialog from "./CreateUserDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
-import { API_BASE_URL } from "../../../config";
+import { API_BASE_URL } from "../../config";
 
 const Users = () => {
   const [tableData, setTableData] = useState([]);

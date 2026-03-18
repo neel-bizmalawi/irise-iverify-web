@@ -513,7 +513,7 @@ const AppLayoutInner = () => {
   const handleLogout = async () => {
   try {
     const token = localStorage.getItem("token");
-    await fetch("http://192.168.0.106:3000/auth/logout", {
+    await fetch("API_BASE_URL/auth/logout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

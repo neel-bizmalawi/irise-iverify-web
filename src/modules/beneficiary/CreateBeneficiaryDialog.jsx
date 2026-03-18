@@ -41,7 +41,7 @@ import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SearchableCreatableSelect from "../../components/SearchableCreatableSelect";
 
-const BASE_IMAGE_URL = "http://192.168.0.106:3000";
+const BASE_IMAGE_URL = API_BASE_URL;
 
 const initialValues = {
   training_site: "",

@@ -34,7 +34,7 @@ import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlin
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import RadarOutlinedIcon from "@mui/icons-material/RadarOutlined";
 import ForestOutlinedIcon from "@mui/icons-material/ForestOutlined";
-import { API_BASE_URL } from "../../../config";
+import { API_BASE_URL } from "../../config";
 import SearchableCreatableSelect from "../../components/SearchableCreatableSelect";
 
 const initialValues = {

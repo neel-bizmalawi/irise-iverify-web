@@ -8,7 +8,7 @@ import CreateTrainingSiteDialog from "./CreateTrainingSiteDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
-import { API_BASE_URL } from "../../../config";
+import { API_BASE_URL } from "../../config";
 
 const TrainingSites = () => {
   const [tableData, setTableData] = useState([]);

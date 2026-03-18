@@ -21,7 +21,7 @@ import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { API_BASE_URL } from "../../../config";
+import { API_BASE_URL } from "../../config";
 
 export default function Login() {
   const navigate = useNavigate();

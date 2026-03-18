@@ -3,9 +3,9 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import autoTable from "jspdf-autotable";
-
+import { API_BASE_URL } from "../config";
 // ── Image URL builder (mirrors your component logic) ──────────────────────────
-const BASE_IMAGE_URL = "http://192.168.0.106:3000";
+const BASE_IMAGE_URL = API_BASE_URL;
 
 const buildImageUrl = (src) => {
   if (!src || src === "-" || src === "null" || src === null) return null;

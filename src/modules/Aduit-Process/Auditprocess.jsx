@@ -8,9 +8,9 @@ import EditAuditDialog from "./EditAuditDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
-import { API_BASE_URL } from "../../../config";
+import { API_BASE_URL } from "../../config";
 
-const BASE_IMAGE_URL = "http://192.168.0.106:3000";
+const BASE_IMAGE_URL = API_BASE_URL;
 
 const buildImageUrl = (src) => {
   if (!src || src === "-" || src === "null" || src === null) return null;
