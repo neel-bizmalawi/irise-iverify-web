@@ -41,13 +41,11 @@ export class UserService {
 
     async UpdateUser(adminId: number, dto: CreateUserDto, userId: number) {
 
-        const user = await this.trainingSiteRepo.getUserById(userId);
-
-        const username = user.name;
+   
 
 
         try {
-            const result: any = await this.userRepo.UpdateById(adminId, dto, username);
+            const result: any = await this.userRepo.UpdateById(adminId, dto, userId);
 
 
             if (result && result.affectedRows === 1) {

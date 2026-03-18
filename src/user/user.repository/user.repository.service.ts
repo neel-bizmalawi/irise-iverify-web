@@ -80,10 +80,9 @@ export class UserRepositoryService {
         }
   }
 
-  async UpdateById(AID: number, dto: UpdateUserDto, username: string) {
+  async UpdateById(AID: number, dto: UpdateUserDto, userid: number) {
 
-    console.log("AID IS", AID);
-    console.log("Username is", username)
+
 
     const filteredDto = Object.fromEntries(  //This converts the array of pairs back into an object.
       Object.entries(dto).filter(([_, value]) => value !== undefined), // converts dto object to array of key value pair
@@ -116,7 +115,7 @@ export class UserRepositoryService {
 
     const result: any = await this.db.query(
       sql,
-      [...values, username, AID],
+      [...values, userid, AID],
     );
 
     return result; // 👈 IMPORTANT
