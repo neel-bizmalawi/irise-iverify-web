@@ -38,6 +38,17 @@ export class TrainingSiteRepositoryService {
     return rows[0]?.total ?? 0;
   }
 
+  async getByOfflineIds(offlineIds: number[], connection: any) {
+  const sql = `
+    SELECT training_point_id, m_training_point_id
+    FROM training_sites
+    WHERE offline_id IN (?)
+  `;
+
+  const [rows] = await connection.query(sql, [offlineIds]);
+  return rows;
+}
+
   async getFilteredCount(filters: any[]): Promise<number> {
 
     const where: string[] = [];
@@ -357,9 +368,9 @@ export class TrainingSiteRepositoryService {
 
     try {
 
-
       const values = data.map((t) => [
         t.offline_id ?? null,
+        t.m_training_point_id ?? null,
         t.training_site ?? null,
         t.district ?? null,
         t.gvh_name ?? null,
@@ -373,13 +384,17 @@ export class TrainingSiteRepositoryService {
         t.latitude ?? null,
         t.longitude ?? null,
         createdByUserId ?? null,
-        t.created_date ?? new Date(),
+        // t.created_date ?? new Date(),
+          t.created_date
+    ? new Date(t.created_date)
+    : new Date(),
         t.s_is_sync ?? 0
       ]);
 
       const sql = `
         INSERT INTO training_sites (
           offline_id,
+          m_training_point_id,
           training_site,
           district,
           gvh_name,
@@ -411,7 +426,9 @@ export class TrainingSiteRepositoryService {
 
   // ✅ FIXED (no silent failure)
   async getExistingOfflineIds(offlineIds: number[], connection?: any) {
+
     try {
+
       if (!offlineIds.length) return [];
 
       const placeholders = offlineIds.map(() => '?').join(',');
@@ -423,7 +440,9 @@ export class TrainingSiteRepositoryService {
       );
 
       return rows.map((r: any) => r.offline_id);
-    } catch (error) {
+    } 
+    
+    catch (error) {
       Sentry.captureException(error);
       console.error('getExistingOfflineIds error:', error);
       throw error; // 🚨 critical
@@ -507,7 +526,9 @@ export class TrainingSiteRepositoryService {
   }
 
   async getUpdatedDataByDate(date: Date) {
+
     try {
+
       const rows: any = await this.db.query(
         `
         SELECT *
@@ -519,6 +540,7 @@ export class TrainingSiteRepositoryService {
       );
 
       return rows;
+      
     } catch (error) {
       Sentry.captureException(error);
       console.error('getUpdatedDataByDate error', error);

@@ -281,7 +281,9 @@ export class BeneficiaryRepositoryService {
 
       return result;
 
-    } catch (error) {
+    } 
+    
+    catch (error) {
       Sentry.captureException(error);
 
       console.error("UpdateFilepath error", error);

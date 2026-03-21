@@ -178,11 +178,11 @@ export class UserRepositoryService {
     });
 
     const sql = `
-        SELECT COUNT(*) as total
-        FROM ab_admin us
-        LEFT JOIN ab_admin creator 
+    SELECT COUNT(*) as total
+    FROM ab_admin us
+    LEFT JOIN ab_admin creator 
     ON us.created_by = creator.adminID
-  LEFT JOIN ab_admin modifier 
+    LEFT JOIN ab_admin modifier 
     ON us.modified_by = modifier.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       `;

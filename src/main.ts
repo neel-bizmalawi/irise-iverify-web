@@ -14,13 +14,13 @@ Sentry.init({
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-    app.use(cookieParser());
+  app.use(cookieParser());
 
   app.enableCors({
     origin: '*',
   });
 
-   app.useGlobalPipes(
+  app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,        // remove extra fields
       forbidNonWhitelisted: true, // throw error on extra fields

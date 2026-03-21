@@ -259,7 +259,6 @@ export class TrainingSiteService {
 
     try {
 
-
       let skippedCount = 0;
       const failed: any[] = [];
 
@@ -291,6 +290,8 @@ export class TrainingSiteService {
       console.log("new Records are", newRecords)
 
       let syncedCount = 0;
+      let mapping: any[] = [];
+
 
       if (newRecords.length > 0) {
         console.log("inside newRecords.length > 0");
@@ -299,6 +300,22 @@ export class TrainingSiteService {
           createdByUserId,
           connection
         );
+
+        const offlineIdsnew = newRecords
+  .map(r => r.offline_id)
+  .filter((id): id is number => id !== undefined && id !== null);
+
+          // ✅ Fetch inserted rows
+  const insertedRows = await this.trainingSiteRepo.getByOfflineIds(
+  offlineIdsnew,
+    connection
+  );
+
+  mapping = insertedRows.map(row => ({
+    m_training_point_id: row.m_training_point_id,
+    training_point_id: row.training_point_id, // DB primary key
+  }));
+
       }
 
       // for (const training of trainings) {
@@ -343,6 +360,7 @@ export class TrainingSiteService {
         failedCount: failed.length,
         failedRecords: failed,
         totalTraining,
+        mapping,
       };
     }
 
@@ -398,7 +416,7 @@ export class TrainingSiteService {
         }
       }
 
-      return {
+      return {    
         success: true,
         message: "updated data  fetched succesfully",
         data: record,

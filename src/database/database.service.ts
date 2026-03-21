@@ -17,18 +17,9 @@ export class DatabaseService implements OnModuleDestroy {
 
       waitForConnections: true,
       connectionLimit: 20,   // 🔥 important
-      queueLimit: 0,
+      queueLimit: 100,
 
       connectTimeout: 10000, // optional safety
-    });
-
-    // ✅ Optional debug logs (remove in production if noisy)
-    this.pool.on('acquire', () => {
-      console.log('MySQL connection acquired');
-    });
-
-    this.pool.on('release', () => {
-      console.log('MySQL connection released');
     });
   }
 

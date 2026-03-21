@@ -13,6 +13,10 @@ export class SyncTrainingSiteDto {
   @IsNumber()
   offline_id?: number;
 
+    @IsOptional()
+  @IsNumber()
+  m_training_point_id?: number;
+
   @IsOptional()
   @IsString()
   training_site?: string;
