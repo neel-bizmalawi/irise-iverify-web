@@ -38,14 +38,14 @@ export class TrainingSiteRepositoryService {
     return rows[0]?.total ?? 0;
   }
 
-  async getByOfflineIds(offlineIds: number[], connection: any) {
+  async getByOfflineIds(offlineIds: number[]) {
   const sql = `
     SELECT training_point_id, m_training_point_id
     FROM training_sites
     WHERE offline_id IN (?)
   `;
 
-  const [rows] = await connection.query(sql, [offlineIds]);
+  const rows = await this.db.query(sql, [offlineIds]);
   return rows;
 }
 
@@ -363,7 +363,6 @@ export class TrainingSiteRepositoryService {
   async bulkInsertTrainings(
     data: SyncTrainingSiteDto[],
     createdByUserId: number,
-    connection?: any,
   ) {
 
     try {
@@ -414,8 +413,10 @@ export class TrainingSiteRepositoryService {
         VALUES ?
       `;
 
-      const result = await this.execute(sql, [values], connection);
+      const result = await this.db.bulkQuery(sql, [values]);
+
       return result?.affectedRows ?? 0;
+
     } catch (error: any) {
 
       Sentry.captureException(error);
@@ -487,12 +488,11 @@ export class TrainingSiteRepositoryService {
     }
   }
 
-  async getTotalTrainingCount(connection?: any): Promise<number> {
+  async getTotalTrainingCount(): Promise<number> {
     try {
-      const rows: any = await this.execute(
+      const rows: any = await this.db.query(
         'SELECT COUNT(*) AS total FROM training_sites',
         [],
-        connection,
       );
 
       return rows[0]?.total ?? 0;

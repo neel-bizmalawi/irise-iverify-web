@@ -254,9 +254,6 @@ export class TrainingSiteService {
 
   async syncTrainings(trainings: SyncTrainingSiteDto[], userId: number) {
 
-    const connection = await this.db.getConnection();
-    await connection.beginTransaction();
-
     try {
 
       let skippedCount = 0;
@@ -272,7 +269,7 @@ export class TrainingSiteService {
       }
 
       console.log("offline ids are", offlineids)
-
+      
       // const existingIds = await this.trainingSiteRepo.getExistingOfflineIds(offlineids, connection);
       // const existingSet = new Set(existingIds);
 
@@ -286,7 +283,8 @@ export class TrainingSiteService {
       //   }
       //   return true;
       // });
-      const newRecords= trainings
+
+      const newRecords = trainings
 
       console.log("new Records are", newRecords)
 
@@ -299,23 +297,21 @@ export class TrainingSiteService {
         syncedCount = await this.trainingSiteRepo.bulkInsertTrainings(
           newRecords,
           createdByUserId,
-          connection
         );
 
-        const offlineIdsnew = newRecords
-  .map(r => r.offline_id)
-  .filter((id): id is number => id !== undefined && id !== null);
+        // const offlineIdsnew = newRecords
+        //   .map(r => r.offline_id)
+        //   .filter((id): id is number => id !== undefined && id !== null);
 
-          // ✅ Fetch inserted rows
-  const insertedRows = await this.trainingSiteRepo.getByOfflineIds(
-  offlineIdsnew,
-    connection
-  );
+        // ✅ Fetch inserted rows
+        // const insertedRows = await this.trainingSiteRepo.getByOfflineIds(
+        //   offlineIdsnew,
+        // );
 
-  mapping = insertedRows.map(row => ({
-    m_training_point_id: row.m_training_point_id,
-    training_point_id: row.training_point_id, // DB primary key
-  }));
+        // mapping = insertedRows.map(row => ({
+        //   m_training_point_id: row.m_training_point_id,
+        //   training_point_id: row.training_point_id, // DB primary key
+        // }));
 
       }
 
@@ -350,9 +346,8 @@ export class TrainingSiteService {
       // }
 
       const totalTraining =
-        await this.trainingSiteRepo.getTotalTrainingCount(connection);
+        await this.trainingSiteRepo.getTotalTrainingCount();
 
-      await connection.commit();
 
       return {
         success: failed.length === 0,
@@ -366,14 +361,13 @@ export class TrainingSiteService {
     }
 
     catch (error) {
+
+
       console.error("syncTrainings error", error)
       throw new InternalServerErrorException("Failed to sync training data");
 
     }
 
-    finally {
-      connection.release();
-    }
   }
 
   async getupdateDataCount(dates: Date) {
@@ -417,7 +411,7 @@ export class TrainingSiteService {
         }
       }
 
-      return {    
+      return {
         success: true,
         message: "updated data  fetched succesfully",
         data: record,

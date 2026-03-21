@@ -37,6 +37,20 @@ export class DatabaseService implements OnModuleDestroy {
     }
   }
 
+  // ✅ For bulk inserts (supports VALUES ?)
+  async bulkQuery<T = any>(sql: string, params: any[] = []): Promise<T> {
+    try {
+      const [result] = await this.pool.query(sql, params); // ✅ IMPORTANT: query(), not execute()
+      return result as T;
+    } catch (error) {
+      console.error('❌ DB BULK QUERY ERROR');
+      console.error('SQL:', sql);
+      console.error('PARAMS:', params);
+      console.error('ERROR:', error);
+      throw error;
+    }
+  }
+
   // ⚠️ Use only if you REALLY need manual control (transactions)
   async getConnection(): Promise<mysql.PoolConnection> {
     const connection = await this.pool.getConnection();

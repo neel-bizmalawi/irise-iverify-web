@@ -295,8 +295,6 @@ export class BeneficiaryRepositoryService {
   }
 
 
-
-
   async getBeneficiaryById(bid: number) {
     try {
       const rows = await this.db.query(
