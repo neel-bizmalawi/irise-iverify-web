@@ -273,19 +273,20 @@ export class TrainingSiteService {
 
       console.log("offline ids are", offlineids)
 
-      const existingIds = await this.trainingSiteRepo.getExistingOfflineIds(offlineids, connection);
-      const existingSet = new Set(existingIds);
+      // const existingIds = await this.trainingSiteRepo.getExistingOfflineIds(offlineids, connection);
+      // const existingSet = new Set(existingIds);
 
-      console.log("existing ids are", existingIds);
-      console.log("exisitngSet is", existingSet)
+      // console.log("existing ids are", existingIds);
+      // console.log("exisitngSet is", existingSet)
 
-      const newRecords = trainings.filter(training => {
-        if (training.offline_id && existingSet.has(training.offline_id)) {
-          skippedCount++;
-          return false;
-        }
-        return true;
-      });
+      // const newRecords = trainings.filter(training => {
+      //   if (training.offline_id && existingSet.has(training.offline_id)) {
+      //     skippedCount++;
+      //     return false;
+      //   }
+      //   return true;
+      // });
+      const newRecords= trainings
 
       console.log("new Records are", newRecords)
 
