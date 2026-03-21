@@ -365,7 +365,12 @@ export class TrainingSiteRepositoryService {
     createdByUserId: number,
   ) {
 
+        const mapping: any[] = [];
+
+
     try {
+          const mapping: any[] = [];
+
 
       const values = data.map((t) => [
         t.offline_id ?? null,
@@ -415,8 +420,15 @@ export class TrainingSiteRepositoryService {
 
       const result = await this.db.bulkQuery(sql, [values]);
 
-      return result?.affectedRows ?? 0;
+      const firstId = result.insertId;
+      const count = result.affectedRows;
 
+
+
+return {
+  affectedRows: count,
+  firstId,
+};
     } catch (error: any) {
 
       Sentry.captureException(error);

@@ -294,10 +294,12 @@ export class TrainingSiteService {
 
       if (newRecords.length > 0) {
         console.log("inside newRecords.length > 0");
-        syncedCount = await this.trainingSiteRepo.bulkInsertTrainings(
+        const result = await this.trainingSiteRepo.bulkInsertTrainings(
           newRecords,
           createdByUserId,
         );
+
+        syncedCount = result.affectedRows;
 
         // const offlineIdsnew = newRecords
         //   .map(r => r.offline_id)
@@ -312,6 +314,11 @@ export class TrainingSiteService {
         //   m_training_point_id: row.m_training_point_id,
         //   training_point_id: row.training_point_id, // DB primary key
         // }));
+
+         mapping = newRecords.map((t, index) => ({
+    training_point_id: result.firstId + index,
+  }));
+
 
       }
 
@@ -348,6 +355,7 @@ export class TrainingSiteService {
       const totalTraining =
         await this.trainingSiteRepo.getTotalTrainingCount();
 
+        
 
       return {
         success: failed.length === 0,
