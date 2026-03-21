@@ -18,7 +18,7 @@ export class DatabaseService implements OnModuleDestroy {
       waitForConnections: true,
       connectionLimit: 20,   // 🔥 important
       queueLimit: 100,
-
+      timezone: '+00:00',  // ✅ Tell driver to treat DB times as UTC
       connectTimeout: 10000, // optional safety
     });
   }
@@ -26,7 +26,10 @@ export class DatabaseService implements OnModuleDestroy {
   // ✅ Safe query execution
   async query<T = any>(sql: string, params: any[] = []): Promise<T> {
     try {
-      const [result] = await this.pool.execute(sql, params);
+      // const [result] = await this.pool.execute(sql, params);
+      const [result] = params && params.length
+        ? await this.pool.execute(sql, params)   // ✅ when params exist
+        : await this.pool.query(sql);            // ✅ when no params
       return result as T;
     } catch (error) {
       console.error('❌ DB QUERY ERROR');

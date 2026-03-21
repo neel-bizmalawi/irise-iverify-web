@@ -355,7 +355,6 @@ export class TrainingSiteService {
       const totalTraining =
         await this.trainingSiteRepo.getTotalTrainingCount();
 
-        
 
       return {
         success: failed.length === 0,
