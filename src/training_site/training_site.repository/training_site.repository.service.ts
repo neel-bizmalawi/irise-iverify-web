@@ -301,7 +301,7 @@ export class TrainingSiteRepositoryService {
     // 2. Generate created_date in user's local time, stored as UTC-aware ISO string
 const created_date = DateTime.now()
   .setZone(timezone)
-  .toFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+  .toFormat("yyyy-MM-dd HH:mm:ss");
 
     console.log(`User timezone: ${timezone} → created_date UTC: ${created_date}`);
 
