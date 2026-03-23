@@ -40,15 +40,15 @@ export class TrainingSiteRepositoryService {
   }
 
   async getByOfflineIds(offlineIds: number[]) {
-  const sql = `
+    const sql = `
     SELECT training_point_id, m_training_point_id
     FROM training_sites
     WHERE offline_id IN (?)
   `;
 
-  const rows = await this.db.query(sql, [offlineIds]);
-  return rows;
-}
+    const rows = await this.db.query(sql, [offlineIds]);
+    return rows;
+  }
 
   async getFilteredCount(filters: any[]): Promise<number> {
 
@@ -283,8 +283,8 @@ export class TrainingSiteRepositoryService {
     }
   }
 
-  
-    async getUserTimezone(userId: number): Promise<string> {
+
+  async getUserTimezone(userId: number): Promise<string> {
     const result: any = await this.db.query(
       `SELECT timezone FROM ab_admin WHERE adminID = ? LIMIT 1`,
       [userId]
@@ -298,12 +298,12 @@ export class TrainingSiteRepositoryService {
 
       const timezone = await this.getUserTimezone(userid);
 
-    // 2. Generate created_date in user's local time, stored as UTC-aware ISO string
-const created_date = DateTime.now()
-  .setZone(timezone)
-  .toFormat("yyyy-MM-dd HH:mm:ss");
+      // 2. Generate created_date in user's local time, stored as UTC-aware ISO string
+      const created_date = DateTime.now()
+        .setZone(timezone)
+        .toFormat("yyyy-MM-dd HH:mm:ss");
 
-    console.log(`User timezone: ${timezone} → created_date UTC: ${created_date}`);
+      console.log(`User timezone: ${timezone} → created_date UTC: ${created_date}`);
 
       console.log('Insert training payload:', data);
 
@@ -356,7 +356,7 @@ const created_date = DateTime.now()
           total_people ?? null,
           latitude ?? null,
           longitude ?? null,
-          created_date??null,
+          created_date ?? null,
           userid ?? null,
         ],
       );
@@ -387,77 +387,80 @@ const created_date = DateTime.now()
     data: SyncTrainingSiteDto[],
     createdByUserId: number,
   ) {
-
-        const mapping: any[] = [];
-
-
     try {
-          const mapping: any[] = [];
+      // 1. Fetch user's timezone once
+      const timezone = await this.getUserTimezone(createdByUserId);
+      console.log(`Bulk insert timezone: ${timezone}`);
 
+      const values = data.map((t) => {
 
-      const values = data.map((t) => [
-        t.offline_id ?? null,
-        t.m_training_point_id ?? null,
-        t.training_site ?? null,
-        t.district ?? null,
-        t.gvh_name ?? null,
-        t.village_head_name ?? null,
-        t.traditional_authority ?? null,
-        t.cookstoves_count ?? null,
-        t.house_holds_count ?? null,
-        t.house_hold_radius ?? null,
-        t.road_access ?? null,
-        t.total_people ?? null,
-        t.latitude ?? null,
-        t.longitude ?? null,
-        t.conduct_training_date??null,
-        t.number_of_people_present??null,
-        createdByUserId ?? null,
-        // t.created_date ?? new Date(),
-          t.created_date
-    ? new Date(t.created_date)
-    : new Date(),
-        t.s_is_sync ?? 0
-      ]);
+        // 2. Convert created_date to user's local timezone format
+        let created_date: string;
+
+        if (t.created_date) {
+          const raw = t.created_date;
+
+          // Handle both string and Date object safely
+          created_date = (typeof raw === 'string'
+            ? DateTime.fromISO(raw)              // if string → fromISO
+            : DateTime.fromJSDate(raw as Date)   // if Date object → fromJSDate
+          )
+            .setZone(timezone)
+            .toFormat("yyyy-MM-dd HH:mm:ss");
+
+          console.log(`Parsed created_date: ${created_date}`);
+        } else {
+          // No date sent → generate fresh in user's local timezone
+          created_date = DateTime.now()
+            .setZone(timezone)
+            .toFormat("yyyy-MM-dd HH:mm:ss");
+        }
+
+        console.log(`created_date for offline_id ${t.offline_id}: ${created_date}`);
+
+        return [
+          t.offline_id ?? null,
+          t.m_training_point_id ?? null,
+          t.training_site ?? null,
+          t.district ?? null,
+          t.gvh_name ?? null,
+          t.village_head_name ?? null,
+          t.traditional_authority ?? null,
+          t.cookstoves_count ?? null,
+          t.house_holds_count ?? null,
+          t.house_hold_radius ?? null,
+          t.road_access ?? null,
+          t.total_people ?? null,
+          t.latitude ?? null,
+          t.longitude ?? null,
+          t.conduct_training_date ?? null,
+          t.number_of_people_present ?? null,
+          createdByUserId ?? null,
+          created_date,   // ✅ properly formatted local time
+          t.s_is_sync ?? 0,
+        ];
+      });
 
       const sql = `
-        INSERT INTO training_sites (
-          offline_id,
-          m_training_point_id,
-          training_site,
-          district,
-          gvh_name,
-          village_head_name,
-          traditional_authority,
-          cookstoves_count,
-          house_holds_count,
-          house_hold_radius,
-          road_access,
-          total_people,
-          latitude,
-          longitude,
-          conduct_training_date,
-          number_of_people_present,
-          created_by,
-          created_date,
-          s_is_sync
-        )
-        VALUES ?
-      `;
+      INSERT INTO training_sites (
+        offline_id, m_training_point_id, training_site,
+        district, gvh_name, village_head_name,
+        traditional_authority, cookstoves_count, house_holds_count,
+        house_hold_radius, road_access, total_people,
+        latitude, longitude, conduct_training_date,
+        number_of_people_present, created_by, created_date, s_is_sync
+      )
+      VALUES ?
+    `;
 
       const result = await this.db.bulkQuery(sql, [values]);
 
-      const firstId = result.insertId;
-      const count = result.affectedRows;
+      return {
+        affectedRows: result.affectedRows,
+        firstId: result.insertId,
+      };
 
-
-
-return {
-  affectedRows: count,
-  firstId,
-};
     } catch (error: any) {
-
       Sentry.captureException(error);
       console.error('❌ bulkInsert error:', error);
       throw new InternalServerErrorException('Bulk insert failed');
@@ -480,8 +483,8 @@ return {
       );
 
       return rows.map((r: any) => r.offline_id);
-    } 
-    
+    }
+
     catch (error) {
       Sentry.captureException(error);
       console.error('getExistingOfflineIds error:', error);
@@ -490,67 +493,67 @@ return {
   }
 
   // ✅ SAFE UPDATE
-async updateTraining(
-  id: number,
-  dto: UpdateTrainingSiteDto,
-  userid: number,
-) {
-  try {
-    const filteredDto = Object.fromEntries(
-      Object.entries(dto).filter(([_, value]) => value !== undefined),
-    );
+  async updateTraining(
+    id: number,
+    dto: UpdateTrainingSiteDto,
+    userid: number,
+  ) {
+    try {
+      const filteredDto = Object.fromEntries(
+        Object.entries(dto).filter(([_, value]) => value !== undefined),
+      );
 
-       // ✅ ADD THIS BLOCK
-    if (filteredDto.modified_date) {
-      filteredDto.modified_date = new Date(filteredDto.modified_date);
-    }
+      // ✅ ADD THIS BLOCK
+      if (filteredDto.modified_date) {
+        filteredDto.modified_date = new Date(filteredDto.modified_date);
+      }
 
-    if (filteredDto.conduct_training_date) {
-      filteredDto.conduct_training_date = new Date(filteredDto.conduct_training_date);
-    }
+      if (filteredDto.conduct_training_date) {
+        filteredDto.conduct_training_date = new Date(filteredDto.conduct_training_date);
+      }
 
-    // 🔹 Extract modified_date separately
-    const { modified_date, ...restDto } = filteredDto;
+      // 🔹 Extract modified_date separately
+      const { modified_date, ...restDto } = filteredDto;
 
-    const fields = Object.keys(restDto);
+      const fields = Object.keys(restDto);
 
-    if (!fields.length && !modified_date) {
-      return { message: 'Nothing to update' };
-    }
+      if (!fields.length && !modified_date) {
+        return { message: 'Nothing to update' };
+      }
 
-    // 🔹 Build dynamic fields
-    let setClause = fields.map((f) => `${f} = ?`).join(', ');
-    const values = Object.values(restDto);
+      // 🔹 Build dynamic fields
+      let setClause = fields.map((f) => `${f} = ?`).join(', ');
+      const values = Object.values(restDto);
 
-    // 🔹 Handle modified_date
-    if (modified_date) {
-      setClause += `${setClause ? ', ' : ''}modified_date = ?`;
-      values.push(modified_date);
-    } else {
-      setClause += `${setClause ? ', ' : ''}modified_date = NOW()`;
-    }
+      // 🔹 Handle modified_date
+      if (modified_date) {
+        setClause += `${setClause ? ', ' : ''}modified_date = ?`;
+        values.push(modified_date);
+      } else {
+        setClause += `${setClause ? ', ' : ''}modified_date = NOW()`;
+      }
 
-    // 🔹 Always update modified_by
-    setClause += `${setClause ? ', ' : ''}modified_by = ?`;
-    values.push(userid);
+      // 🔹 Always update modified_by
+      setClause += `${setClause ? ', ' : ''}modified_by = ?`;
+      values.push(userid);
 
-    const sql = `
+      const sql = `
       UPDATE training_sites
       SET ${setClause}
       WHERE training_point_id = ?
     `;
 
-    await this.db.query(sql, [...values, id]);
+      await this.db.query(sql, [...values, id]);
 
-    return { message: 'Training site updated successfully' };
-  } catch (error) {
-    Sentry.captureException(error);
-    console.error('updateTraining error:', error);
-    throw new InternalServerErrorException(
-      'Failed to update training',
-    );
+      return { message: 'Training site updated successfully' };
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error('updateTraining error:', error);
+      throw new InternalServerErrorException(
+        'Failed to update training',
+      );
+    }
   }
-}
 
   async getTotalTrainingCount(): Promise<number> {
     try {
@@ -589,7 +592,7 @@ async updateTraining(
     }
   }
 
-  async  getUpdatedDataByDate(date: Date) {
+  async getUpdatedDataByDate(date: Date) {
 
     try {
 
@@ -604,7 +607,7 @@ async updateTraining(
       );
 
       return rows;
-      
+
     } catch (error) {
       Sentry.captureException(error);
       console.error('getUpdatedDataByDate error', error);
