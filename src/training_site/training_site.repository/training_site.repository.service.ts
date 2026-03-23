@@ -477,6 +477,15 @@ async updateTraining(
       Object.entries(dto).filter(([_, value]) => value !== undefined),
     );
 
+       // ✅ ADD THIS BLOCK
+    if (filteredDto.modified_date) {
+      filteredDto.modified_date = new Date(filteredDto.modified_date);
+    }
+
+    if (filteredDto.conduct_training_date) {
+      filteredDto.conduct_training_date = new Date(filteredDto.conduct_training_date);
+    }
+    
     // 🔹 Extract modified_date separately
     const { modified_date, ...restDto } = filteredDto;
 
