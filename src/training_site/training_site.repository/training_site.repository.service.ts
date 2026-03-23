@@ -463,42 +463,58 @@ return {
   }
 
   // ✅ SAFE UPDATE
-  async updateTraining(
-    id: number,
-    dto: UpdateTrainingSiteDto,
-    userid: number,
-  ) {
-    try {
-      const filteredDto = Object.fromEntries(
-        Object.entries(dto).filter(([_, value]) => value !== undefined),
-      );
+async updateTraining(
+  id: number,
+  dto: UpdateTrainingSiteDto,
+  userid: number,
+) {
+  try {
+    const filteredDto = Object.fromEntries(
+      Object.entries(dto).filter(([_, value]) => value !== undefined),
+    );
 
-      const fields = Object.keys(filteredDto);
+    // 🔹 Extract modified_date separately
+    const { modified_date, ...restDto } = filteredDto;
 
-      if (!fields.length) {
-        return { message: 'Nothing to update' };
-      }
+    const fields = Object.keys(restDto);
 
-      const setClause = fields.map((f) => `${f} = ?`).join(', ');
-      const values = Object.values(filteredDto);
-
-      const sql = `
-        UPDATE training_sites
-        SET ${setClause}, modified_date = NOW(), modified_by = ?
-        WHERE training_point_id = ?
-      `;
-
-      await this.db.query(sql, [...values, userid, id]);
-
-      return { message: 'Training site updated successfully' };
-    } catch (error) {
-      Sentry.captureException(error);
-      console.error('updateTraining error:', error);
-      throw new InternalServerErrorException(
-        'Failed to update training',
-      );
+    if (!fields.length && !modified_date) {
+      return { message: 'Nothing to update' };
     }
+
+    // 🔹 Build dynamic fields
+    let setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = Object.values(restDto);
+
+    // 🔹 Handle modified_date
+    if (modified_date) {
+      setClause += `${setClause ? ', ' : ''}modified_date = ?`;
+      values.push(modified_date);
+    } else {
+      setClause += `${setClause ? ', ' : ''}modified_date = NOW()`;
+    }
+
+    // 🔹 Always update modified_by
+    setClause += `${setClause ? ', ' : ''}modified_by = ?`;
+    values.push(userid);
+
+    const sql = `
+      UPDATE training_sites
+      SET ${setClause}
+      WHERE training_point_id = ?
+    `;
+
+    await this.db.query(sql, [...values, id]);
+
+    return { message: 'Training site updated successfully' };
+  } catch (error) {
+    Sentry.captureException(error);
+    console.error('updateTraining error:', error);
+    throw new InternalServerErrorException(
+      'Failed to update training',
+    );
   }
+}
 
   async getTotalTrainingCount(): Promise<number> {
     try {

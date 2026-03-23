@@ -284,18 +284,38 @@ export class TrainingSiteService {
       //   return true;
       // });
 
-      const newRecords = trainings
+const toUpdate = trainings.filter(
+  (t): t is SyncTrainingSiteDto & { training_point_id: number } =>
+    t.training_point_id !== undefined && t.training_point_id !== null
+);
+const toInsert = trainings.filter(t => !t.training_point_id);
 
-      console.log("new Records are", newRecords)
 
       let syncedCount = 0;
       let mapping: any[] = [];
 
+let updatedCount = 0;
 
-      if (newRecords.length > 0) {
-        console.log("inside newRecords.length > 0");
+for (const t of toUpdate) {
+  try {
+    await this.trainingSiteRepo.updateTraining(
+      t.training_point_id,
+      t,
+      createdByUserId,
+    );
+    updatedCount++;
+  } catch (error: any) {
+    failed.push({
+      training_point_id: t.training_point_id,
+      error: error.message,
+    });
+  }
+}
+
+
+      if (toInsert.length > 0) {
         const result = await this.trainingSiteRepo.bulkInsertTrainings(
-          newRecords,
+          toInsert,
           createdByUserId,
         );
 
@@ -315,7 +335,7 @@ export class TrainingSiteService {
         //   training_point_id: row.training_point_id, // DB primary key
         // }));
 
-         mapping = newRecords.map((t, index) => ({
+         mapping = toInsert.map((t, index) => ({
     training_point_id: result.firstId + index,
   }));
 
@@ -368,7 +388,6 @@ export class TrainingSiteService {
     }
 
     catch (error) {
-
 
       console.error("syncTrainings error", error)
       throw new InternalServerErrorException("Failed to sync training data");

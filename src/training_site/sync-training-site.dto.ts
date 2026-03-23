@@ -13,7 +13,11 @@ export class SyncTrainingSiteDto {
   @IsNumber()
   offline_id?: number;
 
-    @IsOptional()
+   @IsOptional()
+  @IsNumber()
+  training_point_id?: number;
+
+  @IsOptional()
   @IsNumber()
   m_training_point_id?: number;
 
@@ -76,4 +80,12 @@ export class SyncTrainingSiteDto {
   @IsOptional()
   @Type(() => Date)
   server_time?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  conduct_training_date?: Date;
+
+  @IsOptional()
+  @IsNumber()
+  number_of_people_present?: number;
 }

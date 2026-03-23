@@ -52,6 +52,10 @@ export class CreateTrainingSiteDto {
 
     @IsOptional()
     @IsNumber()
+    number_of_people_present?: number;
+
+    @IsOptional()
+    @IsNumber()
     latitude?: number;
 
     @IsOptional()
@@ -61,6 +65,10 @@ export class CreateTrainingSiteDto {
     @IsOptional()
     @Type(() => Date)
     created_date?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    conduct_training_date?: Date;
 
     @IsOptional()
     @Type(() => Date)
