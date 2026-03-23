@@ -14,10 +14,11 @@ import * as Sentry from '@sentry/node';
 export class UserRepositoryService {
   constructor(private readonly db: DatabaseService) { }
 
+
   async insertUser(data: CreateUserDto, userid: number) {
 
     try {
-      const { name, user_name, email, password, role, user_setting, status, mobile_number } = data;
+      const { name, user_name, email, password, role, user_setting, status, mobile_number,timezone } = data;
 
       // 🔐 Hash password
       const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
@@ -37,9 +38,10 @@ export class UserRepositoryService {
       user_setting,
       status,
       mobile_number,
+      timezone
       created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?,?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?,?,?,?)
     `,
         [
           name ?? null,
@@ -50,6 +52,7 @@ export class UserRepositoryService {
           user_setting ?? null,
           status ?? null,
           mobile_number ?? null,
+          timezone??null,
           userid ?? null,
         ],
       );

@@ -64,10 +64,6 @@ export class CreateTrainingSiteDto {
 
     @IsOptional()
     @Type(() => Date)
-    created_date?: Date;
-
-    @IsOptional()
-    @Type(() => Date)
     conduct_training_date?: Date;
 
     @IsOptional()

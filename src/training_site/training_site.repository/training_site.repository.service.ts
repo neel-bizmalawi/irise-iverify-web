@@ -13,6 +13,7 @@ import { UpdateTrainingSiteDto } from '../update-training-site.dto';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
 import { SyncTrainingSiteDto } from '../sync-training-site.dto';
 import * as Sentry from '@sentry/node';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class TrainingSiteRepositoryService {
@@ -282,9 +283,28 @@ export class TrainingSiteRepositoryService {
     }
   }
 
+  
+    async getUserTimezone(userId: number): Promise<string> {
+    const result: any = await this.db.query(
+      `SELECT timezone FROM ab_admin WHERE adminID = ? LIMIT 1`,
+      [userId]
+    );
+    return result?.[0]?.timezone || 'UTC';
+  }
+
   // ✅ SAFE INSERT
   async insertTraining(data: CreateTrainingSiteDto, userid: number) {
     try {
+
+      const timezone = await this.getUserTimezone(userid);
+
+    // 2. Generate created_date in user's local time, stored as UTC-aware ISO string
+const created_date = DateTime.now()
+  .setZone(timezone)
+  .toFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+    console.log(`User timezone: ${timezone} → created_date UTC: ${created_date}`);
+
       console.log('Insert training payload:', data);
 
       const {
@@ -300,7 +320,6 @@ export class TrainingSiteRepositoryService {
         total_people,
         latitude,
         longitude,
-        created_date,
 
       } = data;
 

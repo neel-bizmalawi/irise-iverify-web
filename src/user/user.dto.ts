@@ -7,6 +7,7 @@ import {
     IsEnum,
     IsEmail,
     MinLength,
+    isString,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -44,5 +45,9 @@ export class CreateUserDto {
     @IsOptional()
     @IsEnum(['active', 'inactive'])
     status?: 'active' | 'inactive';
+
+    @IsOptional()
+    @IsString()
+    timezone?:string;
 
 }
