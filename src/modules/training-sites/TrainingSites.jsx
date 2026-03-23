@@ -55,11 +55,15 @@ const TrainingSites = () => {
       },
       { key: "latitude", label: "Latitude", align: "center" },
       { key: "longitude", label: "Longitude", align: "center" },
-      { key: "number_of_people_present", label: "Number of People Present", align: "center" },
-      
+      {
+        key: "number_of_people_present",
+        label: "Number of People Present",
+        align: "center",
+      },
+
       { key: "created_by_name", label: "Created By", align: "center" },
       { key: "modified_by_name", label: "Modified By", align: "center" },
-       {
+      {
         key: "conduct_training_date",
         label: "Conduct Training Date",
         align: "center",
@@ -69,9 +73,9 @@ const TrainingSites = () => {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "UTC",
+                // hour: "2-digit",
+                // minute: "2-digit",
+                // timeZone: "UTC",
               })
             : "-",
       },
@@ -87,10 +91,11 @@ const TrainingSites = () => {
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
-                timeZone: "UTC",
+               // timeZone: "UTC",
               })
             : "-",
       },
+   
       {
         key: "modified_date",
         label: "Modified Date",
@@ -390,6 +395,8 @@ const TrainingSites = () => {
         house_hold_radius: Number(formData.houseHoldRadius),
         total_people: Number(formData.totalPeople),
         road_access: formData.roadAccess,
+        ...(!editId && { created_date: new Date().toISOString() }),
+      
       };
 
       const config = {
