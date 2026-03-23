@@ -91,7 +91,7 @@ const TrainingSites = () => {
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
-               // timeZone: "UTC",
+               timeZone: "UTC",
               })
             : "-",
       },
@@ -395,7 +395,7 @@ const TrainingSites = () => {
         house_hold_radius: Number(formData.houseHoldRadius),
         total_people: Number(formData.totalPeople),
         road_access: formData.roadAccess,
-        ...(!editId && { created_date: new Date().toISOString() }),
+       // ...(!editId && { created_date: new Date().toISOString() }),
       
       };
 
