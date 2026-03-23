@@ -300,6 +300,8 @@ export class TrainingSiteRepositoryService {
         total_people,
         latitude,
         longitude,
+        created_date,
+
       } = data;
 
       const result: any = await this.db.query(
@@ -317,9 +319,10 @@ export class TrainingSiteRepositoryService {
           total_people,
           latitude,
           longitude,
+          created_date,
           created_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?)
         `,
         [
           training_site ?? null,
@@ -334,6 +337,7 @@ export class TrainingSiteRepositoryService {
           total_people ?? null,
           latitude ?? null,
           longitude ?? null,
+          created_date??null,
           userid ?? null,
         ],
       );
@@ -485,7 +489,7 @@ async updateTraining(
     if (filteredDto.conduct_training_date) {
       filteredDto.conduct_training_date = new Date(filteredDto.conduct_training_date);
     }
-    
+
     // 🔹 Extract modified_date separately
     const { modified_date, ...restDto } = filteredDto;
 
@@ -566,7 +570,7 @@ async updateTraining(
     }
   }
 
-  async getUpdatedDataByDate(date: Date) {
+  async  getUpdatedDataByDate(date: Date) {
 
     try {
 
