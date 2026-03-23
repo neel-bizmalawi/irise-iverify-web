@@ -493,67 +493,90 @@ export class TrainingSiteRepositoryService {
   }
 
   // ✅ SAFE UPDATE
-  async updateTraining(
-    id: number,
-    dto: UpdateTrainingSiteDto,
-    userid: number,
-  ) {
-    try {
-      const filteredDto = Object.fromEntries(
-        Object.entries(dto).filter(([_, value]) => value !== undefined),
-      );
+async updateTraining(
+  id: number,
+  dto: UpdateTrainingSiteDto,
+  userid: number,
+) {
+  try {
+    // 1. Fetch user's timezone
+    const timezone = await this.getUserTimezone(userid);
+    console.log(`Update timezone: ${timezone}`);
 
-      // ✅ ADD THIS BLOCK
-      if (filteredDto.modified_date) {
-        filteredDto.modified_date = new Date(filteredDto.modified_date);
-      }
+    const filteredDto = Object.fromEntries(
+      Object.entries(dto).filter(([_, value]) => value !== undefined),
+    );
 
-      if (filteredDto.conduct_training_date) {
-        filteredDto.conduct_training_date = new Date(filteredDto.conduct_training_date);
-      }
 
-      // 🔹 Extract modified_date separately
-      const { modified_date, ...restDto } = filteredDto;
+    // 3. Convert conduct_training_date if present
+    if (filteredDto.conduct_training_date) {
+      const raw = filteredDto.conduct_training_date;
+      filteredDto.conduct_training_date = (typeof raw === 'string'
+        ? DateTime.fromISO(raw)
+        : DateTime.fromJSDate(raw as Date)
+      )
+        .setZone(timezone)
+        .toFormat("yyyy-MM-dd HH:mm:ss");
 
-      const fields = Object.keys(restDto);
+      console.log(`conduct_training_date converted: ${filteredDto.conduct_training_date}`);
+    }
 
-      if (!fields.length && !modified_date) {
-        return { message: 'Nothing to update' };
-      }
+    // 4. Convert modified_date if present, else generate fresh in user's timezone
+    let modified_date: string;
+    if (filteredDto.modified_date) {
+      const raw = filteredDto.modified_date;
+      modified_date = (typeof raw === 'string'
+        ? DateTime.fromISO(raw)
+        : DateTime.fromJSDate(raw as Date)
+      )
+        .setZone(timezone)
+        .toFormat("yyyy-MM-dd HH:mm:ss");
+    } else {
+      // No modified_date sent → generate fresh in user's local timezone
+      modified_date = DateTime.now()
+        .setZone(timezone)
+        .toFormat("yyyy-MM-dd HH:mm:ss");
+    }
 
-      // 🔹 Build dynamic fields
-      let setClause = fields.map((f) => `${f} = ?`).join(', ');
-      const values = Object.values(restDto);
+    console.log(`modified_date: ${modified_date}`);
 
-      // 🔹 Handle modified_date
-      if (modified_date) {
-        setClause += `${setClause ? ', ' : ''}modified_date = ?`;
-        values.push(modified_date);
-      } else {
-        setClause += `${setClause ? ', ' : ''}modified_date = NOW()`;
-      }
+    // 5. Remove modified_date from restDto (handle separately)
+    const { modified_date: _, ...restDto } = filteredDto;
 
-      // 🔹 Always update modified_by
-      setClause += `${setClause ? ', ' : ''}modified_by = ?`;
-      values.push(userid);
+    const fields = Object.keys(restDto);
 
-      const sql = `
+    if (!fields.length && !modified_date) {
+      return { message: 'Nothing to update' };
+    }
+
+    // 6. Build dynamic SET clause
+    let setClause = fields.map((f) => `${f} = ?`).join(', ');
+    const values = Object.values(restDto);
+
+    // 7. Always set modified_date (local timezone, not NOW())
+    setClause += `${setClause ? ', ' : ''}modified_date = ?`;
+    values.push(modified_date);
+
+    // 8. Always set modified_by
+    setClause += `, modified_by = ?`;
+    values.push(userid);
+
+    const sql = `
       UPDATE training_sites
       SET ${setClause}
       WHERE training_point_id = ?
     `;
 
-      await this.db.query(sql, [...values, id]);
+    await this.db.query(sql, [...values, id]);
 
-      return { message: 'Training site updated successfully' };
-    } catch (error) {
-      Sentry.captureException(error);
-      console.error('updateTraining error:', error);
-      throw new InternalServerErrorException(
-        'Failed to update training',
-      );
-    }
+    return { message: 'Training site updated successfully' };
+
+  } catch (error) {
+    Sentry.captureException(error);
+    console.error('updateTraining error:', error);
+    throw new InternalServerErrorException('Failed to update training');
   }
+}
 
   async getTotalTrainingCount(): Promise<number> {
     try {
