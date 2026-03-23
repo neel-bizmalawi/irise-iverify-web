@@ -387,6 +387,8 @@ export class TrainingSiteRepositoryService {
         t.total_people ?? null,
         t.latitude ?? null,
         t.longitude ?? null,
+        t.conduct_training_date??null,
+        t.number_of_people_present??null,
         createdByUserId ?? null,
         // t.created_date ?? new Date(),
           t.created_date
@@ -411,6 +413,8 @@ export class TrainingSiteRepositoryService {
           total_people,
           latitude,
           longitude,
+          conduct_training_date,
+          number_of_people_present,
           created_by,
           created_date,
           s_is_sync
