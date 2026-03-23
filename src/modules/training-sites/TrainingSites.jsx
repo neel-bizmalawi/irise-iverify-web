@@ -56,6 +56,9 @@ const TrainingSites = () => {
       { key: "latitude", label: "Latitude", align: "center" },
       { key: "longitude", label: "Longitude", align: "center" },
       { key: "number_of_people_present", label: "Number of People Present", align: "center" },
+      
+      { key: "created_by_name", label: "Created By", align: "center" },
+      { key: "modified_by_name", label: "Modified By", align: "center" },
        {
         key: "conduct_training_date",
         label: "Conduct Training Date",
@@ -72,8 +75,6 @@ const TrainingSites = () => {
               })
             : "-",
       },
-      { key: "created_by_name", label: "Created By", align: "center" },
-      { key: "modified_by_name", label: "Modified By", align: "center" },
       {
         key: "created_date",
         label: "Created Date",
