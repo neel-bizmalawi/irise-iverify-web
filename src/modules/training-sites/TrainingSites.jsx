@@ -55,6 +55,23 @@ const TrainingSites = () => {
       },
       { key: "latitude", label: "Latitude", align: "center" },
       { key: "longitude", label: "Longitude", align: "center" },
+      { key: "number_of_people_present", label: "Number of People Present", align: "center" },
+       {
+        key: "conduct_training_date",
+        label: "Conduct Training Date",
+        align: "center",
+        render: (value) =>
+          value
+            ? new Date(value).toLocaleString(undefined, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "UTC",
+              })
+            : "-",
+      },
       { key: "created_by_name", label: "Created By", align: "center" },
       { key: "modified_by_name", label: "Modified By", align: "center" },
       {
@@ -319,6 +336,8 @@ const TrainingSites = () => {
           training_status: item.training_status,
           latitude: item.latitude,
           longitude: item.longitude,
+          number_of_people_present: item.number_of_people_present,
+          conduct_training_date: item.conduct_training_date,
           status: item.status,
           created_by_name: item.created_by_name,
           modified_by_name: item.modified_by_name,
