@@ -131,7 +131,7 @@ const AppTable = ({
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
-                      align={col.align || "left"}
+                      align={col.align || "center"}
                       sx={cellSx}
                     >
                       {col.render
