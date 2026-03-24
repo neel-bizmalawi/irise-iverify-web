@@ -165,7 +165,7 @@ const ImageThumb = ({ src, alt }) => {
 // ── Date formatter helper ─────────────────────────────────────────────────────
 const fmtDate = (value) =>
   value
-    ? new Date(value).toLocaleString("en-IN", {
+    ? new Date(value).toLocaleString(undefined, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -301,11 +301,27 @@ const Beneficiary = () => {
       { key: "longitude", label: "Longitude", align: "center" },
       { key: "created_by_name", label: "Created By", align: "center" },
       { key: "modified_by_name", label: "Modified By", align: "center" },
+      // {
+      //   key: "created_date",
+      //   label: "Created Date",
+      //   align: "center",
+      //   render: fmtDate,
+      // },
       {
         key: "created_date",
         label: "Created Date",
         align: "center",
-        render: fmtDate,
+        render: (value) =>
+          value
+            ? new Date(value).toLocaleString(undefined, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "UTC",
+              })
+            : "-",
       },
       {
         key: "modified_date",
@@ -695,11 +711,11 @@ const Beneficiary = () => {
         formData[field] instanceof File
           ? formData[field]
           : cache[field] instanceof File
-          ? cache[field]
-          : formData[field]; // "REMOVED" or null
+            ? cache[field]
+            : formData[field]; // "REMOVED" or null
 
       const natId = resolveFile("national_id_attachment");
-      const sig   = resolveFile("signature");
+      const sig = resolveFile("signature");
       const house = resolveFile("house_pic");
       const stove = resolveFile("cookstove_pic");
 
@@ -806,9 +822,7 @@ const Beneficiary = () => {
     } catch (error) {
       console.error("Submit error:", error);
       if (!error?.response) {
-        toast.error(
-          "No internet connection.",
-        );
+        toast.error("No internet connection.");
         return;
       }
       const raw = error?.response?.data?.message || "";
