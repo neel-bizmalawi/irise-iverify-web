@@ -187,14 +187,31 @@ const ImageUploadField = ({
   //const displaySrc = preview || (!imgError ? serverUrl : null);
   const displaySrc = preview || (!imgError && !removed ? serverUrl : null);
 
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+     // ✅ Validate file type
+  if (!allowedTypes.includes(file.type)) {
+    alert("Only JPG, JPEG, and PNG files are allowed.");
+    e.target.value = "";
+    return;
+  }
+  // ✅ Size validation (2MB)
+  if (file.size > MAX_FILE_SIZE) {
+    alert("File size should not exceed 2MB.");
+    e.target.value = "";
+    return;
+  }
+
     const reader = new FileReader();
     reader.onload = (ev) => setPreview(ev.target.result);
     reader.readAsDataURL(file);
     onChange(file);
   };
+
 
   const handleRemove = (e) => {
     e.stopPropagation();
@@ -229,7 +246,8 @@ const ImageUploadField = ({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          //accept="image/*"
+          accept=".jpg,.jpeg,.png"
           style={{ display: "none" }}
           onChange={handleFileChange}
         />
