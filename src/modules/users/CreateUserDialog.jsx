@@ -39,74 +39,37 @@ import SearchableCreatableSelect from "../../components/SearchableCreatableSelec
 // ── Timezone list ──────────────────────────────────────────────────────────────
 const TIMEZONE_OPTIONS = [
   { label: "UTC (UTC+00:00)", value: "UTC" },
-  { label: "Africa/Cairo (UTC+02:00)", value: "Africa/Cairo" },
-  { label: "Africa/Johannesburg (UTC+02:00)", value: "Africa/Johannesburg" },
-  { label: "Africa/Lagos (UTC+01:00)", value: "Africa/Lagos" },
-  { label: "Africa/Nairobi (UTC+03:00)", value: "Africa/Nairobi" },
-  { label: "America/Anchorage (UTC-09:00)", value: "America/Anchorage" },
-  {
-    label: "America/Argentina/Buenos_Aires (UTC-03:00)",
-    value: "America/Argentina/Buenos_Aires",
-  },
-  { label: "America/Bogota (UTC-05:00)", value: "America/Bogota" },
+
+  // India & nearby
+  { label: "Asia/Kolkata (UTC+05:30)", value: "Asia/Kolkata" },
+  { label: "Asia/Dhaka (UTC+06:00)", value: "Asia/Dhaka" },
+
+  // Africa (added)
+  { label: "Africa/Johannesburg (UTC+02:00)", value: "Africa/Johannesburg" }, // South Africa
+  { label: "Africa/Lagos (UTC+01:00)", value: "Africa/Lagos" }, // West Africa
+  { label: "Africa/Nairobi (UTC+03:00)", value: "Africa/Nairobi" }, // East Africa
+  { label: "Africa/Cairo (UTC+02:00)", value: "Africa/Cairo" }, // North Africa
+
+  // Asia major
+  { label: "Asia/Dubai (UTC+04:00)", value: "Asia/Dubai" },
+  { label: "Asia/Singapore (UTC+08:00)", value: "Asia/Singapore" },
+  { label: "Asia/Shanghai (UTC+08:00)", value: "Asia/Shanghai" },
+  { label: "Asia/Tokyo (UTC+09:00)", value: "Asia/Tokyo" },
+
+  // Europe
+  { label: "Europe/London (UTC+00:00)", value: "Europe/London" },
+  { label: "Europe/Berlin (UTC+01:00)", value: "Europe/Berlin" },
+  { label: "Europe/Paris (UTC+01:00)", value: "Europe/Paris" },
+
+  // USA
+  { label: "America/New_York (UTC-05:00)", value: "America/New_York" },
   { label: "America/Chicago (UTC-06:00)", value: "America/Chicago" },
   { label: "America/Denver (UTC-07:00)", value: "America/Denver" },
-  { label: "America/Halifax (UTC-04:00)", value: "America/Halifax" },
-  { label: "America/Los_Angeles (UTC-08:00)", value: "America/Los_Angeles" },
-  { label: "America/Mexico_City (UTC-06:00)", value: "America/Mexico_City" },
-  { label: "America/New_York (UTC-05:00)", value: "America/New_York" },
-  { label: "America/Phoenix (UTC-07:00)", value: "America/Phoenix" },
-  { label: "America/Santiago (UTC-04:00)", value: "America/Santiago" },
-  { label: "America/Sao_Paulo (UTC-03:00)", value: "America/Sao_Paulo" },
-  { label: "America/Toronto (UTC-05:00)", value: "America/Toronto" },
-  { label: "America/Vancouver (UTC-08:00)", value: "America/Vancouver" },
-  { label: "Asia/Bangkok (UTC+07:00)", value: "Asia/Bangkok" },
-  { label: "Asia/Colombo (UTC+05:30)", value: "Asia/Colombo" },
-  { label: "Asia/Dhaka (UTC+06:00)", value: "Asia/Dhaka" },
-  { label: "Asia/Dubai (UTC+04:00)", value: "Asia/Dubai" },
-  { label: "Asia/Hong_Kong (UTC+08:00)", value: "Asia/Hong_Kong" },
-  { label: "Asia/Jakarta (UTC+07:00)", value: "Asia/Jakarta" },
-  { label: "Asia/Karachi (UTC+05:00)", value: "Asia/Karachi" },
-  { label: "Asia/Kathmandu (UTC+05:45)", value: "Asia/Kathmandu" },
-  { label: "Asia/Kolkata (UTC+05:30)", value: "Asia/Kolkata" },
-  { label: "Asia/Kuala_Lumpur (UTC+08:00)", value: "Asia/Kuala_Lumpur" },
-  { label: "Asia/Manila (UTC+08:00)", value: "Asia/Manila" },
-  { label: "Asia/Riyadh (UTC+03:00)", value: "Asia/Riyadh" },
-  { label: "Asia/Seoul (UTC+09:00)", value: "Asia/Seoul" },
-  { label: "Asia/Shanghai (UTC+08:00)", value: "Asia/Shanghai" },
-  { label: "Asia/Singapore (UTC+08:00)", value: "Asia/Singapore" },
-  { label: "Asia/Taipei (UTC+08:00)", value: "Asia/Taipei" },
-  { label: "Asia/Tehran (UTC+03:30)", value: "Asia/Tehran" },
-  { label: "Asia/Tokyo (UTC+09:00)", value: "Asia/Tokyo" },
-  { label: "Atlantic/Azores (UTC-01:00)", value: "Atlantic/Azores" },
-  { label: "Australia/Adelaide (UTC+09:30)", value: "Australia/Adelaide" },
-  { label: "Australia/Brisbane (UTC+10:00)", value: "Australia/Brisbane" },
-  { label: "Australia/Perth (UTC+08:00)", value: "Australia/Perth" },
+  // { label: "America/Los_Angeles (UTC-08:00)", value: "America/Los_Angeles" },
+
+  // Others important
   { label: "Australia/Sydney (UTC+10:00)", value: "Australia/Sydney" },
-  { label: "Europe/Amsterdam (UTC+01:00)", value: "Europe/Amsterdam" },
-  { label: "Europe/Athens (UTC+02:00)", value: "Europe/Athens" },
-  { label: "Europe/Berlin (UTC+01:00)", value: "Europe/Berlin" },
-  { label: "Europe/Brussels (UTC+01:00)", value: "Europe/Brussels" },
-  { label: "Europe/Bucharest (UTC+02:00)", value: "Europe/Bucharest" },
-  { label: "Europe/Copenhagen (UTC+01:00)", value: "Europe/Copenhagen" },
-  { label: "Europe/Dublin (UTC+00:00)", value: "Europe/Dublin" },
-  { label: "Europe/Helsinki (UTC+02:00)", value: "Europe/Helsinki" },
-  { label: "Europe/Istanbul (UTC+03:00)", value: "Europe/Istanbul" },
-  { label: "Europe/Lisbon (UTC+00:00)", value: "Europe/Lisbon" },
-  { label: "Europe/London (UTC+00:00)", value: "Europe/London" },
-  { label: "Europe/Madrid (UTC+01:00)", value: "Europe/Madrid" },
-  { label: "Europe/Moscow (UTC+03:00)", value: "Europe/Moscow" },
-  { label: "Europe/Oslo (UTC+01:00)", value: "Europe/Oslo" },
-  { label: "Europe/Paris (UTC+01:00)", value: "Europe/Paris" },
-  { label: "Europe/Prague (UTC+01:00)", value: "Europe/Prague" },
-  { label: "Europe/Rome (UTC+01:00)", value: "Europe/Rome" },
-  { label: "Europe/Stockholm (UTC+01:00)", value: "Europe/Stockholm" },
-  { label: "Europe/Vienna (UTC+01:00)", value: "Europe/Vienna" },
-  { label: "Europe/Warsaw (UTC+01:00)", value: "Europe/Warsaw" },
-  { label: "Europe/Zurich (UTC+01:00)", value: "Europe/Zurich" },
   { label: "Pacific/Auckland (UTC+12:00)", value: "Pacific/Auckland" },
-  { label: "Pacific/Fiji (UTC+12:00)", value: "Pacific/Fiji" },
-  { label: "Pacific/Honolulu (UTC-10:00)", value: "Pacific/Honolulu" },
 ];
 
 // ── Initial Values ─────────────────────────────────────────────────────────────
@@ -798,6 +761,9 @@ const CreateUserDialog = ({
 };
 
 export default CreateUserDialog;
+
+
+
 
 // import React, { useEffect, useState } from "react";
 // import {
