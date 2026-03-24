@@ -11,6 +11,7 @@ import { BENEFICIARY_FILTER_SCHEMA } from './beneficiary.filter.schema';
 // import { v4 as uuid } from 'uuid';
 import { v4 as uuidv4 } from 'uuid';
 import * as Sentry from '@sentry/node';
+import { DateTime } from 'luxon';
 
 
 
@@ -22,6 +23,16 @@ export class BeneficiaryService {
 
 
 
+    private formatDateForDB(date: any): string | null {
+    if (!date) return null;
+    
+    return (typeof date === 'string'
+      ? DateTime.fromISO(date)
+      : DateTime.fromJSDate(date)
+    )
+      .toUTC()
+      .toFormat("yyyy-MM-dd HH:mm:ss");
+  }
 
   private async saveBeneficiaryFile(
     file: Express.Multer.File | undefined,
@@ -359,24 +370,34 @@ if (beneficiaryId === null) {
       .forEach(p => { if (p) oldFilesToDelete.push(p); });
 
     // ✅ STEP 3: Build file updates
-    const fileUpdates: any = {};
+const fileUpdates: any = {};
 
-    if (nationalIdFile.dbPath !== undefined) {
-      fileUpdates.national_id_attachment = nationalIdFile.dbPath;
-      fileUpdates.national_id_timestamp = nationalIdFile.dbPath ?(udto.national_id_timestamp ?? new Date()) : null;
-    }
-    if (signatureFile.dbPath !== undefined) {
-      fileUpdates.signature = signatureFile.dbPath;
-      fileUpdates.signature_timestamp = signatureFile.dbPath ? (udto.signature_timestamp ?? new Date()): null;
-    }
-    if (householdFile.dbPath !== undefined) {
-      fileUpdates.house_pic = householdFile.dbPath;
-      fileUpdates.house_pic_timestamp = householdFile.dbPath ? (udto.house_pic_timestamp ?? new Date()) : null;
-    }
-    if (cookstoveFile.dbPath !== undefined) {
-      fileUpdates.cookstove_pic = cookstoveFile.dbPath;
-      fileUpdates.cookstove_pic_timestamp = cookstoveFile.dbPath ? (udto.cookstove_pic_timestamp ?? new Date()) : null;
-    }
+if (nationalIdFile.dbPath !== undefined) {
+  fileUpdates.national_id_attachment = nationalIdFile.dbPath;
+  fileUpdates.national_id_timestamp = nationalIdFile.dbPath
+    ? this.formatDateForDB(udto.national_id_timestamp ?? new Date())
+    : null;
+}
+if (signatureFile.dbPath !== undefined) {
+  fileUpdates.signature = signatureFile.dbPath;
+  fileUpdates.signature_timestamp = signatureFile.dbPath
+    ? this.formatDateForDB(udto.signature_timestamp ?? new Date())
+    : null;
+}
+if (householdFile.dbPath !== undefined) {
+  fileUpdates.house_pic = householdFile.dbPath;
+  fileUpdates.house_pic_timestamp = householdFile.dbPath
+    ? this.formatDateForDB(udto.house_pic_timestamp ?? new Date())
+    : null;
+}
+if (cookstoveFile.dbPath !== undefined) {
+  fileUpdates.cookstove_pic = cookstoveFile.dbPath;
+  fileUpdates.cookstove_pic_timestamp = cookstoveFile.dbPath
+    ? this.formatDateForDB(udto.cookstove_pic_timestamp ?? new Date())
+    : null;
+}
+
+console.log("fileupdates in update beneficiary is", fileUpdates.national_id_timestamp)
 
     // ✅ STEP 4: Single DB update — fast, no transaction needed
     await this.beneficiaryRepo.updateBeneficiary(bid, udto, fileUpdates, userId);
