@@ -492,91 +492,92 @@ export class TrainingSiteRepositoryService {
     }
   }
 
+
   // ✅ SAFE UPDATE
-async updateTraining(
-  id: number,
-  dto: UpdateTrainingSiteDto,
-  userid: number,
-) {
-  try {
-    // 1. Fetch user's timezone
-    const timezone = await this.getUserTimezone(userid);
-    console.log(`Update timezone: ${timezone}`);
+  async updateTraining(
+    id: number,
+    dto: UpdateTrainingSiteDto,
+    userid: number,
+  ) {
+    try {
+      // 1. Fetch user's timezone
+      const timezone = await this.getUserTimezone(userid);
+      console.log(`Update timezone: ${timezone}`);
 
-    const filteredDto = Object.fromEntries(
-      Object.entries(dto).filter(([_, value]) => value !== undefined),
-    );
+      const filteredDto = Object.fromEntries(
+        Object.entries(dto).filter(([_, value]) => value !== undefined),
+      );
 
 
-    // 3. Convert conduct_training_date if present
-    if (filteredDto.conduct_training_date) {
-      const raw = filteredDto.conduct_training_date;
-      filteredDto.conduct_training_date = (typeof raw === 'string'
-        ? DateTime.fromISO(raw)
-        : DateTime.fromJSDate(raw as Date)
-      )
-        .setZone(timezone)
-        .toFormat("yyyy-MM-dd HH:mm:ss");
+      // 3. Convert conduct_training_date if present
+      if (filteredDto.conduct_training_date) {
+        const raw = filteredDto.conduct_training_date;
+        filteredDto.conduct_training_date = (typeof raw === 'string'
+          ? DateTime.fromISO(raw)   //if string
+          : DateTime.fromJSDate(raw as Date)   // if Date object
+        )
+          .setZone(timezone)
+          .toFormat("yyyy-MM-dd HH:mm:ss");
 
-      console.log(`conduct_training_date converted: ${filteredDto.conduct_training_date}`);
-    }
+        console.log(`conduct_training_date converted: ${filteredDto.conduct_training_date}`);
+      }
 
-    // 4. Convert modified_date if present, else generate fresh in user's timezone
-    let modified_date: string;
-    if (filteredDto.modified_date) {
-      const raw = filteredDto.modified_date;
-      modified_date = (typeof raw === 'string'
-        ? DateTime.fromISO(raw)
-        : DateTime.fromJSDate(raw as Date)
-      )
-        .setZone(timezone)
-        .toFormat("yyyy-MM-dd HH:mm:ss");
-    } else {
-      // No modified_date sent → generate fresh in user's local timezone
-      modified_date = DateTime.now()
-        .setZone(timezone)
-        .toFormat("yyyy-MM-dd HH:mm:ss");
-    }
+      // 4. Convert modified_date if present, else generate fresh in user's timezone
+      let modified_date: string;
+      if (filteredDto.modified_date) {
+        const raw = filteredDto.modified_date;
+        modified_date = (typeof raw === 'string'
+          ? DateTime.fromISO(raw)
+          : DateTime.fromJSDate(raw as Date)
+        )
+          .setZone(timezone)
+          .toFormat("yyyy-MM-dd HH:mm:ss");
+      } else {
+        // No modified_date sent → generate fresh in user's local timezone
+        modified_date = DateTime.now()
+          .setZone(timezone)
+          .toFormat("yyyy-MM-dd HH:mm:ss");
+      }
 
-    console.log(`modified_date: ${modified_date}`);
+      console.log(`modified_date: ${modified_date}`);
 
-    // 5. Remove modified_date from restDto (handle separately)
-    const { modified_date: _, ...restDto } = filteredDto;
+      // 5. Remove modified_date from restDto (handle separately)
+      const { modified_date: _, ...restDto } = filteredDto;
 
-    const fields = Object.keys(restDto);
+      const fields = Object.keys(restDto);
 
-    if (!fields.length && !modified_date) {
-      return { message: 'Nothing to update' };
-    }
+      if (!fields.length && !modified_date) {
+        return { message: 'Nothing to update' };
+      }
 
-    // 6. Build dynamic SET clause
-    let setClause = fields.map((f) => `${f} = ?`).join(', ');
-    const values = Object.values(restDto);
+      // 6. Build dynamic SET clause
+      let setClause = fields.map((f) => `${f} = ?`).join(', ');
+      const values = Object.values(restDto);
 
-    // 7. Always set modified_date (local timezone, not NOW())
-    setClause += `${setClause ? ', ' : ''}modified_date = ?`;
-    values.push(modified_date);
+      // 7. Always set modified_date (local timezone, not NOW())
+      setClause += `${setClause ? ', ' : ''}modified_date = ?`;
+      values.push(modified_date);
 
-    // 8. Always set modified_by
-    setClause += `, modified_by = ?`;
-    values.push(userid);
+      // 8. Always set modified_by
+      setClause += `, modified_by = ?`;
+      values.push(userid);
 
-    const sql = `
+      const sql = `
       UPDATE training_sites
       SET ${setClause}
       WHERE training_point_id = ?
     `;
 
-    await this.db.query(sql, [...values, id]);
+      await this.db.query(sql, [...values, id]);
 
-    return { message: 'Training site updated successfully' };
+      return { message: 'Training site updated successfully' };
 
-  } catch (error) {
-    Sentry.captureException(error);
-    console.error('updateTraining error:', error);
-    throw new InternalServerErrorException('Failed to update training');
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error('updateTraining error:', error);
+      throw new InternalServerErrorException('Failed to update training');
+    }
   }
-}
 
   async getTotalTrainingCount(): Promise<number> {
     try {
@@ -615,19 +616,19 @@ async updateTraining(
     }
   }
 
-  async getUpdatedDataByDate(date: Date) {
+  async getUpdatedDataByDate(date: Date,timezone:string) {
 
     try {
 
-      const rows: any = await this.db.query(
-        `
-        SELECT *
-        FROM training_sites
-        WHERE server_time > ?
-        OR modified_date > ?
-        `,
-        [date, date],
-      );
+  const rows: any = await this.db.query(
+  `
+  SELECT *
+  FROM training_sites
+  WHERE server_time > ?
+  OR modified_date > CONVERT_TZ(?, '+00:00', ?)
+  `,
+  [date, date, timezone],
+);
 
       return rows;
 
