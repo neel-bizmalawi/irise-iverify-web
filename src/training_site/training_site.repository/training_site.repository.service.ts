@@ -530,16 +530,15 @@ export class TrainingSiteRepositoryService {
           ? DateTime.fromISO(raw)
           : DateTime.fromJSDate(raw as Date)
         )
-          .setZone(timezone)
-          .toFormat("yyyy-MM-dd HH:mm:ss");
+          .toUTC()                           // ✅ convert to UTC
+          .toFormat("yyyy-MM-dd HH:mm:ss"); // ✅ MySQL format
       } else {
-        // No modified_date sent → generate fresh in user's local timezone
-        modified_date = DateTime.now()
-          .setZone(timezone)
-          .toFormat("yyyy-MM-dd HH:mm:ss");
+        // No modified_date sent → generate fresh in UTC
+        modified_date = DateTime.utc()
+          .toFormat("yyyy-MM-dd HH:mm:ss"); // ✅ current UTC time
       }
 
-      console.log(`modified_date: ${modified_date}`);
+      console.log(`modified_date (UTC): ${modified_date}`);
 
       // 5. Remove modified_date from restDto (handle separately)
       const { modified_date: _, ...restDto } = filteredDto;
@@ -616,19 +615,19 @@ export class TrainingSiteRepositoryService {
     }
   }
 
-  async getUpdatedDataByDate(date: Date,timezone:string) {
+  async getUpdatedDataByDate(date: Date) {
 
     try {
 
-  const rows: any = await this.db.query(
-  `
-  SELECT *
-  FROM training_sites
-  WHERE server_time > ?
-  OR modified_date > CONVERT_TZ(?, '+00:00', ?)
-  `,
-  [date, date, timezone],
-);
+      const rows: any = await this.db.query(
+        `
+        SELECT *
+        FROM training_sites
+        WHERE server_time > ?
+        OR modified_date > ?
+        `,
+        [date, date],
+      );
 
       return rows;
 

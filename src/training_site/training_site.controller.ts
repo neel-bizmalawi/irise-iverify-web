@@ -141,8 +141,8 @@ export class TrainingSiteController {
     }
 
     @Post('update_data')
-    async getupdatedata(@Body('date') date: string, @Body('timezone') timezone: string,) {
-        return this.TrainingSiteService.getupdateData(new Date(date),timezone);
+    async getupdatedata(@Body('date') date: string) {
+        return this.TrainingSiteService.getupdateData(new Date(date));
     }
 
 }

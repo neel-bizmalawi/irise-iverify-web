@@ -421,14 +421,14 @@ for (const t of toUpdate) {
   }
 
 
-  async getupdateData(dates: Date,timezone:string) {
+  async getupdateData(dates: Date) {
     try {
 
       console.log("Input date (raw):", dates);
       console.log("ISO format:", dates.toISOString());
       console.log("Locale string:", dates.toString());
 
-      const record = await this.trainingSiteRepo.getUpdatedDataByDate(dates,timezone);
+      const record = await this.trainingSiteRepo.getUpdatedDataByDate(dates);
 
       if (!record || record.length === 0) {
         return {
