@@ -15,6 +15,12 @@ export class CreateBeneficiarydto {
   @IsString()
   training_site?: string;
 
+@IsOptional()
+@Type(() => Number)
+@IsNumber()
+beneficiary_id?: number;
+
+
   @IsOptional()
   @IsNumber()
   m_user_id?: number;
@@ -166,11 +172,19 @@ export class CreateBeneficiarydto {
   @IsEnum(['active', 'inactive'])
   status?: 'active' | 'inactive';
 
+    @IsOptional()
+  @Type(() => Date)
+  created_date?: Date;
+
+    @IsOptional()
+  @Type(() => Date)
+  modified_date?: Date;
+
   @IsOptional()
   @IsString()
   s_is_sync?: string;
 
-    @IsOptional()
+  @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   remove_national_id?: boolean;
@@ -190,5 +204,5 @@ export class CreateBeneficiarydto {
   @IsBoolean()
   remove_cookstove_pic?: boolean;
 
-  
+
 }

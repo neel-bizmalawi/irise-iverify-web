@@ -131,16 +131,16 @@ if (beneficiaryId === null) {
         beneficiaryId,
         {
           national_id_attachment: nationalIdFile.dbPath,
-          national_id_timestamp: nationalIdFile.dbPath ? new Date() : null,
+          national_id_timestamp: nationalIdFile.dbPath ? (dto.national_id_timestamp ?? new Date()): null,
 
           signature: signatureFile.dbPath,
-          signature_timestamp: signatureFile.dbPath ? new Date() : null,
+          signature_timestamp: signatureFile.dbPath ? (dto.signature_timestamp ?? new Date()) : null,
 
           house_pic: householdFile.dbPath,
-          house_pic_timestamp: householdFile.dbPath ? new Date() : null,
+          house_pic_timestamp: householdFile.dbPath ? (dto.house_pic_timestamp ?? new Date()): null,
 
           cookstove_pic: cookstoveFile.dbPath,
-          cookstove_pic_timestamp: cookstoveFile.dbPath ? new Date() : null
+          cookstove_pic_timestamp: cookstoveFile.dbPath ? (dto.cookstove_pic_timestamp ?? new Date()) : null
         },
       );
 
@@ -363,19 +363,19 @@ if (beneficiaryId === null) {
 
     if (nationalIdFile.dbPath !== undefined) {
       fileUpdates.national_id_attachment = nationalIdFile.dbPath;
-      fileUpdates.national_id_timestamp = nationalIdFile.dbPath ? new Date() : null;
+      fileUpdates.national_id_timestamp = nationalIdFile.dbPath ?(udto.national_id_timestamp ?? new Date()) : null;
     }
     if (signatureFile.dbPath !== undefined) {
       fileUpdates.signature = signatureFile.dbPath;
-      fileUpdates.signature_timestamp = signatureFile.dbPath ? new Date() : null;
+      fileUpdates.signature_timestamp = signatureFile.dbPath ? (udto.signature_timestamp ?? new Date()): null;
     }
     if (householdFile.dbPath !== undefined) {
       fileUpdates.house_pic = householdFile.dbPath;
-      fileUpdates.house_pic_timestamp = householdFile.dbPath ? new Date() : null;
+      fileUpdates.house_pic_timestamp = householdFile.dbPath ? (udto.house_pic_timestamp ?? new Date()) : null;
     }
     if (cookstoveFile.dbPath !== undefined) {
       fileUpdates.cookstove_pic = cookstoveFile.dbPath;
-      fileUpdates.cookstove_pic_timestamp = cookstoveFile.dbPath ? new Date() : null;
+      fileUpdates.cookstove_pic_timestamp = cookstoveFile.dbPath ? (udto.cookstove_pic_timestamp ?? new Date()) : null;
     }
 
     // ✅ STEP 4: Single DB update — fast, no transaction needed
@@ -447,5 +447,95 @@ if (beneficiaryId === null) {
 
     }
   }
+
+
+      async getupdateData(dates: Date) {
+        try {
+    
+          console.log("Input date (raw):", dates);
+          console.log("ISO format:", dates.toISOString());
+          console.log("Locale string:", dates.toString());
+    
+          const record = await this.beneficiaryRepo.getUpdatedDataByDate(dates);
+    
+          if (!record || record.length === 0) {
+            return {
+              message: "no data found",
+              data: [],
+            }
+          }
+    
+          return {
+            success: true,
+            message: "updated data  fetched succesfully",
+            data: record,
+          }
+        } catch (error) {
+          console.error("getUserRles error", error)
+          Sentry.captureException(error);
+    
+    
+          throw new InternalServerErrorException("Failed to get updated data",);
+        }
+      }
+
+
+
+      async syncBeneficiary(
+  dto: CreateBeneficiarydto,
+  nationalId: Express.Multer.File | undefined,
+  signature: Express.Multer.File | undefined,
+  household_pic: Express.Multer.File | undefined,
+  cookstove_pic: Express.Multer.File | undefined,
+  userId: number,
+) {
+  try {
+
+    // UPDATE — beneficiary_id exists
+    if (dto.beneficiary_id) {
+      console.log(`Syncing update for beneficiary_id: ${dto.beneficiary_id}`);
+
+      await this.updateBeneficiary(
+        dto,                  // UpdateBeneficiaryDto fields
+        nationalId,
+        signature,
+        household_pic,
+        cookstove_pic,
+        dto.beneficiary_id,
+        userId,
+      );
+
+      return {
+        success: true,
+        action: 'updated',
+        beneficiary_id: dto.beneficiary_id,
+        message: 'Beneficiary updated successfully',
+      };
+    }
+
+    // CREATE — no beneficiary_id
+    console.log(`Syncing create for new beneficiary`);
+
+    const result = await this.createBeneficiary(
+      dto,                  // CreateBeneficiaryDto fields
+      nationalId,
+      signature,
+      household_pic,
+      cookstove_pic,
+      userId,
+    );
+
+    return {
+      success: true,
+      action: 'created',
+      message: 'Beneficiary created successfully',
+    };
+
+  } catch (error) {
+    Sentry.captureException(error);
+    console.error('syncBeneficiary error', error);
+    throw new InternalServerErrorException('Failed to sync beneficiary');
+  }
+}
 
 }

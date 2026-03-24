@@ -6,6 +6,7 @@ import { CreateBeneficiarydto } from '../create-benificiary.dto';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
 import { UpdateBeneficiaryDto } from '../update-beneficiary-site-dto';
 import * as Sentry from '@sentry/node';
+import { DateTime } from 'luxon';
 
 
 
@@ -13,155 +14,17 @@ import * as Sentry from '@sentry/node';
 export class BeneficiaryRepositoryService {
   constructor(private readonly db: DatabaseService) { }
 
-  //   async insertDataBeneficiary(data: CreateBeneficiarydto, username: string, connection) {
-  //     try {
-  //       const {
-  //         training_site,
-  //         first_name,
-  //         last_name,
-  //         mobile_no,
-  //         other_cookstove,
-  //         females_above_18,
-  //         females_below_18,
-  //         males_below_18,
-  //         males_above_18,
-  //         cooking_method,
-  //         district_name,
-  //         national_id,
-  //         national_id_attachment,
-  //         house_pic,
-  //         cookstove_pic,
-  //         signature,
-  //         emp_id,
-  //         language,
-  //         read_doc,
-  //         understood_doc,
-  //         emp_sign,
-  //         read_to_you,
-  //         stove_status_delivery,
-  //         no_other_cook_stove_present,
-  //         primary_residence_confirmation,
-  //         cookstove_pic_timestamp,
-  //         house_pic_timestamp,
-  //         national_id_timestamp,
-  //         signature_timestamp,
-  //         device_serial_no,
-  //         latitude,
-  //         longitude,
-  //         geo_address,
-  //         created_by,
-  //         modified_by,
-  //         status,
-  //         s_is_sync
-  //       } = data;
 
-  //       const [result] = await connection.query(
-
-  //         `
-  //             INSERT INTO beneficiaries
-  //             (
-  //               training_site,
-  //                 first_name,
-  //                 last_name,
-  //                 mobile_no,
-  //                 other_cookstove,
-  //                 females_above_18,
-  //                 females_below_18,
-  //                 males_below_18,
-  //                 males_above_18,
-  //                 cooking_method,
-  //                 district_name,
-  //                 national_id,
-  //                 national_id_attachment,
-  //                 house_pic,
-  //                 cookstove_pic,
-  //                 signature,
-  //                 emp_id,
-  //                 language,
-  //                 read_doc,
-  //                 understood_doc,
-  //                 emp_sign,
-  //                 read_to_you,
-  //                 stove_status_delivery,
-  //                 no_other_cook_stove_present,
-  //                 primary_residence_confirmation,
-  //                 cookstove_pic_timestamp,
-  //                 house_pic_timestamp,
-  //                 national_id_timestamp,
-  //                 signature_timestamp,
-  //                 device_serial_no,
-  //                 latitude,
-  //                 longitude,
-  //                 geo_address,
-  //                 created_by,
-  //                 modified_by,
-  //                 status,
-  //                 s_is_sync
-  //             )
-  // VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  //         [
-  //           training_site ?? null,
-  //           first_name ?? null,
-  //           last_name ?? null,
-  //           mobile_no ?? null,
-  //           other_cookstove ?? null,
-  //           females_above_18 ?? null,
-  //           females_below_18 ?? null,
-  //           males_below_18 ?? null,
-  //           males_above_18 ?? null,
-  //           cooking_method ?? null,
-  //           district_name ?? null,
-  //           national_id ?? null,
-  //           national_id_attachment ?? null,
-  //           house_pic ?? null,
-  //           cookstove_pic ?? null,
-  //           signature ?? null,
-  //           emp_id ?? null,
-  //           language ?? null,
-  //           read_doc ?? null,
-  //           understood_doc ?? null,
-  //           emp_sign ?? null,
-  //           read_to_you ?? null,
-  //           stove_status_delivery ?? null,
-  //           no_other_cook_stove_present ?? null,
-  //           primary_residence_confirmation ?? null,
-  //           cookstove_pic_timestamp ?? null,
-  //           house_pic_timestamp ?? null,
-  //           national_id_timestamp ?? null,
-  //           signature_timestamp ?? null,
-  //           device_serial_no ?? null,
-  //           latitude ?? null,
-  //           longitude ?? null,
-  //           geo_address ?? null,
-  //           username ?? null,
-  //           modified_by ?? null,
-  //           status ?? null,
-  //           s_is_sync ?? null
-  //         ],
-  //       );
-
-
-  //       return result;
-  //     }
-  //     catch (error: any) {
-
-  //       console.error('❌ insertTraining DB error:', error);
-
-  //       if (error.code === 'ER_DUP_ENTRY') {
-  //         throw new ConflictException('Training site already exists');
-  //       }
-
-  //       // Foreign key constraint (created_by user missing)
-  //       if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-  //         throw new ConflictException('Invalid user reference');
-  //       }
-
-  //       // Fallback
-  //       throw new InternalServerErrorException(
-  //         'Failed to create training site',
-  //       );
-  //     }
-  //   }
+  private formatDateForDB(date: any, timezone: string): string | null {
+  if (!date) return null;
+  
+  return (typeof date === 'string'
+    ? DateTime.fromISO(date)
+    : DateTime.fromJSDate(date)
+  )
+    .setZone(timezone)
+    .toFormat("yyyy-MM-dd HH:mm:ss");
+}
 
   async insertDataBeneficiary(
     data: CreateBeneficiarydto,
@@ -241,6 +104,8 @@ export class BeneficiaryRepositoryService {
   async updateFilesPath(beneficiaryId: number, files: any) {
 
   try {
+
+    console.log("files national id timestamp is",files.national_id_timestamp)
 
     const sql = `
       UPDATE beneficiaries
@@ -594,6 +459,30 @@ export class BeneficiaryRepositoryService {
       console.error("getFilteredCount is", error)
     }
   }
+
+
+    async getUpdatedDataByDate(date: Date) {
+  
+      try {
+  
+        const rows: any = await this.db.query(
+          `
+          SELECT *
+          FROM beneficiaries
+          WHERE server_time > ?
+          OR modified_date > ?
+          `,
+          [date, date],
+        );
+  
+        return rows;
+  
+      } catch (error) {
+        Sentry.captureException(error);
+        console.error('getUpdatedDataByDate error', error);
+        throw error;
+      }
+    }
 
 }
 
