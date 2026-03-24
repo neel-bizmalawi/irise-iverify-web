@@ -61,56 +61,71 @@ export class BeneficiaryService {
     userId: number
   ) {
 
-    const connection = await this.db.getConnection();
-    await connection.beginTransaction();
 
     let beneficiaryFolderPath: string | null = null;
+      let beneficiaryId: number | null = null; // 👈 FIX: declare here
+
 
     try {
 
-      const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId, connection);
+      const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId);
 
-      console.log("beneficiary result is", beneficiary);
 
       if (!beneficiary) {
         throw new Error('Failed to create Beneficiary');
       }
 
-      const beneficiaryId = beneficiary.insertId;
+       beneficiaryId = beneficiary.insertId;
+
+if (beneficiaryId === null) {
+  throw new Error("Invalid beneficiary ID");
+}
 
       // create folder once
       beneficiaryFolderPath = `uploads/beneficiary/${beneficiaryId}`;
 
-      fs.mkdirSync(beneficiaryFolderPath, { recursive: true });
+      // fs.mkdirSync(beneficiaryFolderPath, { recursive: true });
+      await fs.promises.mkdir(beneficiaryFolderPath, { recursive: true });
+
 
       // save files using helper
-      const nationalIdFile = await this.saveBeneficiaryFile(
-        nationalId,
-        beneficiaryId,
-        "beneficiary_national_id",
-        beneficiaryFolderPath
-      );
+      // const nationalIdFile = await this.saveBeneficiaryFile(
+      //   nationalId,
+      //   beneficiaryId,
+      //   "beneficiary_national_id",
+      //   beneficiaryFolderPath
+      // );
 
-      const signatureFile = await this.saveBeneficiaryFile(
-        signature,
-        beneficiaryId,
-        "beneficiary_signature",
-        beneficiaryFolderPath
-      );
+      // const signatureFile = await this.saveBeneficiaryFile(
+      //   signature,
+      //   beneficiaryId,
+      //   "beneficiary_signature",
+      //   beneficiaryFolderPath
+      // );
 
-      const householdFile = await this.saveBeneficiaryFile(
-        household_pic,
-        beneficiaryId,
-        "beneficiary_household",
-        beneficiaryFolderPath
-      );
+      // const householdFile = await this.saveBeneficiaryFile(
+      //   household_pic,
+      //   beneficiaryId,
+      //   "beneficiary_household",
+      //   beneficiaryFolderPath
+      // );
 
-      const cookstoveFile = await this.saveBeneficiaryFile(
-        cookstove_pic,
-        beneficiaryId,
-        "beneficiary_cookstove_pic",
-        beneficiaryFolderPath
-      );
+      // const cookstoveFile = await this.saveBeneficiaryFile(
+      //   cookstove_pic,
+      //   beneficiaryId,
+      //   "beneficiary_cookstove_pic",
+      //   beneficiaryFolderPath
+      // );
+
+      // then all files simultaneously
+
+      const [nationalIdFile, signatureFile, householdFile, cookstoveFile] =
+  await Promise.all([
+    this.saveBeneficiaryFile(nationalId, beneficiaryId, "beneficiary_national_id", beneficiaryFolderPath),
+    this.saveBeneficiaryFile(signature,  beneficiaryId, "beneficiary_signature",   beneficiaryFolderPath),
+    this.saveBeneficiaryFile(household_pic, beneficiaryId, "beneficiary_household", beneficiaryFolderPath),
+    this.saveBeneficiaryFile(cookstove_pic, beneficiaryId, "beneficiary_cookstove_pic", beneficiaryFolderPath),
+  ]);
 
       await this.beneficiaryRepo.updateFilesPath(
         beneficiaryId,
@@ -127,10 +142,8 @@ export class BeneficiaryService {
           cookstove_pic: cookstoveFile.dbPath,
           cookstove_pic_timestamp: cookstoveFile.dbPath ? new Date() : null
         },
-        connection
       );
 
-      await connection.commit();
 
       return { message: "Beneficiary created successfully" };
 
@@ -138,19 +151,31 @@ export class BeneficiaryService {
       Sentry.captureException(error);
 
       console.error("createBeneficiary error", error)
-      await connection.rollback();
 
       // delete entire folder
       if (beneficiaryFolderPath && fs.existsSync(beneficiaryFolderPath)) {
-        fs.rmSync(beneficiaryFolderPath, { recursive: true, force: true });
+        // fs.rmSync(beneficiaryFolderPath, { recursive: true, force: true });
+              await fs.promises.rm(beneficiaryFolderPath, { recursive: true, force: true });
+
       }
+
+       if (beneficiaryId) {
+      try {
+        await this.beneficiaryRepo.deleteBeneficiaryId(beneficiaryId);
+      } catch (deleteError) {
+        // log separately — don't let this hide the original error
+        Sentry.captureException(deleteError);
+        console.error("Failed to cleanup beneficiary record:", beneficiaryId, deleteError);
+      }
+    }
 
       throw error;
 
     } finally {
-      connection.release();
+      console.log("fetch failed")
     }
   }
+
 
   async getBeneficiaryData(bid: number) {
 
@@ -252,195 +277,139 @@ export class BeneficiaryService {
   }
 
 
-  private async replaceBeneficiaryFile(
-    file: Express.Multer.File | undefined,
-    beneficiaryId: number,
-    prefix: string,
-    folderPath: string,
-    oldFilePath?: string,
-    removeFile?: boolean
-  ): Promise<{ dbPath?: string | null; filePath?: string | null }> {
+   private async replaceBeneficiaryFile(
+  file: Express.Multer.File | undefined,
+  beneficiaryId: number,
+  prefix: string,
+  folderPath: string,
+  oldFilePath?: string,
+  removeFile?: boolean
+): Promise<{ dbPath?: string | null; filePath?: string | null; oldFileToDelete?: string | null }> {
+  //                                                            ↑ return old path instead of deleting immediately
 
-
-    // CASE 1: user removed image
-    if (removeFile) {
-      if (oldFilePath) {
-        // const cleanOldPath = oldFilePath.replace(/^\/+/, '');
-        const cleanOldPath = path.resolve(oldFilePath.replace(/^\/+/, ''));
-
-        if (fs.existsSync(cleanOldPath)) {
-          await fs.promises.unlink(cleanOldPath);
-        }
-      }
-
-      return { dbPath: null, filePath: null };
-    }
-
-    // case 2:new upload 
-    if (file) {
-      const fileName = `${prefix}_${beneficiaryId}_${uuidv4()}${path.extname(file.originalname)}`;
-      const filePath = path.join(folderPath, fileName);
-      const dbPath = `/${folderPath}/${fileName}`;
-
-      // delete old file first
-      if (oldFilePath) {
-        // const cleanOldPath = oldFilePath.replace(/^\/+/, '');
-        const cleanOldPath = path.resolve(oldFilePath.replace(/^\/+/, ''));
-
-        if (fs.existsSync(cleanOldPath))  //Does this file exist on the server?
-        {
-          await fs.promises.unlink(cleanOldPath); //This deletes the file from the server.
-        }
-      }
-
-      // write new file
-      await fs.promises.writeFile(filePath, file.buffer);
-
-      return { dbPath, filePath };
-    }
-
-    // CASE 3: untouched
-    return {};
+  // CASE 1: user removed image
+  if (removeFile) {
+    return { 
+      dbPath: null, 
+      filePath: null, 
+      oldFileToDelete: oldFilePath ?? null  // ✅ just return it, don't delete yet
+    };
   }
+
+  // CASE 2: new upload
+  if (file) {
+    const fileName = `${prefix}_${beneficiaryId}_${uuidv4()}${path.extname(file.originalname)}`;
+    const filePath = path.join(folderPath, fileName);
+    const dbPath = `/${folderPath}/${fileName}`;
+
+    await fs.promises.writeFile(filePath, file.buffer);  // write new file
+
+    return { 
+      dbPath, 
+      filePath,
+      oldFileToDelete: oldFilePath ?? null  // ✅ return old path, delete after DB succeeds
+    };
+  }
+
+  // CASE 3: untouched
+  return {};
+}
 
 
   async updateBeneficiary(
-    udto: UpdateBeneficiaryDto,
-    nationalId: Express.Multer.File | undefined,
-    signature: Express.Multer.File | undefined,
-    household_pic: Express.Multer.File | undefined,
-    cookstove_pic: Express.Multer.File | undefined,
-    bid: number,
-    userId: number
-  ) {
+  udto: UpdateBeneficiaryDto,
+  nationalId: Express.Multer.File | undefined,
+  signature: Express.Multer.File | undefined,
+  household_pic: Express.Multer.File | undefined,
+  cookstove_pic: Express.Multer.File | undefined,
+  bid: number,
+  userId: number
+) {
 
-    const connection = await this.db.getConnection();
-    await connection.beginTransaction();
+  let uploadedFiles: string[] = [];      // new files written
+  let oldFilesToDelete: string[] = [];   // old files to delete after DB succeeds
 
-    let uploadedFiles: string[] = [];
+  try {
 
-    try {
+    // ✅ STEP 1: Fetch existing beneficiary BEFORE any file work
+    const existingBeneficiary = await this.beneficiaryRepo.getBeneficiaryById(bid);
 
-      const beneficiaryId = bid;
-
-      const existingBeneficiary =
-        await this.beneficiaryRepo.getBeneficiaryById(beneficiaryId);
-
-      if (!existingBeneficiary) {
-        throw new BadRequestException("Beneficiary not found");
-      }
-
-      const folderPath = `uploads/beneficiary/${beneficiaryId}`;
-      //       const folderPath = path.join(
-      //   process.cwd(),
-      //   "uploads",
-      //   "beneficiary",
-      //   String(beneficiaryId)
-      // );
-      fs.mkdirSync(folderPath, { recursive: true });
-
-      const nationalIdFile = await this.replaceBeneficiaryFile(
-        nationalId,
-        beneficiaryId,
-        "beneficiary_national_id",
-        folderPath,
-        existingBeneficiary?.national_id_attachment,
-        udto.remove_national_id
-      );
-
-      const signatureFile = await this.replaceBeneficiaryFile(
-        signature,
-        beneficiaryId,
-        "beneficiary_signature",
-        folderPath,
-        existingBeneficiary?.signature,
-        udto.remove_signature
-      );
-
-      const householdFile = await this.replaceBeneficiaryFile(
-        household_pic,
-        beneficiaryId,
-        "beneficiary_household",
-        folderPath,
-        existingBeneficiary?.house_pic,
-        udto.remove_house_pic
-      );
-
-      const cookstoveFile = await this.replaceBeneficiaryFile(
-        cookstove_pic,
-        beneficiaryId,
-        "beneficiary_cookstove_pic",
-        folderPath,
-        existingBeneficiary?.cookstove_pic,
-        udto.remove_cookstove_pic
-      );
-
-      // store uploaded files for rollback safety
-      [
-        nationalIdFile.filePath,
-        signatureFile.filePath,
-        householdFile.filePath,
-        cookstoveFile.filePath
-      ].forEach(p => {
-        if (p) uploadedFiles.push(p);
-      });
-
-      const fileUpdates: any = {};
-
-      if (nationalIdFile.dbPath !== undefined) {
-        fileUpdates.national_id_attachment = nationalIdFile.dbPath;
-        fileUpdates.national_id_timestamp = nationalIdFile.dbPath ? new Date() : null;
-
-      }
-
-      if (signatureFile.dbPath !== undefined) {
-        fileUpdates.signature = signatureFile.dbPath;
-        fileUpdates.signature_timestamp = signatureFile.dbPath ? new Date() : null;
-
-      }
-
-      if (householdFile.dbPath !== undefined) {
-        fileUpdates.house_pic = householdFile.dbPath;
-        fileUpdates.house_pic_timestamp = householdFile.dbPath ? new Date() : null;
-
-      }
-
-      if (cookstoveFile.dbPath !== undefined) {
-        fileUpdates.cookstove_pic = cookstoveFile.dbPath;
-        fileUpdates.cookstove_pic_timestamp = cookstoveFile.dbPath ? new Date() : null;
-      }
-
-
-      await this.beneficiaryRepo.updateBeneficiary(
-        beneficiaryId,
-        udto,
-        fileUpdates,
-        connection,
-        userId
-      );
-
-      await connection.commit();
-
-      return { message: "Beneficiary updated successfully" };
-
-    } catch (error) {
-      Sentry.captureException(error);
-
-      await connection.rollback();
-
-      // delete uploaded files
-      for (const file of uploadedFiles) {
-        if (fs.existsSync(file)) {
-          await fs.promises.unlink(file);
-        }
-      }
-
-      throw error;
-
-    } finally {
-      connection.release();
+    if (!existingBeneficiary) {
+      throw new BadRequestException("Beneficiary not found");
     }
+
+    const folderPath = `uploads/beneficiary/${bid}`;
+    await fs.promises.mkdir(folderPath, { recursive: true });
+
+    // ✅ STEP 2: Write new files simultaneously — no DB lock
+    const [nationalIdFile, signatureFile, householdFile, cookstoveFile] =
+      await Promise.all([
+        this.replaceBeneficiaryFile(nationalId, bid, "beneficiary_national_id", folderPath, existingBeneficiary?.national_id_attachment, udto.remove_national_id),
+        this.replaceBeneficiaryFile(signature, bid, "beneficiary_signature", folderPath, existingBeneficiary?.signature, udto.remove_signature),
+        this.replaceBeneficiaryFile(household_pic, bid, "beneficiary_household", folderPath, existingBeneficiary?.house_pic, udto.remove_house_pic),
+        this.replaceBeneficiaryFile(cookstove_pic, bid, "beneficiary_cookstove_pic", folderPath, existingBeneficiary?.cookstove_pic, udto.remove_cookstove_pic),
+      ]);
+
+    // track new uploaded files for rollback if DB fails
+    [nationalIdFile.filePath, signatureFile.filePath, householdFile.filePath, cookstoveFile.filePath]
+      .forEach(p => { if (p) uploadedFiles.push(p); });
+
+    // track old files to delete after DB succeeds
+    [nationalIdFile.oldFileToDelete, signatureFile.oldFileToDelete, householdFile.oldFileToDelete, cookstoveFile.oldFileToDelete]
+      .forEach(p => { if (p) oldFilesToDelete.push(p); });
+
+    // ✅ STEP 3: Build file updates
+    const fileUpdates: any = {};
+
+    if (nationalIdFile.dbPath !== undefined) {
+      fileUpdates.national_id_attachment = nationalIdFile.dbPath;
+      fileUpdates.national_id_timestamp = nationalIdFile.dbPath ? new Date() : null;
+    }
+    if (signatureFile.dbPath !== undefined) {
+      fileUpdates.signature = signatureFile.dbPath;
+      fileUpdates.signature_timestamp = signatureFile.dbPath ? new Date() : null;
+    }
+    if (householdFile.dbPath !== undefined) {
+      fileUpdates.house_pic = householdFile.dbPath;
+      fileUpdates.house_pic_timestamp = householdFile.dbPath ? new Date() : null;
+    }
+    if (cookstoveFile.dbPath !== undefined) {
+      fileUpdates.cookstove_pic = cookstoveFile.dbPath;
+      fileUpdates.cookstove_pic_timestamp = cookstoveFile.dbPath ? new Date() : null;
+    }
+
+    // ✅ STEP 4: Single DB update — fast, no transaction needed
+    await this.beneficiaryRepo.updateBeneficiary(bid, udto, fileUpdates, userId);
+
+    // ✅ STEP 5: DB succeeded — NOW safe to delete old files
+    await Promise.all(
+      oldFilesToDelete.map(async (oldPath) => {
+        const cleanPath = path.resolve(oldPath.replace(/^\/+/, ''));
+        if (fs.existsSync(cleanPath)) {
+          await fs.promises.unlink(cleanPath);
+        }
+      })
+    );
+
+    return { message: "Beneficiary updated successfully" };
+
+  } catch (error) {
+    Sentry.captureException(error);
+    console.error("updateBeneficiary error", error);
+
+    // ✅ DB failed — delete newly uploaded files only
+    await Promise.all(
+      uploadedFiles.map(async (filePath) => {
+        if (fs.existsSync(filePath)) {
+          await fs.promises.unlink(filePath);
+        }
+      })
+    );
+    // old files are untouched ✅ — never deleted since DB didn't succeed
+
+    throw error;
   }
+}
 
 
 

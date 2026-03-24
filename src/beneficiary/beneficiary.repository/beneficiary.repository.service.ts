@@ -165,85 +165,84 @@ export class BeneficiaryRepositoryService {
 
   async insertDataBeneficiary(
     data: CreateBeneficiarydto,
-    userId: number,
-    connection
+    userId: number
   ) {
-    try {
+  try {
 
-      const payload = {
-        ...data,
-        created_by: userId
-      };
+    const payload = {
+      ...data,
+      created_by: userId
+    };
 
-      console.log("FINAL PAYLOAD:", payload);
+    console.log("FINAL PAYLOAD:", payload);
 
-      // ❗ remove flags (not DB columns)
-      delete payload.remove_national_id;
-      delete payload.remove_signature;
-      delete payload.remove_house_pic;
-      delete payload.remove_cookstove_pic;
+    // ❗ remove flags (not DB columns)
+    delete payload.remove_national_id;
+    delete payload.remove_signature;
+    delete payload.remove_house_pic;
+    delete payload.remove_cookstove_pic;
 
-      //remove timestamps
-      delete payload.national_id_timestamp;
-      delete payload.signature_timestamp;
-      delete payload.house_pic_timestamp;
-      delete payload.cookstove_pic_timestamp;
+    //remove timestamps
+    delete payload.national_id_timestamp;
+    delete payload.signature_timestamp;
+    delete payload.house_pic_timestamp;
+    delete payload.cookstove_pic_timestamp;
 
-      // convert undefined → null
-      Object.keys(payload).forEach(key => {
-        if (payload[key] === undefined) {
-          payload[key] = null;
-        }
-      });
+    // convert undefined → null
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) {
+        payload[key] = null;
+      }
+    });
 
-      const columns = Object.keys(payload).join(", ");
-      const placeholders = Object.keys(payload).map(() => "?").join(", ");
-      const values = Object.values(payload);
+    const columns = Object.keys(payload).join(", ");
+    const placeholders = Object.keys(payload).map(() => "?").join(", ");
+    const values = Object.values(payload);
 
-      const [result] = await connection.query(
-        `INSERT INTO beneficiaries (${columns}) VALUES (${placeholders})`,
-        values
-      );
+    const result = await this.db.query(
+      `INSERT INTO beneficiaries (${columns}) VALUES (${placeholders})`,
+      values
+    );
 
-      return result;
+    return result;
 
-    } catch (error: any) {
+  } catch (error: any) {
 
-      Sentry.captureException(error);
+    Sentry.captureException(error);
 
-      console.error("❌ insertBeneficiary DB error:", error);
+    console.error("❌ insertBeneficiary DB error:", error);
 
-      if (error.code === "ER_DUP_ENTRY") {
+    if (error.code === "ER_DUP_ENTRY") {
 
-        const duplicateValue = error.sqlMessage.match(/Duplicate entry '(.+?)'/)?.[1];
-        const key = error.sqlMessage.match(/for key '(.+?)'/)?.[1];
+      const duplicateValue = error.sqlMessage.match(/Duplicate entry '(.+?)'/)?.[1];
+      const key = error.sqlMessage.match(/for key '(.+?)'/)?.[1];
 
-        if (key === "nunique") {
-          throw new ConflictException(`National ID ${duplicateValue} already exists`);
-        }
-
-        if (key === "device_serial_no") {
-          throw new ConflictException(`Device serial number already exists`);
-        }
-
-        throw new ConflictException("Duplicate value detected");
+      if (key === "nunique") {
+        throw new ConflictException(`National ID ${duplicateValue} already exists`);
       }
 
-      if (error.code === "ER_NO_REFERENCED_ROW_2") {
-        throw new ConflictException("Invalid foreign key reference");
+      if (key === "device_serial_no") {
+        throw new ConflictException(`Device serial number already exists`);
       }
 
-      throw new InternalServerErrorException(
-        "Failed to create beneficiary"
-      );
+      throw new ConflictException("Duplicate value detected");
     }
+
+    if (error.code === "ER_NO_REFERENCED_ROW_2") {
+      throw new ConflictException("Invalid foreign key reference");
+    }
+
+    throw new InternalServerErrorException(
+      "Failed to create beneficiary"
+    );
   }
+}
 
-  async updateFilesPath(beneficiaryId: number, files: any, connection) {
+  async updateFilesPath(beneficiaryId: number, files: any) {
 
-    try {
+  try {
 
-      const sql = `
+    const sql = `
       UPDATE beneficiaries
       SET 
         national_id_attachment = ?, 
@@ -261,38 +260,38 @@ export class BeneficiaryRepositoryService {
       WHERE beneficiary_id = ?
     `;
 
-      const values = [
-        files.national_id_attachment ?? null,
-        files.national_id_timestamp ?? null,
+    const values = [
+      files.national_id_attachment ?? null,
+      files.national_id_timestamp ?? null,
 
-        files.signature ?? null,
-        files.signature_timestamp ?? null,
+      files.signature ?? null,
+      files.signature_timestamp ?? null,
 
-        files.house_pic ?? null,
-        files.house_pic_timestamp ?? null,
+      files.house_pic ?? null,
+      files.house_pic_timestamp ?? null,
 
-        files.cookstove_pic ?? null,
-        files.cookstove_pic_timestamp ?? null,
+      files.cookstove_pic ?? null,
+      files.cookstove_pic_timestamp ?? null,
 
-        beneficiaryId
-      ];
+      beneficiaryId
+    ];
 
-      const [result] = await connection.query(sql, values);
+    const result = await this.db.query(sql, values);
 
-      return result;
+    return result;
 
-    } 
-    
-    catch (error) {
-      Sentry.captureException(error);
-
-      console.error("UpdateFilepath error", error);
-
-      throw new InternalServerErrorException(
-        'Failed to update beneficiary file paths'
-      );
-    }
   }
+
+  catch (error) {
+    Sentry.captureException(error);
+
+    console.error("UpdateFilepath error", error);
+
+    throw new InternalServerErrorException(
+      'Failed to update beneficiary file paths'
+    );
+  }
+}
 
 
   async getBeneficiaryById(bid: number) {
@@ -509,7 +508,6 @@ export class BeneficiaryRepositoryService {
     beneficiaryId: number,
     dto: any,
     filePaths: any,
-    connection: any,
     userid: number,
   ) {
 
@@ -550,7 +548,7 @@ export class BeneficiaryRepositoryService {
     WHERE beneficiary_id = ?
   `;
 
-      await connection.query(sql, [...values, userid, beneficiaryId]);
+      await this.db.query(sql, [...values, userid, beneficiaryId]);
     }
     catch (error) {
       Sentry.captureException(error);
