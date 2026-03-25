@@ -79,7 +79,10 @@ export class BeneficiaryService {
 
     try {
 
-      const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId);
+            const timezone = await this.beneficiaryRepo.getUserTimezone(userId);
+
+
+      const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId,timezone);
 
 
       if (!beneficiary) {
@@ -142,16 +145,16 @@ if (beneficiaryId === null) {
         beneficiaryId,
         {
           national_id_attachment: nationalIdFile.dbPath,
-          national_id_timestamp: nationalIdFile.dbPath ? (dto.national_id_timestamp ?? new Date()): null,
+          national_id_timestamp: nationalIdFile.dbPath ? this.formatDateForDB(dto.national_id_timestamp ?? new Date()): null,
 
           signature: signatureFile.dbPath,
-          signature_timestamp: signatureFile.dbPath ? (dto.signature_timestamp ?? new Date()) : null,
+          signature_timestamp: signatureFile.dbPath ? this.formatDateForDB(dto.signature_timestamp ?? new Date()) : null,
 
           house_pic: householdFile.dbPath,
-          house_pic_timestamp: householdFile.dbPath ? (dto.house_pic_timestamp ?? new Date()): null,
+          house_pic_timestamp: householdFile.dbPath ? this.formatDateForDB(dto.house_pic_timestamp ?? new Date()): null,
 
           cookstove_pic: cookstoveFile.dbPath,
-          cookstove_pic_timestamp: cookstoveFile.dbPath ? (dto.cookstove_pic_timestamp ?? new Date()) : null
+          cookstove_pic_timestamp: cookstoveFile.dbPath ? this.formatDateForDB(dto.cookstove_pic_timestamp ?? new Date()) : null
         },
       );
 

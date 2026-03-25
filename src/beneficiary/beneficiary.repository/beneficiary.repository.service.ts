@@ -47,21 +47,20 @@ export class BeneficiaryRepositoryService {
 
   async insertDataBeneficiary(
     data: CreateBeneficiarydto,
-    userId: number
+    userId: number,
+    timezone: string,
   ) {
 
     try {
 
-      const timezone = await this.getUserTimezone(userId);
 
-
-      const payload:any = {
+      const payload: any = {
         ...data,
         created_by: userId
       };
 
       if (payload.created_date) {
-          payload.created_date = this.formatCreateDate(payload.created_date,timezone);
+        payload.created_date = this.formatCreateDate(payload.created_date, timezone);
 
       }
       else {
@@ -70,7 +69,6 @@ export class BeneficiaryRepositoryService {
           .toFormat("yyyy-MM-dd HH:mm:ss");
       }
 
-      console.log("FINAL PAYLOAD:", payload);
 
       // ❗ remove flags (not DB columns)
       delete payload.remove_national_id;
@@ -113,11 +111,11 @@ export class BeneficiaryRepositoryService {
         const duplicateValue = error.sqlMessage.match(/Duplicate entry '(.+?)'/)?.[1];
         const key = error.sqlMessage.match(/for key '(.+?)'/)?.[1];
 
-        if (key === "nunique") {
+        if (key?.includes("nunique")) {
           throw new ConflictException(`National ID ${duplicateValue} already exists`);
         }
 
-        if (key === "device_serial_no") {
+        if (key?.includes("device_serial_no")) {
           throw new ConflictException(`Device serial number already exists`);
         }
 
@@ -136,15 +134,7 @@ export class BeneficiaryRepositoryService {
 
   async updateFilesPath(beneficiaryId: number, files: any) {
     try {
-      console.log("files national id timestamp is", files.national_id_timestamp);
 
-      // Convert all timestamps to MySQL format
-      const national_id_timestamp = this.formatDateForDB(files.national_id_timestamp);
-      const signature_timestamp = this.formatDateForDB(files.signature_timestamp);
-      const house_pic_timestamp = this.formatDateForDB(files.house_pic_timestamp);
-      const cookstove_pic_timestamp = this.formatDateForDB(files.cookstove_pic_timestamp);
-
-      console.log("national_id_timestamp is",national_id_timestamp)
       const sql = `
       UPDATE beneficiaries
       SET 
@@ -161,13 +151,13 @@ export class BeneficiaryRepositoryService {
 
       const values = [
         files.national_id_attachment ?? null,
-        national_id_timestamp ?? null,
+        files.national_id_timestamp ?? null,
         files.signature ?? null,
-        signature_timestamp ?? null,
+        files.signature_timestamp ?? null,
         files.house_pic ?? null,
-        house_pic_timestamp ?? null,
+        files.house_pic_timestamp ?? null,
         files.cookstove_pic ?? null,
-        cookstove_pic_timestamp ?? null,
+        files.cookstove_pic_timestamp ?? null,
         beneficiaryId
       ];
 
@@ -438,7 +428,7 @@ export class BeneficiaryRepositoryService {
 
       console.log(`modified_date (UTC): ${modified_date}`);
 
-        const { modified_date: _, ...restDto } = filteredData;
+      const { modified_date: _, ...restDto } = filteredData;
 
 
 
@@ -468,7 +458,7 @@ export class BeneficiaryRepositoryService {
 
       await this.db.query(sql, [...values, beneficiaryId]);
 
-            return { message: 'Beneficiary updated successfully' };
+      return { message: 'Beneficiary updated successfully' };
 
     }
     catch (error) {
@@ -479,11 +469,11 @@ export class BeneficiaryRepositoryService {
 
         const msg = error.sqlMessage;
 
-        if (msg.includes("national_id")) {
+        if (msg?.includes("nunique")) {
           throw new ConflictException("National ID already exists");
         }
 
-        if (msg.includes("device_serial_no")) {
+        if (msg?.includes("device_serial_no")) {
           throw new ConflictException("Device serial number already exists");
         }
 
