@@ -38,7 +38,7 @@ export class UserRepositoryService {
       user_setting,
       status,
       mobile_number,
-      timezone
+      timezone,
       created_by
     )
     VALUES (?, ?, ?, ?, ?, ?, ?,?,?,?)

@@ -8,8 +8,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 // import { v4 as uuid } from 'uuid';
 import { v4 as uuidv4 } from 'uuid';
+import * as Sentry from '@sentry/node';
+
 
 import { MONITORING_FILTER_SCHEMA } from './monitoring.filter.schema';
+import { UpdateMonitoringdto } from './updatemonitoring.dto';
 
 
 @Injectable()
@@ -59,11 +62,10 @@ export class MonitoringService {
 
         try {
 
-            const user = await this.trainingSiteRepo.getUserById(userId);
+                   const timezone = await this.monitorServiceRepo.getUserTimezone(userId);
 
-            const username = user.name;
 
-            const monitoring = await this.monitorServiceRepo.insertMonitoring(dto, username, connection);
+            const monitoring = await this.monitorServiceRepo.insertMonitoring(dto, userId,timezone);
 
 
             if (!monitoring) {
@@ -77,7 +79,9 @@ export class MonitoringService {
             // create folder once
             MoniToringFolderPath = `uploads/monitoring/${monitoringId}`;
 
-            fs.mkdirSync(MoniToringFolderPath, { recursive: true });
+            // fs.mkdirSync(MoniToringFolderPath, { recursive: true });
+            await fs.promises.mkdir(MoniToringFolderPath, { recursive: true });
+
 
             // save files using helper
             const monitoringIdFile = await this.saveMonitoringFile(
@@ -93,7 +97,6 @@ export class MonitoringService {
                     photo_path: monitoringIdFile.dbPath,
 
                 },
-                connection
             );
 
             await connection.commit();
@@ -101,46 +104,165 @@ export class MonitoringService {
             return { message: "Monitoring site created successfully" };
 
         }
-     catch (error) {
-        console.error("error is ",error)
-     
-           await connection.rollback();
-     
-           // delete entire folder
-           if (MoniToringFolderPath && fs.existsSync(MoniToringFolderPath)) {
-             fs.rmSync(MoniToringFolderPath, { recursive: true, force: true });
-           }
-     
-           throw error;
-     
-         } finally {
-           connection.release();
-         }
+        catch (error) {
+            console.error("error is ", error)
+
+            await connection.rollback();
+
+            // delete entire folder
+            if (MoniToringFolderPath && fs.existsSync(MoniToringFolderPath)) {
+                fs.rmSync(MoniToringFolderPath, { recursive: true, force: true });
+            }
+
+            throw error;
+
+        } finally {
+            connection.release();
+        }
     }
 
 
+    private async replaceBeneficiaryFile(
+        file: Express.Multer.File | undefined,
+        monitoringId: number,
+        prefix: string,
+        folderPath: string,
+        oldFilePath?: string,
+        removeFile?: boolean
+    ): Promise<{ dbPath?: string | null; filePath?: string | null; oldFileToDelete?: string | null }> {
+        //                                                            ↑ return old path instead of deleting immediately
+
+        // CASE 1: user removed image
+        if (removeFile) {
+            return {
+                dbPath: null,
+                filePath: null,
+                oldFileToDelete: oldFilePath ?? null  // ✅ just return it, don't delete yet
+            };
+        }
+
+        // CASE 2: new upload
+        if (file) {
+            const fileName = `${prefix}_${monitoringId}_${uuidv4()}${path.extname(file.originalname)}`;
+            const filePath = path.join(folderPath, fileName);
+            const dbPath = `/${folderPath}/${fileName}`;
+
+            await fs.promises.writeFile(filePath, file.buffer);  // write new file
+
+            return {
+                dbPath,
+                filePath,
+                oldFileToDelete: oldFilePath ?? null  // ✅ return old path, delete after DB succeeds
+            };
+        }
+
+        // CASE 3: untouched
+        return {};
+    }
+
+    async UpdateMonitoring(udto: UpdateMonitoringdto, cookstove_photo: Express.Multer.File | undefined,
+        mid: number,
+        userId: number) {
+
+        let uploadedFiles: string[] = [];      // new files written
+        let oldFilesToDelete: string[] = [];   // old files to delete after DB 
+
+        try {
+
+            const exisitingMonitoring = await this.monitorServiceRepo.getMonitoringById(mid);
+
+            if (!exisitingMonitoring) {
+                throw new BadRequestException("Monitoring not found");
+            }
+
+
+            const folderPath = `uploads/monitoring/${mid}`;
+            await fs.promises.mkdir(folderPath, { recursive: true });
+
+
+
+
+            // save files using helper
+            const monitoringIdFile = await this.replaceBeneficiaryFile(
+                cookstove_photo,
+                mid,
+                "Monitoring_cookstove",
+                folderPath,
+                exisitingMonitoring?.photo_path,
+                udto.remove_cookstove_img
+            );
+
+
+            // track new uploaded files for rollback if DB fails
+            [monitoringIdFile.filePath]
+                .forEach(p => { if (p) uploadedFiles.push(p); });
+
+            // track old files to delete after DB succeeds
+            [monitoringIdFile.filePath]
+                .forEach(p => { if (p) oldFilesToDelete.push(p); });
+
+            const fileUpdates: any = {};
+
+            if (monitoringIdFile.dbPath !== undefined) {
+                fileUpdates.photo_path = monitoringIdFile.dbPath;
+
+            }
+
+            await this.monitorServiceRepo.updateMonitoring(mid, udto, fileUpdates, userId);
+
+            await Promise.all(
+                oldFilesToDelete.map(async (oldPath) => {
+                    const cleanPath = path.resolve(oldPath.replace(/^\/+/, ''));
+                    if (fs.existsSync(cleanPath)) {
+                        await fs.promises.unlink(cleanPath);
+                    }
+                })
+            );
+
+            return { message: "Monitoring updated successfully" };
+
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            console.error("updateBeneficiary error", error);
+
+            // ✅ DB failed — delete newly uploaded files only
+            await Promise.all(
+                uploadedFiles.map(async (filePath) => {
+                    if (fs.existsSync(filePath)) {
+                        await fs.promises.unlink(filePath);
+                    }
+                })
+            );
+            // old files are untouched ✅ — never deleted since DB didn't succeed
+
+            throw error;
+
+        }
+    }
+
 
     async getMonitorings(
-            page: number,
-            limit: number,
-            filters: any[] = [],
-        ) {
-            try{
+        page: number,
+        limit: number,
+        filters: any[] = [],
+    ) {
+        try {
             if (page < 1) page = 1;
             if (limit < 1) limit = 10;
-    
+
             // 🔑 MAP FILTERS HERE
             const validatedFilters = filters.map((f) => {
                 const schema = MONITORING_FILTER_SCHEMA[f.field];
-    
+
                 if (!schema) {
                     throw new Error(`Invalid filter field: ${f.field}`);
                 }
-    
+
                 if (!schema.operators.includes(f.operator)) {
                     throw new Error(`Invalid operator for field: ${f.field}`);
                 }
-    
+
                 return {
                     column: schema.column,
                     type: schema.type,
@@ -148,24 +270,24 @@ export class MonitoringService {
                     value: f.value,
                 };
             });
-    
-    
-    
+
+
+
             const totalRecords =
                 validatedFilters.length > 0
                     ? await this.monitorServiceRepo.getFilteredCount(validatedFilters)
                     : await this.monitorServiceRepo.getTotalCount();
-    
+
             const totalPages = Math.ceil(totalRecords / limit);
-    
+
             const data =
                 validatedFilters.length > 0
                     ? await this.monitorServiceRepo.findWithFilters(validatedFilters, page, limit)
                     : await this.monitorServiceRepo.findAll(page, limit);
-    
+
             const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
             const end = Math.min(page * limit, totalRecords);
-    
+
             return {
                 currentPage: page,
                 limit,
@@ -178,46 +300,45 @@ export class MonitoringService {
                 data,
             };
         }
-        catch(error)
-        {
-            console.error("getMonitorings error is",error)
+        catch (error) {
+            console.error("getMonitorings error is", error)
             throw new InternalServerErrorException("failed to get monitoring data")
         }
-        }
+    }
 
 
 
 
-         async deleteMonitroing(mid: number) {
-        
-            try{
+    async deleteMonitroing(mid: number) {
+
+        try {
             if (!mid) {
-              throw new BadRequestException("Monitoring id is missing");
+                throw new BadRequestException("Monitoring id is missing");
             }
-        
+
             const result = await this.monitorServiceRepo.deleteMonitoringbyId(mid);
-        
+
             // If no rows were deleted
             if (!result || result.affectedRows === 0) {
-              throw new BadRequestException("Beneficiary not found or already deleted");
+                throw new BadRequestException("Beneficiary not found or already deleted");
             }
-        
+
             const folderPath = path.join(
-              process.cwd(),
-              "uploads",
-              "monitoring",
-              String(mid)
+                process.cwd(),
+                "uploads",
+                "monitoring",
+                String(mid)
             );
-        
+
             if (fs.existsSync(folderPath)) {
-              await fs.promises.rm(folderPath, { recursive: true, force: true });//rmSync means remove
+                await fs.promises.rm(folderPath, { recursive: true, force: true });//rmSync means remove
             }
-        
+
             return { message: "Monitorings deleted successfully" };
         }
-        catch(error){
-            console.error("delete monitoring error",error);
+        catch (error) {
+            console.error("delete monitoring error", error);
             throw error;
         }
-          }
+    }
 }

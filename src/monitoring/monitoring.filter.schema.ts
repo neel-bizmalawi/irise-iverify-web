@@ -88,14 +88,25 @@ export const MONITORING_FILTER_SCHEMA =
         operators: ['equals', 'not_equals', 'isEmpty', 'is_not_empty'],
     },
 
-    created_by: {
-        column: 'md.created_by',
+    // created_by: {
+    //     column: 'md.created_by',
+    //     type: 'text',
+    //     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+    // },
+
+     created_by: {
+        column: 'a.name',
         type: 'text',
         operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
     },
 
-    modified_by: {
-        column: 'md.modified_by',
+    // modified_by: {
+    //     column: 'md.modified_by',
+    //     type: 'text',
+    //     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+    // },
+      modified_by: {
+        column: 'a2.name',
         type: 'text',
         operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
     },

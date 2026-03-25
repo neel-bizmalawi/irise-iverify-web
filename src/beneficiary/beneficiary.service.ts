@@ -386,7 +386,7 @@ if (signatureFile.dbPath !== undefined) {
   fileUpdates.signature_timestamp = signatureFile.dbPath
     ? this.formatDateForDB(udto.signature_timestamp ?? new Date())
     : null;
-}
+} 
 if (householdFile.dbPath !== undefined) {
   fileUpdates.house_pic = householdFile.dbPath;
   fileUpdates.house_pic_timestamp = householdFile.dbPath

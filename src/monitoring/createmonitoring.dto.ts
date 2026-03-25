@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsEnum,
   IsDateString,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateMonitoringDto {
@@ -140,7 +141,7 @@ export class CreateMonitoringDto {
   photo_path?: string;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
   created_date?: Date;
 
   @IsOptional()
@@ -148,10 +149,16 @@ export class CreateMonitoringDto {
   created_by?: string;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
   modified_at?: Date;
 
   @IsOptional()
   @IsString()
   modified_by?: string;
+
+
+   @IsOptional()
+    @Transform(({ value }) => value === 'true' || value === true)
+    @IsBoolean()
+    remove_cookstove_img?: boolean;
 }

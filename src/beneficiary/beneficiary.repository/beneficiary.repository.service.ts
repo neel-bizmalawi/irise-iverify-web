@@ -51,6 +51,8 @@ export class BeneficiaryRepositoryService {
     timezone: string,
   ) {
 
+    console.log("time zone is ",timezone)
+
     try {
 
 
