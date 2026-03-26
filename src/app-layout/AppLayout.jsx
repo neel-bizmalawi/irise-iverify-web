@@ -47,6 +47,8 @@ import {
   ClipboardList,
   FileCheck,
   UserCheck,
+  UserCog2,
+  BarChart3,
 } from "lucide-react";
 import eStove from "../assets/images/eStove.png";
 import eStoveFire from "../assets/images/eStoveFire.png";
@@ -89,9 +91,9 @@ const navItems = [
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
   { icon: UserCheck , label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
-  // { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
+  { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
   // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
-  // { icon: UserCog , label: "User Role Management", path: "/userrolemanagement" },
+  // { icon: BarChart3 , label: "Customer Dashboard", path: "/dashboard" },
 ];
 
 const bottomNavItems = [

@@ -254,7 +254,7 @@ const Monitoring = () => {
       //     ),
       // },
 
-      { key: "nfc_tag_status", label: "NFC Tag Status", align: "center" },
+  //    { key: "nfc_tag_status", label: "NFC Tag Status", align: "center" },
       {
         key: "user_satisfaction",
         label: "User Satisfaction",
@@ -312,14 +312,14 @@ const Monitoring = () => {
         align: "center",
         render: fmtDate,
       },
-      { key: "created_by", label: "Created By", align: "center" },
+      { key: "created_by_name", label: "Created By", align: "center" },
       {
         key: "modified_at",
         label: "Modified At",
         align: "center",
         render: fmtDate,
       },
-      { key: "modified_by", label: "Modified By", align: "center" },
+      { key: "modified_by_name", label: "Modified By", align: "center" },
       {
         key: "actions",
         label: "Action",
@@ -512,9 +512,9 @@ const Monitoring = () => {
           health_better_air: item.health_better_air ?? "-",
           photo_path: item.photo_path || null,
           created_date: item.created_date ?? null,
-          created_by: item.created_by ?? "-",
+          created_by_name: item.created_by_name ?? "-",
           modified_at: item.modified_at ?? null,
-          modified_by: item.modified_by ?? "-",
+          modified_by_name: item.modified_by_name ?? "-",
         }));
 
         setTableData(mappedData);
