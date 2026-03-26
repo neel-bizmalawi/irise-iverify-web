@@ -16,18 +16,18 @@ export class MonitoringRepositoryService {
     }
 
 
-      private formatCreateDate(date: any, timezone: string): string | null {
-    if (!date) return null;
+    private formatCreateDate(date: any, timezone: string): string | null {
+        if (!date) return null;
 
-    return (typeof date === 'string'
-      ? DateTime.fromISO(date)
-      : DateTime.fromJSDate(date)
-    )
-      .setZone(timezone)
-      .toFormat("yyyy-MM-dd HH:mm:ss");
-  }
+        return (typeof date === 'string'
+            ? DateTime.fromISO(date)
+            : DateTime.fromJSDate(date)
+        )
+            .setZone(timezone)
+            .toFormat("yyyy-MM-dd HH:mm:ss");
+    }
 
-   
+
 
 
     async getUserTimezone(userId: number): Promise<string> {
@@ -56,24 +56,24 @@ export class MonitoringRepositoryService {
     async insertMonitoring(
         data: CreateMonitoringDto,
         userId: number,
-        timezone:string,
+        timezone: string,
     ) {
         try {
 
-            const payload:any = {
+            const payload: any = {
                 ...data,
                 created_by: userId
             };
 
-              if (payload.created_date) {
-        payload.created_date = this.formatCreateDate(payload.created_date, timezone);
+            if (payload.created_date) {
+                payload.created_date = this.formatCreateDate(payload.created_date, timezone);
 
-      }
-      else {
-        payload.created_date = DateTime.now()
-          .setZone(timezone)
-          .toFormat("yyyy-MM-dd HH:mm:ss");
-      }
+            }
+            else {
+                payload.created_date = DateTime.now()
+                    .setZone(timezone)
+                    .toFormat("yyyy-MM-dd HH:mm:ss");
+            }
 
             delete payload.remove_cookstove_img;
 

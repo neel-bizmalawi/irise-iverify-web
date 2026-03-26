@@ -62,10 +62,10 @@ export class MonitoringService {
 
         try {
 
-                   const timezone = await this.monitorServiceRepo.getUserTimezone(userId);
+            const timezone = await this.monitorServiceRepo.getUserTimezone(userId);
 
 
-            const monitoring = await this.monitorServiceRepo.insertMonitoring(dto, userId,timezone);
+            const monitoring = await this.monitorServiceRepo.insertMonitoring(dto, userId, timezone);
 
 
             if (!monitoring) {

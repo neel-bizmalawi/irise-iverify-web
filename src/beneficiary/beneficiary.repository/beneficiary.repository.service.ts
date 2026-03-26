@@ -410,7 +410,7 @@ export class BeneficiaryRepositoryService {
 
       // remove undefined
       const filteredData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, value]) => value !== undefined),
+        Object.entries(updateData).filter(([_, value]) => value !== undefined),//filter updatedData dont take keys only take values where value is not undefined
       );
 
       let modified_date: string;

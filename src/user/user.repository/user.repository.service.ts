@@ -18,7 +18,7 @@ export class UserRepositoryService {
   async insertUser(data: CreateUserDto, userid: number) {
 
     try {
-      const { name, user_name, email, password, role, user_setting, status, mobile_number,timezone } = data;
+      const { name, user_name, email, password, role, user_setting, status, mobile_number, timezone } = data;
 
       // 🔐 Hash password
       const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
@@ -52,35 +52,35 @@ export class UserRepositoryService {
           user_setting ?? null,
           status ?? null,
           mobile_number ?? null,
-          timezone??null,
+          timezone ?? null,
           userid ?? null,
         ],
       );
 
       return result;
 
-    }    
-     catch (error) {
-          Sentry.captureException(error);
-    
-          console.error("Create user  error is", error)
-          if (error.code === "ER_DUP_ENTRY") {
-    
-            const msg = error.sqlMessage;
-    
-            if (msg.includes("unique_email")) {
-              throw new ConflictException("Email ID already exists");
-            }
-    
-    
-            throw new ConflictException("Duplicate value detected");
-          }
+    }
+    catch (error) {
+      Sentry.captureException(error);
 
-    
-          throw new InternalServerErrorException(
-            "Failed to create beneficiary"
-          );
+      console.error("Create user  error is", error)
+      if (error.code === "ER_DUP_ENTRY") {
+
+        const msg = error.sqlMessage;
+
+        if (msg.includes("unique_email")) {
+          throw new ConflictException("Email ID already exists");
         }
+
+
+        throw new ConflictException("Duplicate value detected");
+      }
+
+
+      throw new InternalServerErrorException(
+        "Failed to create beneficiary"
+      );
+    }
   }
 
   async UpdateById(AID: number, dto: UpdateUserDto, userid: number) {

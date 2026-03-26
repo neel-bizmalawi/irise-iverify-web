@@ -15,10 +15,10 @@ export class CreateBeneficiarydto {
   @IsString()
   training_site?: string;
 
-@IsOptional()
-@Type(() => Number)
-@IsNumber()
-beneficiary_id?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  beneficiary_id?: number;
 
 
   @IsOptional()
@@ -131,19 +131,23 @@ beneficiary_id?: number;
   primary_residence_confirmation?: 'yes' | 'no';
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+
   cookstove_pic_timestamp?: Date;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+
   house_pic_timestamp?: Date;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+
   national_id_timestamp?: Date;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+
   signature_timestamp?: Date;
 
   @IsOptional()
@@ -172,11 +176,11 @@ beneficiary_id?: number;
   @IsEnum(['active', 'inactive'])
   status?: 'active' | 'inactive';
 
-    @IsOptional()
+  @IsOptional()
   @Type(() => Date)
   created_date?: Date;
 
-    @IsOptional()
+  @IsOptional()
   @Type(() => Date)
   modified_date?: Date;
 
