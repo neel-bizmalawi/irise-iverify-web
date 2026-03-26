@@ -314,8 +314,8 @@ const Monitoring = () => {
       },
       { key: "created_by_name", label: "Created By", align: "center" },
       {
-        key: "modified_at",
-        label: "Modified At",
+        key: "modified_date",
+        label: "Modified Date",
         align: "center",
         render: fmtDate,
       },
@@ -430,7 +430,7 @@ const Monitoring = () => {
       },
       { key: "visit_at", label: "Visit At", type: "date" },
       { key: "created_date", label: "Created Date", type: "date" },
-      { key: "modified_at", label: "Modified At", type: "date" },
+      { key: "modified_date", label: "Modified Date", type: "date" },
     ]);
   }, [userOptions]);
 
@@ -513,7 +513,7 @@ const Monitoring = () => {
           photo_path: item.photo_path || null,
           created_date: item.created_date ?? null,
           created_by_name: item.created_by_name ?? "-",
-          modified_at: item.modified_at ?? null,
+          modified_date: item.modified_date ?? null,
           modified_by_name: item.modified_by_name ?? "-",
         }));
 
