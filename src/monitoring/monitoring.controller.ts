@@ -38,14 +38,14 @@ export class MonitoringController {
             { name: 'photo_path', maxCount: 1 },
         ]),
     )
-    async updateMonitoring(@Body() udto: UpdateMonitoringdto, @Param('id') id: string,@Req() req: any, @UploadedFiles()
-        files: {
-            photo_path?: Express.Multer.File[];
-        },) {
+    async updateMonitoring(@Body() udto: UpdateMonitoringdto, @Param('id') id: string, @Req() req: any, @UploadedFiles()
+    files: {
+        photo_path?: Express.Multer.File[];
+    },) {
         const cookstove_photo = files?.photo_path?.[0];
 
         const userId = req.user.userId;
-        return this.monitorService.UpdateMonitoring(udto, cookstove_photo,Number(id), userId);
+        return this.monitorService.UpdateMonitoring(udto, cookstove_photo, Number(id), userId);
     }
 
 
@@ -68,4 +68,31 @@ export class MonitoringController {
 
         return this.monitorService.deleteMonitroing(id)
     }
+
+
+           @Post('moni_sync')
+    @UseGuards(AuthGuard('jwt'))
+    @UseInterceptors(
+      FileFieldsInterceptor([
+        { name: 'photo_path', maxCount: 1 },
+      ]),
+    )
+    async syncMonitoring(
+      @Body() sdto: CreateMonitoringDto,
+      @Req() req: any,
+      @UploadedFiles()
+      files: {
+        photo_path?: Express.Multer.File[];
+      },
+    ) {
+      const cookstove_photo = files?.photo_path?.[0];
+        const userId = req.user.userId;
+        
+      return this.monitorService.syncMonitorings(
+        sdto,
+      cookstove_photo,
+        userId,
+      );
+    }
+
 }

@@ -148,15 +148,17 @@ export class AuditRepository {
         const sql = `
                 SELECT COUNT(*) as total
                 FROM audit af
+                LEFT JOIN ab_admin a ON af.created_by = a.adminID
+                LEFT JOIN ab_admin a2 ON af.modified_by = a2.adminID
                 ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
               `;
 
-        const [[result]] = await this.db.query(sql, values);
-        return result.total;
+        const result = await this.db.query(sql, values);
+        return result[0]?.total??0;
     }
 
     async getTotalCount(): Promise<number> {
-        const [rows]: any = await this.db.query('select count(*) as total from audit',);
+        const rows: any = await this.db.query('select count(*) as total from audit',);
         return rows[0].total;
     }
 
@@ -214,14 +216,18 @@ export class AuditRepository {
         const safeOffset = Math.max(0, Number((page - 1) * limit));
 
         const sql = `
-            SELECT af.*
+            SELECT af.*,
+             a.name AS created_by_name,
+            a2.name AS modified_by_name
             FROM audit af
+            LEFT JOIN ab_admin a ON af.created_by = a.adminID
+            LEFT JOIN ab_admin a2 ON af.modified_by = a2.adminID
             ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
             ORDER BY af.audit_id DESC
             LIMIT ${safeLimit} OFFSET ${safeOffset}
           `;
 
-        const [rows] = await this.db.query(sql, values);
+        const rows = await this.db.query(sql, values);
         return rows;
     }
 
@@ -235,19 +241,23 @@ export class AuditRepository {
         }
 
         const sql = `
-  SELECT *
-  FROM audit
+  SELECT af.*,
+       a.name AS created_by_name,
+        a2.name AS modified_by_name
+  FROM audit af
+   LEFT JOIN ab_admin a ON af.created_by = a.adminID
+      LEFT JOIN ab_admin a2 ON af.modified_by = a2.adminID
   ORDER BY audit_id DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
 
-        const [rows] = await this.db.query(sql);
+        const rows = await this.db.query(sql);
         return rows;
     }
 
 
     async deleteAuditId(aid: number) {
-        const [rows] = await this.db.query(
+        const rows = await this.db.query(
             'delete FROM audit WHERE audit_id = ? LIMIT 1',
             [aid]
         );

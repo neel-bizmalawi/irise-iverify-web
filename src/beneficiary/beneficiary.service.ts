@@ -159,7 +159,10 @@ export class BeneficiaryService {
       );
 
 
-      return { message: "Beneficiary created successfully" };
+return { 
+  message: "Beneficiary created successfully",
+  beneficiary_id: beneficiaryId
+};
 
     } catch (error) {
       Sentry.captureException(error);
@@ -551,6 +554,7 @@ export class BeneficiaryService {
 
       return {
         success: true,
+        beneficiary_id:result.beneficiary_id,
         action: 'created',
         message: 'Beneficiary created successfully',
       };

@@ -54,8 +54,7 @@ export class MonitoringService {
     async CreateMonitoring(dto: CreateMonitoringDto, cookstove_photo: Express.Multer.File | undefined,
         userId: number) {
 
-        const connection = await this.db.getConnection();
-        await connection.beginTransaction();
+
 
         let MoniToringFolderPath: string | null = null;
 
@@ -99,16 +98,13 @@ export class MonitoringService {
                 },
             );
 
-            await connection.commit();
 
             return { message: "Monitoring site created successfully" };
 
         }
         catch (error) {
             console.error("error is ", error)
-
-            await connection.rollback();
-
+            
             // delete entire folder
             if (MoniToringFolderPath && fs.existsSync(MoniToringFolderPath)) {
                 fs.rmSync(MoniToringFolderPath, { recursive: true, force: true });
@@ -116,8 +112,6 @@ export class MonitoringService {
 
             throw error;
 
-        } finally {
-            connection.release();
         }
     }
 
@@ -198,7 +192,7 @@ export class MonitoringService {
                 .forEach(p => { if (p) uploadedFiles.push(p); });
 
             // track old files to delete after DB succeeds
-            [monitoringIdFile.filePath]
+            [monitoringIdFile.oldFileToDelete]
                 .forEach(p => { if (p) oldFilesToDelete.push(p); });
 
             const fileUpdates: any = {};
@@ -339,6 +333,55 @@ export class MonitoringService {
         catch (error) {
             console.error("delete monitoring error", error);
             throw error;
+        }
+    }
+
+
+
+    async syncMonitorings(
+        dto: CreateMonitoringDto,
+        cookstove_pic: Express.Multer.File | undefined,
+        userId: number,
+    ) {
+        try {
+
+            if (dto.monitoring_id) {
+
+
+                await this.UpdateMonitoring(
+                    dto,                  // UpdateBeneficiaryDto fields
+                    cookstove_pic,
+                    dto.monitoring_id,
+                    userId,
+                );
+
+                return {
+                    success: true,
+                    action: 'updated',
+                    monitoring_id: dto.monitoring_id,
+                    message: 'Monitoring updated successfully',
+                };
+            }
+
+            // CREATE — no beneficiary_id
+            console.log(`Syncing create for new beneficiary`);
+
+            const result = await this.CreateMonitoring(
+                dto,
+                cookstove_pic,
+                userId,
+            );
+
+            return {
+                success: true,
+                action: 'created',
+                message: 'Monitoring created successfully',
+            };
+
+        } catch (error) {
+            Sentry.captureException(error);
+            console.error('syncBeneficiary error', error);
+            throw new InternalServerErrorException('Failed to sync beneficiary');
         }
     }
 }

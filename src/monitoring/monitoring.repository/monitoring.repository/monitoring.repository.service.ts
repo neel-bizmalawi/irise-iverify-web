@@ -372,10 +372,10 @@ export class MonitoringRepositoryService {
         const sql = `
             SELECT md.*,
             a.name AS created_by_name,
-        a2.name AS modified_by_name
+            a2.name AS modified_by_name
             FROM monitoring_data md
-               LEFT JOIN ab_admin a ON md.created_by = a.adminID
-      LEFT JOIN ab_admin a2 ON md.modified_by = a2.adminID
+            LEFT JOIN ab_admin a ON md.created_by = a.adminID
+            LEFT JOIN ab_admin a2 ON md.modified_by = a2.adminID
             ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
             ORDER BY md.monitoring_id DESC
             LIMIT ${safeLimit} OFFSET ${safeOffset}
@@ -397,11 +397,11 @@ export class MonitoringRepositoryService {
         const sql = `
   SELECT
   md.*,
-     a.name AS created_by_name,
-        a2.name AS modified_by_name
+  a.name AS created_by_name,
+  a2.name AS modified_by_name
   FROM monitoring_data md
-    LEFT JOIN ab_admin a ON md.created_by = a.adminID
-      LEFT JOIN ab_admin a2 ON md.modified_by = a2.adminID
+ LEFT JOIN ab_admin a ON md.created_by = a.adminID
+ LEFT JOIN ab_admin a2 ON md.modified_by = a2.adminID
   ORDER BY monitoring_id DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;

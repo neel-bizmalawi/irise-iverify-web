@@ -11,6 +11,12 @@ import {
 
 export class CreateMonitoringDto {
 
+
+    @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  monitoring_id?: number;
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -145,12 +151,12 @@ export class CreateMonitoringDto {
   created_date?: Date;
 
   @IsOptional()
-  @IsString()
-  created_by?: string;
+  @Type(() => Date)
+  created_by?: Date;
 
   @IsOptional()
   @Type(() => Date)
-  modified_at?: Date;
+  modified_date?: Date;
 
   @IsOptional()
   @IsString()
