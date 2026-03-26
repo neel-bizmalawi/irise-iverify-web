@@ -38,41 +38,49 @@ import SearchableCreatableSelect from "../../components/SearchableCreatableSelec
 
 // ── Timezone list ──────────────────────────────────────────────────────────────
 const TIMEZONE_OPTIONS = [
-  { label: "UTC (UTC+00:00)", value: "UTC" },
+  { label: "UTC", value: "UTC" },
 
-  // India & nearby
-  { label: "Asia/Kolkata (UTC+05:30)", value: "Asia/Kolkata" },
-  { label: "Asia/Dhaka (UTC+06:00)", value: "Asia/Dhaka" },
+  // // 🇿🇦 Africa (your main region)
+  // { label: "South Africa", value: "Africa/Johannesburg" },
+  // { label: "Nigeria", value: "Africa/Lagos" },
+  // { label: "Kenya", value: "Africa/Nairobi" },
 
-  // Africa (added)
-  { label: "Africa/Johannesburg (UTC+02:00)", value: "Africa/Johannesburg" }, // South Africa
-  { label: "Africa/Lagos (UTC+01:00)", value: "Africa/Lagos" }, // West Africa
-  { label: "Africa/Nairobi (UTC+03:00)", value: "Africa/Nairobi" }, // East Africa
-  { label: "Africa/Cairo (UTC+02:00)", value: "Africa/Cairo" }, // North Africa
+  // // 🌏 Asia
+  // { label: "India", value: "Asia/Kolkata" },
+  // { label: "UAE", value: "Asia/Dubai" },
+  // { label: "Singapore", value: "Asia/Singapore" },
 
-  // Asia major
-  { label: "Asia/Dubai (UTC+04:00)", value: "Asia/Dubai" },
-  { label: "Asia/Singapore (UTC+08:00)", value: "Asia/Singapore" },
-  { label: "Asia/Shanghai (UTC+08:00)", value: "Asia/Shanghai" },
-  { label: "Asia/Tokyo (UTC+09:00)", value: "Asia/Tokyo" },
+  // // 🇪🇺 Europe
+  // { label: "UK", value: "Europe/London" },
 
-  // Europe
-  { label: "Europe/London (UTC+00:00)", value: "Europe/London" },
-  { label: "Europe/Berlin (UTC+01:00)", value: "Europe/Berlin" },
-  { label: "Europe/Paris (UTC+01:00)", value: "Europe/Paris" },
+  // // 🇺🇸 USA
+  // { label: "USA (New York)", value: "America/New_York" },
+  // { label: "USA (Los Angeles)", value: "America/Los_Angeles" },
 
-  // USA
-  { label: "America/New_York (UTC-05:00)", value: "America/New_York" },
-  { label: "America/Chicago (UTC-06:00)", value: "America/Chicago" },
-  { label: "America/Denver (UTC-07:00)", value: "America/Denver" },
-  // { label: "America/Los_Angeles (UTC-08:00)", value: "America/Los_Angeles" },
+  // // 🌏 Oceania
+  // { label: "Australia", value: "Australia/Sydney" },
 
-  // Others important
-  { label: "Australia/Sydney (UTC+10:00)", value: "Australia/Sydney" },
-  { label: "Pacific/Auckland (UTC+12:00)", value: "Pacific/Auckland" },
+  { label: "South Africa", value: "Africa/Johannesburg" },
+  { label: "Nigeria", value: "Africa/Lagos" },
+  { label: "Kenya", value: "Africa/Nairobi" },
+  { label: "India", value: "Asia/Kolkata" },
+  { label: "UK", value: "Europe/London" },
 ];
 
+const getFlag = (country) => {
+  const flags = {
+    UTC: "🌐",
+    "South Africa": "🇿🇦",
+    Nigeria: "🇳🇬",
+    Kenya: "🇰🇪",
+    India: "🇮🇳",
+    UK: "🇬🇧",
+  };
+  return flags[country] || "🌍";
+};
+
 // ── Initial Values ─────────────────────────────────────────────────────────────
+
 const initialValues = {
   name: "",
   userName: "",
@@ -549,11 +557,48 @@ const CreateUserDialog = ({
                 }
                 onBlur={formik.handleBlur("timezone")}
                 displayEmpty
+                // renderValue={(selected) => {
+                //   if (!selected) {
+                //     return (
+                //       <span style={{ color: "#b0b7c3" }}>Select timezone</span>
+                //     );
+                //   }
+                //   return TIMEZONE_OPTIONS.find((tz) => tz.value === selected)
+                //     ?.label;
+                // }}
+                renderValue={(selected) => {
+                  if (!selected) {
+                    return (
+                      <span style={{ color: "#b0b7c3" }}>Select timezone</span>
+                    );
+                  }
+
+                  const selectedItem = TIMEZONE_OPTIONS.find(
+                    (tz) => tz.value === selected,
+                  );
+
+                  return (
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <span>{getFlag(selectedItem?.label)}</span>
+                      {selectedItem?.label}
+                    </span>
+                  );
+                }}
                 MenuProps={{
                   PaperProps: {
                     sx: {
-                      maxHeight: 220, // ✅ show only 5 items
-                      overflowY: "auto", // ✅ enable scroll
+                      maxHeight: 210,
+                      overflowY: "auto",
+
+                      // ✅ ADD THESE LINES
+                      "&::-webkit-scrollbar": {
+                        display: "none",
+                      },
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+
                       borderRadius: "10px",
                       border: "1px solid #e5e7eb",
                       boxShadow:
@@ -601,21 +646,25 @@ const CreateUserDialog = ({
                   },
                 }}
               >
-                <MenuItem
-                  value=""
-                  disabled
-                  sx={{ fontSize: "0.85rem", color: "#b0b7c3" }}
-                >
-                  Select timezone
-                </MenuItem>
-
-                {TIMEZONE_OPTIONS.map((tz) => (
+                {/* {TIMEZONE_OPTIONS.map((tz) => (
                   <MenuItem
                     key={tz.value}
                     value={tz.value}
                     sx={{ fontSize: "0.85rem", color: "#111827" }}
                   >
                     {tz.label}
+                  </MenuItem>
+                ))} */}
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <MenuItem
+                    key={tz.value}
+                    value={tz.value}
+                    sx={{ fontSize: "0.85rem", color: "#111827" }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <span>{getFlag(tz.label)}</span>
+                      {tz.label}
+                    </Box>
                   </MenuItem>
                 ))}
               </Select>
@@ -761,9 +810,6 @@ const CreateUserDialog = ({
 };
 
 export default CreateUserDialog;
-
-
-
 
 // import React, { useEffect, useState } from "react";
 // import {
