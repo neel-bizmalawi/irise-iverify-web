@@ -101,68 +101,46 @@ export class BeneficiaryService {
       // fs.mkdirSync(beneficiaryFolderPath, { recursive: true });
       await fs.promises.mkdir(beneficiaryFolderPath, { recursive: true });
 
+      const hasFiles = nationalId || signature || household_pic || cookstove_pic;
 
-      // save files using helper
-      // const nationalIdFile = await this.saveBeneficiaryFile(
-      //   nationalId,
-      //   beneficiaryId,
-      //   "beneficiary_national_id",
-      //   beneficiaryFolderPath
-      // );
+      if (hasFiles) {
+        const [nationalIdFile, signatureFile, householdFile, cookstoveFile] =
+          await Promise.all([
+            this.saveBeneficiaryFile(nationalId, beneficiaryId, "beneficiary_national_id", beneficiaryFolderPath),
+            this.saveBeneficiaryFile(signature, beneficiaryId, "beneficiary_signature", beneficiaryFolderPath),
+            this.saveBeneficiaryFile(household_pic, beneficiaryId, "beneficiary_household", beneficiaryFolderPath),
+            this.saveBeneficiaryFile(cookstove_pic, beneficiaryId, "beneficiary_cookstove_pic", beneficiaryFolderPath),
+          ]);
 
-      // const signatureFile = await this.saveBeneficiaryFile(
-      //   signature,
-      //   beneficiaryId,
-      //   "beneficiary_signature",
-      //   beneficiaryFolderPath
-      // );
-
-      // const householdFile = await this.saveBeneficiaryFile(
-      //   household_pic,
-      //   beneficiaryId,
-      //   "beneficiary_household",
-      //   beneficiaryFolderPath
-      // );
-
-      // const cookstoveFile = await this.saveBeneficiaryFile(
-      //   cookstove_pic,
-      //   beneficiaryId,
-      //   "beneficiary_cookstove_pic",
-      //   beneficiaryFolderPath
-      // );
-
-      // then all files simultaneously
-
-      const [nationalIdFile, signatureFile, householdFile, cookstoveFile] =
-        await Promise.all([
-          this.saveBeneficiaryFile(nationalId, beneficiaryId, "beneficiary_national_id", beneficiaryFolderPath),
-          this.saveBeneficiaryFile(signature, beneficiaryId, "beneficiary_signature", beneficiaryFolderPath),
-          this.saveBeneficiaryFile(household_pic, beneficiaryId, "beneficiary_household", beneficiaryFolderPath),
-          this.saveBeneficiaryFile(cookstove_pic, beneficiaryId, "beneficiary_cookstove_pic", beneficiaryFolderPath),
-        ]);
-
-      await this.beneficiaryRepo.updateFilesPath(
-        beneficiaryId,
-        {
-          national_id_attachment: nationalIdFile.dbPath,
-          national_id_timestamp: nationalIdFile.dbPath ? this.formatDateForDB(dto.national_id_timestamp ?? new Date()) : null,
-
-          signature: signatureFile.dbPath,
-          signature_timestamp: signatureFile.dbPath ? this.formatDateForDB(dto.signature_timestamp ?? new Date()) : null,
-
-          house_pic: householdFile.dbPath,
-          house_pic_timestamp: householdFile.dbPath ? this.formatDateForDB(dto.house_pic_timestamp ?? new Date()) : null,
-
-          cookstove_pic: cookstoveFile.dbPath,
-          cookstove_pic_timestamp: cookstoveFile.dbPath ? this.formatDateForDB(dto.cookstove_pic_timestamp ?? new Date()) : null
-        },
-      );
+        const anyFileSaved = nationalIdFile.dbPath || signatureFile.dbPath ||
+          householdFile.dbPath || cookstoveFile.dbPath;
 
 
-return { 
-  message: "Beneficiary created successfully",
-  beneficiary_id: beneficiaryId
-};
+        if (anyFileSaved) {
+          await this.beneficiaryRepo.updateFilesPath(
+            beneficiaryId,
+            {
+              national_id_attachment: nationalIdFile.dbPath,
+              national_id_timestamp: nationalIdFile.dbPath ? this.formatDateForDB(dto.national_id_timestamp ?? new Date()) : null,
+
+              signature: signatureFile.dbPath,
+              signature_timestamp: signatureFile.dbPath ? this.formatDateForDB(dto.signature_timestamp ?? new Date()) : null,
+
+              house_pic: householdFile.dbPath,
+              house_pic_timestamp: householdFile.dbPath ? this.formatDateForDB(dto.house_pic_timestamp ?? new Date()) : null,
+
+              cookstove_pic: cookstoveFile.dbPath,
+              cookstove_pic_timestamp: cookstoveFile.dbPath ? this.formatDateForDB(dto.cookstove_pic_timestamp ?? new Date()) : null
+            },
+          );
+        }
+      }
+
+
+      return {
+        message: "Beneficiary created successfully",
+        beneficiary_id: beneficiaryId
+      };
 
     } catch (error) {
       Sentry.captureException(error);
@@ -554,7 +532,7 @@ return {
 
       return {
         success: true,
-        beneficiary_id:result.beneficiary_id,
+        beneficiary_id: result.beneficiary_id,
         action: 'created',
         message: 'Beneficiary created successfully',
       };
@@ -562,7 +540,7 @@ return {
     } catch (error) {
       Sentry.captureException(error);
       console.error('syncBeneficiary error', error);
-      throw new InternalServerErrorException('Failed to sync beneficiary');
+      throw error;
     }
   }
 
