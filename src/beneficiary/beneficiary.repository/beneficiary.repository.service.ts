@@ -84,6 +84,8 @@ export class BeneficiaryRepositoryService {
       delete payload.house_pic_timestamp;
       delete payload.cookstove_pic_timestamp;
 
+      console.log("payload is sohan ",payload)
+
       // convert undefined → null
       Object.keys(payload).forEach(key => {
         if (payload[key] === undefined) {
@@ -117,7 +119,7 @@ export class BeneficiaryRepositoryService {
           throw new ConflictException(`National ID ${duplicateValue} already exists`);
         }
 
-        if (key?.includes("device_serial_no")) {
+        if (key?.includes("dunique")) {
           throw new ConflictException(`Device serial number already exists`);
         }
 
@@ -413,6 +415,8 @@ export class BeneficiaryRepositoryService {
         Object.entries(updateData).filter(([_, value]) => value !== undefined),//filter updatedData dont take keys only take values where value is not undefined
       );
 
+            console.log("filtered Data is", filteredData);
+
       let modified_date: string;
       if (filteredData.modified_date) {
         const raw = filteredData.modified_date;
@@ -475,7 +479,7 @@ export class BeneficiaryRepositoryService {
           throw new ConflictException("National ID already exists");
         }
 
-        if (msg?.includes("device_serial_no")) {
+        if (msg?.includes("dunique")) {
           throw new ConflictException("Device serial number already exists");
         }
 
@@ -487,7 +491,7 @@ export class BeneficiaryRepositoryService {
       }
 
       throw new InternalServerErrorException(
-        "Failed to create beneficiary"
+        "Failed to update beneficiary"
       );
     }
 
