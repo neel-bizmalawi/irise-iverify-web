@@ -4,7 +4,7 @@ import Breadcrumb from "../../components/Breadcrumb";
 import AppPagination from "../../components/AppPagination";
 import AppTable from "../../components/AppTable";
 import AppTableFilter from "../../components/AppTableFilter";
-import EditAuditDialog from "./EditAuditDialog";
+//import EditAuditDialog from "./EditAuditDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
@@ -265,20 +265,36 @@ const AuditProcess = () => {
       },
       { key: "remarks", label: "Remarks", align: "center" },
       { key: "s_is_sync", label: "Sync Status", align: "center" },
+      // {
+      //   key: "created_date",
+      //   label: "Created Date",
+      //   align: "center",
+      //   render: fmtDate,
+      // },
       {
         key: "created_date",
         label: "Created Date",
         align: "center",
-        render: fmtDate,
+        render: (value) =>
+          value
+            ? new Date(value).toLocaleString(undefined, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "UTC",
+              })
+            : "-",
       },
-      { key: "created_by", label: "Created By", align: "center" },
+      { key: "created_by_name", label: "Created By", align: "center" },
       {
         key: "modified_date",
         label: "Modified Date",
         align: "center",
         render: fmtDate,
       },
-      { key: "modified_by", label: "Modified By", align: "center" },
+      { key: "modified_by_name", label: "Modified By", align: "center" },
       {
         key: "actions",
         label: "Action",
@@ -456,9 +472,9 @@ const AuditProcess = () => {
           remarks: item.remarks ?? "-",
           s_is_sync: item.s_is_sync ?? "-",
           created_date: item.created_date ?? null,
-          created_by: item.created_by ?? "-",
+          created_by_name: item.created_by_name ?? "-",
           modified_date: item.modified_date ?? null,
-          modified_by: item.modified_by ?? "-",
+          modified_by_name: item.modified_by_name ?? "-",
         }));
 
         setTableData(mappedData);
@@ -703,7 +719,7 @@ const AuditProcess = () => {
         }}
       />
 
-      <EditAuditDialog
+      {/* <EditAuditDialog
         open={openDialog}
         onClose={() => {
           setOpenDialog(false);
@@ -712,7 +728,7 @@ const AuditProcess = () => {
         }}
         onSubmit={handleSubmitAudit}
         initialData={editData}
-      />
+      /> */}
     </Box>
   );
 };

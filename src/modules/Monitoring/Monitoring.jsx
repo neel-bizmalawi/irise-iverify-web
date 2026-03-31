@@ -306,11 +306,27 @@ const Monitoring = () => {
         align: "center",
         render: (value) => <ImageThumb src={value} alt="Monitoring Photo" />,
       },
-      {
+      // {
+      //   key: "created_date",
+      //   label: "Created Date",
+      //   align: "center",
+      //   render: fmtDate,
+      // },
+       {
         key: "created_date",
         label: "Created Date",
         align: "center",
-        render: fmtDate,
+        render: (value) =>
+          value
+            ? new Date(value).toLocaleString(undefined, {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "UTC",
+              })
+            : "-",
       },
       { key: "created_by_name", label: "Created By", align: "center" },
       {

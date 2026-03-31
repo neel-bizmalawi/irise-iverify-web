@@ -48,7 +48,7 @@ const Users = () => {
       { key: "adminID", label: "user ID", align: "center" },
       { key: "name", label: "Name" },
       { key: "userName", label: "Username" },
-      { key: "email", label: "Email" },
+      { key: "email", label: "Email", align: "center" },
       {
         key: "roleName",
         label: "Role",

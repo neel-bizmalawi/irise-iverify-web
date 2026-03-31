@@ -54,6 +54,7 @@ import eStove from "../assets/images/eStove.png";
 import eStoveFire from "../assets/images/eStoveFire.png";
 import { checkTokenExpiry } from "../utils/checkTokenExpiry";
 import { FactCheck } from "@mui/icons-material";
+import { API_BASE_URL } from "../config";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const appTheme = createTheme({
@@ -92,7 +93,7 @@ const navItems = [
   { icon: UserCheck , label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
   { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
-  // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
+ // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
   // { icon: BarChart3 , label: "Customer Dashboard", path: "/dashboard" },
 ];
 
@@ -515,7 +516,9 @@ const AppLayoutInner = () => {
   const handleLogout = async () => {
   try {
     const token = localStorage.getItem("token");
-    await fetch("API_BASE_URL/auth/logout", {
+    //await fetch("API_BASE_URL/auth/logout", 
+    await fetch(`${API_BASE_URL}/auth/logout`,  
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
