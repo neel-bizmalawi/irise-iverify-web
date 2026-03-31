@@ -90,10 +90,10 @@ const SIDEBAR_COLLAPSED_WIDTH = 72;
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
-  { icon: UserCheck , label: "Beneficiary", path: "/beneficiary" },
+  { icon: UserCheck, label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
-  { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
- // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
+  // { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
+  // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
   // { icon: BarChart3 , label: "Customer Dashboard", path: "/dashboard" },
 ];
 
@@ -512,28 +512,26 @@ const AppLayoutInner = () => {
     ? SIDEBAR_COLLAPSED_WIDTH
     : SIDEBAR_WIDTH;
 
-
   const handleLogout = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    //await fetch("API_BASE_URL/auth/logout", 
-    await fetch(`${API_BASE_URL}/auth/logout`,  
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  } catch (error) {
-    console.error("Logout API error:", error);
-  } finally {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("userName");
-    navigate("/login");
-  }
-};
+    try {
+      const token = localStorage.getItem("token");
+      //await fetch("API_BASE_URL/auth/logout",
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      navigate("/login");
+    }
+  };
 
   return (
     <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>

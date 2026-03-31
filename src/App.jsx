@@ -7,7 +7,7 @@ import Users from "./modules/users/Users";
 import Login from "./modules/auth/Login";
 import { ToastContainer } from "react-toastify";
 // import CustomerDashboard from "./modules/dashboard/CustomerDashboard";
-import Monitoring from "./modules/Monitoring/Monitoring";
+// import Monitoring from "./modules/Monitoring/Monitoring";
 // import AuditProcess from "./modules/Aduit-Process/Auditprocess";
 
 function App() {
@@ -23,8 +23,8 @@ function App() {
           <Route path="/training" element={<TrainingSites />} />
           <Route path="/beneficiary" element={<Beneficiary />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/monitoring" element={<Monitoring />} />
-          {/*  <Route path="/auditprocess" element={<AuditProcess />} /> */}
+          {/* <Route path="/monitoring" element={<Monitoring />} /> */}
+          {/* <Route path="/auditprocess" element={<AuditProcess />} /> */}
           {/* <Route path="/dashboard" element={<CustomerDashboard />} /> */}
         </Route>
 
