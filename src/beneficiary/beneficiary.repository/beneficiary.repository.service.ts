@@ -51,7 +51,6 @@ export class BeneficiaryRepositoryService {
     timezone: string,
   ) {
 
-    console.log("time zone is ",timezone)
 
     try {
 
@@ -84,7 +83,6 @@ export class BeneficiaryRepositoryService {
       delete payload.house_pic_timestamp;
       delete payload.cookstove_pic_timestamp;
 
-      console.log("payload is sohan ",payload)
 
       // convert undefined → null
       Object.keys(payload).forEach(key => {
@@ -193,8 +191,13 @@ export class BeneficiaryRepositoryService {
 
   async getTotalCount(): Promise<number> {
     try {
-      const rows: any = await this.db.query('select count(*) as total from beneficiaries',);
-      return rows[0].total;
+      const rows: any = await this.db.query(
+        `
+  SELECT COUNT(*) as total
+  FROM beneficiaries
+  WHERE (status IS NULL OR status = 'active')
+  `
+      ); return rows[0].total;
     }
     catch (error) {
       Sentry.captureException(error);
@@ -206,7 +209,7 @@ export class BeneficiaryRepositoryService {
 
   async getFilteredCount(filters: any[]) {
     try {
-      const where: string[] = [];
+      const where: string[] = [`(bf.status IS NULL OR bf.status = 'active')`];
       const values: any[] = [];
 
       filters.forEach((f) => {
@@ -281,7 +284,7 @@ export class BeneficiaryRepositoryService {
 
   async findWithFilters(filters: any[], page: number, limit: number) {
     try {
-      const where: string[] = [];
+      const where: string[] = [`(bf.status IS NULL OR bf.status = 'active')`];
       const values: any[] = [];
 
       filters.forEach((f) => {
@@ -371,6 +374,8 @@ export class BeneficiaryRepositoryService {
       FROM beneficiaries bf
        LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
+        WHERE (bf.status IS NULL OR bf.status = 'active')
+
       ORDER BY beneficiary_id DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
@@ -415,7 +420,7 @@ export class BeneficiaryRepositoryService {
         Object.entries(updateData).filter(([_, value]) => value !== undefined),//filter updatedData dont take keys only take values where value is not undefined
       );
 
-            console.log("filtered Data is", filteredData);
+      console.log("filtered Data is", filteredData);
 
       let modified_date: string;
       if (filteredData.modified_date) {
@@ -500,8 +505,8 @@ export class BeneficiaryRepositoryService {
   async deleteBeneficiaryId(bid: number) {
     try {
       const rows = await this.db.query(
-        'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
-        [bid]
+        'update beneficiaries set status = ? where beneficiary_id = ? LIMIT 1',
+        ['inactive', bid]
       );
       return rows;
     }
@@ -518,12 +523,21 @@ export class BeneficiaryRepositoryService {
     try {
 
       const rows: any = await this.db.query(
+        // `
+        //   SELECT *
+        //   FROM beneficiaries
+        //   WHERE server_time > ?
+        //   OR modified_date > ?
+        //   `,
         `
-          SELECT *
-          FROM beneficiaries
-          WHERE server_time > ?
-          OR modified_date > ?
-          `,
+    SELECT *
+    FROM beneficiaries
+    WHERE (status IS NULL OR status = 'active')
+    AND (
+      server_time > ?
+      OR modified_date > ?
+    )
+  `,
         [date, date],
       );
 

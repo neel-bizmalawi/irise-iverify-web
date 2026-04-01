@@ -24,8 +24,6 @@ export class UserRepositoryService {
       const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
 
-
-
       const result = await this.db.query(
         `
      INSERT INTO ab_admin
@@ -304,9 +302,9 @@ export class UserRepositoryService {
   }
 
   async deleteUserId(userId: number) {
-    const rows = await this.db.query(
-      'delete FROM ab_admin WHERE adminID = ? LIMIT 1',
-      [userId]
+    const rows:any = await this.db.query(
+      'update ab_admin set status = ? where adminID = ? LIMIT 1',
+      ['inactive',userId]
     );
     return rows;
   }

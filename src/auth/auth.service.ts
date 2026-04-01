@@ -17,15 +17,15 @@ export class AuthService {
 
   async logout(token: string) {
 
-  const decoded: any = this.jwtService.decode(token);
+    const decoded: any = this.jwtService.decode(token);
 
-  await this.Authrepo.blacklistToken({
-    token,
-    expires_at: new Date(decoded.exp * 1000)
-  });
+    await this.Authrepo.blacklistToken({
+      token,
+      expires_at: new Date(decoded.exp * 1000)
+    });
 
-  return { message: "Logged out successfully" };
-}
+    return { message: "Logged out successfully" };
+  }
 
 
   async generateTokens(user) {
@@ -57,6 +57,12 @@ export class AuthService {
     }
 
     const user = rows[0];
+
+    // ✅ CHECK STATUS FIRST
+    if (user.status !== 'active') {
+      throw new UnauthorizedException('User is inactive');
+    }
+
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {

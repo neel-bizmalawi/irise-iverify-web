@@ -103,7 +103,7 @@ export class TrainingSiteController {
 
 
 
-    @Delete('delete_training/:id')
+    @Put('delete_training/:id')
     async deleteTrainingData(@Param('id', ParseIntPipe) id: number,) {
 
         return this.TrainingSiteService.deleteTraining(id)

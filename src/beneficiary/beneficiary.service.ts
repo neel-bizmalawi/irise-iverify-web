@@ -431,17 +431,6 @@ export class BeneficiaryService {
         throw new BadRequestException("Beneficiary not found or already deleted");
       }
 
-      const folderPath = path.join(
-        process.cwd(),
-        "uploads",
-        "beneficiary",
-        String(bid)
-      );
-
-      if (fs.existsSync(folderPath)) {
-        await fs.promises.rm(folderPath, { recursive: true, force: true });//rmSync means remove
-      }
-
       return { message: "Beneficiary deleted successfully" };
     }
     catch (error) {

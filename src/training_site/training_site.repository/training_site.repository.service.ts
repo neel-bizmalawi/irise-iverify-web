@@ -114,7 +114,7 @@ export class TrainingSiteRepositoryService {
 
   async findWithFilters(filters: any[], page: number, limit: number) {
     try {
-      const where: string[] = [];
+      const where: string[] = [`(ts.status IS NULL OR ts.status = 'active')`];
       const values: any[] = [];
 
       filters.forEach((f) => {
@@ -203,6 +203,8 @@ export class TrainingSiteRepositoryService {
       FROM training_sites ts
       LEFT JOIN ab_admin a ON ts.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
+              WHERE (ts.status IS NULL OR ts.status = 'active')
+
       ORDER BY ts.training_point_id DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
@@ -223,10 +225,11 @@ export class TrainingSiteRepositoryService {
   async deleteTrainginId(training_id: number) {
     try {
       const result: any = await this.db.query(
-        'DELETE FROM training_sites WHERE training_point_id = ? LIMIT 1',
-        [training_id],
+        'update training_sites set status = ? WHERE training_point_id = ? LIMIT 1',
+        ['inactive', training_id],
       );
       return result;
+
     } catch (error) {
       Sentry.captureException(error);
       console.error('deleteTrainingId error:', error);
@@ -620,12 +623,21 @@ export class TrainingSiteRepositoryService {
     try {
 
       const rows: any = await this.db.query(
+        // `
+        // SELECT *
+        // FROM training_sites
+        // WHERE server_time > ?
+        // OR modified_date > ?
+        // `,
         `
-        SELECT *
-        FROM training_sites
-        WHERE server_time > ?
-        OR modified_date > ?
-        `,
+    SELECT *
+    FROM training_sites
+    WHERE (status IS NULL OR status = 'active')
+    AND (
+      server_time > ?
+      OR modified_date > ?
+    )
+  `,
         [date, date],
       );
 
