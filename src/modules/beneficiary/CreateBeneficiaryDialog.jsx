@@ -913,7 +913,7 @@ const CreateBeneficiaryDialog = ({
                   value={formik.values.national_id}
                   onChange={handleNationalIdChange}
                   onBlur={formik.handleBlur("national_id")}
-                  placeholder="e.g. SG1005"
+                  placeholder="e.g. Z9Y8X7W6"
                   error={
                     formik.touched.national_id &&
                     Boolean(formik.errors.national_id)
