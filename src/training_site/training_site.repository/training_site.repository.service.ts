@@ -34,7 +34,8 @@ export class TrainingSiteRepositoryService {
 
   async getTotalCount(): Promise<number> {
     const rows: any = await this.db.query(
-      'SELECT COUNT(*) AS total FROM training_sites',
+      `SELECT COUNT(*) AS total FROM training_sites  WHERE (status IS NULL OR status = 'active')
+`,
     );
     return rows[0]?.total ?? 0;
   }
@@ -52,7 +53,7 @@ export class TrainingSiteRepositoryService {
 
   async getFilteredCount(filters: any[]): Promise<number> {
 
-    const where: string[] = [];
+    const where: string[] = [`(ts.status IS NULL OR bf.status = 'active')`];
     const values: any[] = [];
 
     filters.forEach((f) => {
