@@ -211,7 +211,5 @@ export class CreateBeneficiarydto {
   @IsBoolean()
   remove_cookstove_pic?: boolean;
 
-  @IsOptional()
-  @Type(() => Date)
-  server_time?: Date;
+
 }
