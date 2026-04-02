@@ -328,6 +328,13 @@ const Beneficiary = () => {
             : "-",
       },
       {
+        key: "distribution_date",
+        label: "Distrubution Date",
+        align: "center",
+        render: fmtDate,
+      },
+
+      {
         key: "modified_date",
         label: "Modified Date",
         align: "center",
@@ -464,6 +471,7 @@ const Beneficiary = () => {
       },
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
+      { key: "distribution_date", label: "Distribution Date", type: "date" }
     ]);
   }, [
     trainingSiteOptions,
@@ -479,29 +487,6 @@ const Beneficiary = () => {
     fetchLanguages();
     fetchUsers();
   }, []);
-
-  // ── API helpers ───────────────────────────────────────────────────────────
-  // const fetchTrainingSites = async (search = "") => {
-  //   try {
-  //     const res = await axios.get(`${API_BASE_URL}/training-site/getallSites`, {
-  //       params: { search },
-  //     });
-  //     setTrainingSiteOptions(res.data?.data || []);
-  //   } catch (error) {
-  //     console.error("Training site fetch error:", error);
-  //   }
-  // };
-
-  // const searchTrainingSite = async (query) => {
-  //   try {
-  //     const res = await axios.get(`${API_BASE_URL}/training-site/getallSites`, {
-  //       params: { search: query },
-  //     });
-  //     setTrainingSiteOptions(res.data?.data || []);
-  //   } catch (error) {
-  //     console.error("Training site search error:", error);
-  //   }
-  // };
 
   const fetchTrainingSites = async (search = "") => {
     try {
@@ -631,6 +616,7 @@ const Beneficiary = () => {
           modified_by_name: item.modified_by_name,
           created_date: item.created_date ?? null,
           modified_date: item.modified_date ?? null,
+          distribution_date: item.distribution_date ?? null,
           status: item.status,
         }));
 
@@ -760,27 +746,6 @@ const Beneficiary = () => {
         headers: { Authorization: `Bearer ${token}` },
       };
 
-      // if (editId) {
-      //   await axios.put(
-      //     `${API_BASE_URL}/beneficiary/update-beneficiary/${editId}`,
-      //     fd,
-      //     config,
-      //   );
-      //   toast.success("Beneficiary updated successfully!");
-      // } else {
-      //   await axios.post(
-      //     `${API_BASE_URL}/beneficiary/create_beneficiary`,
-      //     fd,
-      //     config,
-      //   );
-      //   toast.success("Beneficiary created successfully!");
-      // }
-
-      // setPage(1);
-      // await fetchData(1, pageSize, activeFilters);
-      // setOpenDialog(false);
-      // setEditId(null);
-      // setEditData(null);
       if (editId) {
         await axios.put(
           `${API_BASE_URL}/beneficiary/update-beneficiary/${editId}`,
@@ -1041,6 +1006,8 @@ const Beneficiary = () => {
 };
 
 export default Beneficiary;
+
+
 
 // import React, { useState, useEffect, useCallback, useMemo } from "react";
 // import { Box, Button, CircularProgress, Typography } from "@mui/material";
