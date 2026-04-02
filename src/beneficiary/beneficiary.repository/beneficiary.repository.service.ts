@@ -70,6 +70,10 @@ export class BeneficiaryRepositoryService {
           .toFormat("yyyy-MM-dd HH:mm:ss");
       }
 
+         if (payload.distribution_date) {
+        payload.distribution_date = this.formatDateForDB(payload.distribution_date);
+
+      }
 
       // ❗ remove flags (not DB columns)
       delete payload.remove_national_id;
@@ -438,6 +442,10 @@ export class BeneficiaryRepositoryService {
       }
 
       console.log(`modified_date (UTC): ${modified_date}`);
+            const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
+
+      console.log(`server time (UTC): ${server_time}`);
+
 
       const { modified_date: _, ...restDto } = filteredData;
 
@@ -460,6 +468,9 @@ export class BeneficiaryRepositoryService {
       setClause += `, modified_by = ?`;
       values.push(userid);
 
+       // 9. Always set server_time
+      setClause += `, server_time = ?`;
+      values.push(server_time);
 
       const sql = `
     UPDATE beneficiaries

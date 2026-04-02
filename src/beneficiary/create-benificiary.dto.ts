@@ -142,7 +142,6 @@ export class CreateBeneficiarydto {
 
   @IsOptional()
   @Type(() => Date)
-
   national_id_timestamp?: Date;
 
   @IsOptional()
@@ -185,6 +184,10 @@ export class CreateBeneficiarydto {
   modified_date?: Date;
 
   @IsOptional()
+  @Type(() => Date)
+  distribution_date?: Date;
+
+  @IsOptional()
   @IsString()
   s_is_sync?: string;
 
@@ -208,5 +211,7 @@ export class CreateBeneficiarydto {
   @IsBoolean()
   remove_cookstove_pic?: boolean;
 
-
+  @IsOptional()
+  @Type(() => Date)
+  server_time?: Date;
 }

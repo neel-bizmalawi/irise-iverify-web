@@ -53,7 +53,7 @@ export class TrainingSiteRepositoryService {
 
   async getFilteredCount(filters: any[]): Promise<number> {
 
-    const where: string[] = [`(ts.status IS NULL OR bf.status = 'active')`];
+    const where: string[] = [`(ts.status IS NULL OR ts.status = 'active')`];
     const values: any[] = [];
 
     filters.forEach((f) => {
@@ -544,6 +544,9 @@ export class TrainingSiteRepositoryService {
 
       console.log(`modified_date (UTC): ${modified_date}`);
 
+      const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
+      console.log(`server_time (UTC): ${server_time}`);
+
       // 5. Remove modified_date from restDto (handle separately)
       const { modified_date: _, ...restDto } = filteredDto;
 
@@ -564,6 +567,10 @@ export class TrainingSiteRepositoryService {
       // 8. Always set modified_by
       setClause += `, modified_by = ?`;
       values.push(userid);
+
+      // 9. Always set server_time
+      setClause += `, server_time = ?`;
+      values.push(server_time);
 
       const sql = `
       UPDATE training_sites
