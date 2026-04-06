@@ -51,7 +51,6 @@ export class BeneficiaryRepositoryService {
     timezone: string,
   ) {
 
-
     try {
 
 
@@ -527,6 +526,23 @@ export class BeneficiaryRepositoryService {
       console.error("getFilteredCount is", error)
     }
   }
+
+
+     async deleteBenebyId(bid: number) {
+        try {
+            const [rows] = await this.db.query(
+                'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+                [bid]
+            );
+            return rows;
+        }
+        catch (error) {
+                Sentry.captureException(error);
+
+            console.error("delete monitoring repository error", error)
+            throw new InternalServerErrorException("failed to delte monitoring in repo");
+        }
+    }
 
 
   async getUpdatedDataByDate(date: Date) {

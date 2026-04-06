@@ -14,8 +14,6 @@ import * as Sentry from '@sentry/node';
 import { DateTime } from 'luxon';
 
 
-
-
 @Injectable()
 export class BeneficiaryService {
 
@@ -156,7 +154,7 @@ export class BeneficiaryService {
 
       if (beneficiaryId) {
         try {
-          await this.beneficiaryRepo.deleteBeneficiaryId(beneficiaryId);
+          await this.beneficiaryRepo.deleteBenebyId(beneficiaryId);
         } catch (deleteError) {
           // log separately — don't let this hide the original error
           Sentry.captureException(deleteError);

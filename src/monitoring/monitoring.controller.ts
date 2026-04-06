@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Body, Controller, Delete, Param, ParseIntPipe, Post, Query, Req, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Param, ParseIntPipe, Post, Put, Query, Req, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { MonitoringService } from './monitoring.service';
 import { AuthGuard } from '@nestjs/passport';
 import { CreateMonitoringDto } from './createmonitoring.dto';
@@ -69,30 +69,42 @@ export class MonitoringController {
         return this.monitorService.deleteMonitroing(id)
     }
 
+        @Put('ustatus/:id')
+    async setStatus(@Param('id', ParseIntPipe) id: number,) {
 
-           @Post('moni_sync')
+        return this.monitorService.setStausMonitoring(id)
+    }
+
+    @Post('moni_sync')
     @UseGuards(AuthGuard('jwt'))
     @UseInterceptors(
-      FileFieldsInterceptor([
-        { name: 'photo_path', maxCount: 1 },
-      ]),
+        FileFieldsInterceptor([
+            { name: 'photo_path', maxCount: 1 },
+        ]),
     )
     async syncMonitoring(
-      @Body() sdto: CreateMonitoringDto,
-      @Req() req: any,
-      @UploadedFiles()
-      files: {
-        photo_path?: Express.Multer.File[];
-      },
+        @Body() sdto: CreateMonitoringDto,
+        @Req() req: any,
+        @UploadedFiles()
+        files: {
+            photo_path?: Express.Multer.File[];
+        },
     ) {
-      const cookstove_photo = files?.photo_path?.[0];
+
+        const cookstove_photo = files?.photo_path?.[0];
         const userId = req.user.userId;
-        
-      return this.monitorService.syncMonitorings(
-        sdto,
-      cookstove_photo,
-        userId,
-      );
+
+        return this.monitorService.syncMonitorings(
+            sdto,
+            cookstove_photo,
+            userId,
+        );
     }
+
+    @Post('monitoring_data')
+    async getUpdatedMonitoring(@Body('date') date: string) {
+        return this.monitorService.getupdateData(new Date(date));
+    }
+
 
 }

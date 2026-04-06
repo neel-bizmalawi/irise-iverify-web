@@ -12,7 +12,12 @@ import {
 export class CreateMonitoringDto {
 
 
-    @IsOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  beneficiary_id
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   monitoring_id?: number;
@@ -148,7 +153,7 @@ export class CreateMonitoringDto {
 
   @IsOptional()
   @Type(() => Date)
-  created_date?: Date;
+  created_date?: string | null;
 
   @IsOptional()
   @Type(() => Date)
@@ -163,8 +168,12 @@ export class CreateMonitoringDto {
   modified_by?: string;
 
 
-   @IsOptional()
-    @Transform(({ value }) => value === 'true' || value === true)
-    @IsBoolean()
-    remove_cookstove_img?: boolean;
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_cookstove_img?: boolean;
+
+  @IsOptional()
+  @IsEnum(['active', 'inactive'])
+  status?: 'active' | 'inactive';
 }
