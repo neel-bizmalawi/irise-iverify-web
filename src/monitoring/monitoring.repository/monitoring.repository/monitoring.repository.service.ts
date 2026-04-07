@@ -533,7 +533,7 @@ export class MonitoringRepositoryService {
 
     async getTotalCount(): Promise<number> {
         try {
-            const rows: any = await this.db.query(`select count(*) as total from monitoring_data where(status is null or status='active'`,);
+            const rows: any = await this.db.query(`select count(*) as total from monitoring_data where(status is null or status='active')`,);
             return rows[0].total;
         }
         catch (error) {
