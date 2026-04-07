@@ -173,6 +173,9 @@ export class MonitoringRepositoryService {
         userId: number,
         conn
     ) {
+
+        console.log("dto in updateBeneficiaryDeviceAndLocationCreate is", dto)
+
         try {
             const db = conn ?? this.db;
             const fields: string[] = [];
@@ -277,6 +280,7 @@ export class MonitoringRepositoryService {
         userId: number,
         conn
     ) {
+        console.log("data is ", data)
         const db = conn ?? this.db;
         try {
 
@@ -456,7 +460,7 @@ export class MonitoringRepositoryService {
 
     async getFilteredCount(filters: any[]) {
         try {
-            const where: string[] = [];
+            const where: string[] = [`(md.status IS NULL OR md.status = 'active')`];
             const values: any[] = [];
 
             filters.forEach((f) => {
@@ -528,14 +532,22 @@ export class MonitoringRepositoryService {
     }
 
     async getTotalCount(): Promise<number> {
-        const rows: any = await this.db.query('select count(*) as total from monitoring_data',);
-        return rows[0].total;
+        try {
+            const rows: any = await this.db.query(`select count(*) as total from monitoring_data where(status is null or status='active'`,);
+            return rows[0].total;
+        }
+        catch (error) {
+            Sentry.captureException(error);
+
+            console.error("getTotalCount error is", error)
+            throw error;
+        }
     }
 
 
     async findWithFilters(filters: any[], page: number, limit: number) {
         try {
-            const where: string[] = [];
+            const where: string[] = [`(md.status IS NULL OR md.status = 'active')`];
             const values: any[] = [];
 
             filters.forEach((f) => {
@@ -626,6 +638,8 @@ export class MonitoringRepositoryService {
   FROM monitoring_data md
  LEFT JOIN ab_admin a ON md.created_by = a.adminID
  LEFT JOIN ab_admin a2 ON md.modified_by = a2.adminID
+ WHERE (md.status IS NULL OR md.status = 'active')
+
   ORDER BY monitoring_id DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;

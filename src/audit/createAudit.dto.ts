@@ -12,6 +12,7 @@ import {
 export class CreateAuditDto {
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   audit_id?: number;
 
@@ -28,7 +29,7 @@ export class CreateAuditDto {
   phone_number?: string;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
   visit_date?: Date;
 
   @IsOptional()
@@ -92,8 +93,8 @@ export class CreateAuditDto {
   delivered_condition?: 'yes' | 'no';
 
   @IsOptional()
-  @IsDateString()
-  delivered_cook_stove?: Date;
+  @Type(() => Date)
+  date_of_cookstove_recieved?: Date;
 
   @IsOptional()
   @IsString()
@@ -133,5 +134,29 @@ export class CreateAuditDto {
   @IsOptional()
   @IsString()
   modified_by?: string;
+
+
+    @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_cookstove_area?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  remove_cookstove?: boolean;
+
+
+    @IsOptional()
+  @Type(() => Date)
+  created_date?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  modified_date?: string;
+
+    @IsOptional()
+  @IsEnum(['active', 'inactive'])
+  status?: 'active' | 'inactive';
 
 }

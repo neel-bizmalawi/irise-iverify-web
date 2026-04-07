@@ -4,6 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AuditService } from './audit.service';
 import { CreateAuditDto } from './createAudit.dto';
+import { updateAuditDto } from './updateAudit.dto';
 
 @Controller('audit')
 export class AuditController {
@@ -39,6 +40,27 @@ export class AuditController {
         }
     }
 
+    @Post('update_audit/:id')
+    @UseGuards(AuthGuard('jwt'))
+    @UseInterceptors(
+        FileFieldsInterceptor([ //basically for processing file on server
+            { name: 'cook_stove_img', maxCount: 1 },
+            { name: 'cook_stove_area_img', maxCount: 1 },
+        ]),
+    )
+    async updateAudit(@Body() udto: updateAuditDto, @Param('id') id: string, @Req() req: any, @UploadedFiles()
+    files: {
+        cook_stove_img?: Express.Multer.File[];
+        cook_stove_area_img?: Express.Multer.File[];
+
+    },) {
+        const cookstoveFile = files?.cook_stove_img?.[0];
+        const cookstoveareaFile = files?.cook_stove_area_img?.[0];
+
+        const userId = req.user.userId;
+        return this.auditService.updateAudit(udto, cookstoveFile, cookstoveareaFile, Number(id), userId);
+    }
+
 
     @Post('list')
     async getTrainingSites(
@@ -57,5 +79,41 @@ export class AuditController {
     async deleteAudit(@Param('id', ParseIntPipe) id: number,) {
 
         return this.auditService.deleteAudit(id)
+    }
+
+
+    @Post('audit_sync')
+    @UseGuards(AuthGuard('jwt'))
+    @UseInterceptors(
+        FileFieldsInterceptor([
+            { name: 'cook_stove_img', maxCount: 1 },
+            { name: 'cook_stove_area_img', maxCount: 1 },]),
+    )
+    async syncAudit(
+        @Body() sdto: CreateAuditDto,
+        @Req() req: any,
+        @UploadedFiles()
+        files: {
+            cook_stove_img?: Express.Multer.File[];
+            cook_stove_area_img?: Express.Multer.File[];
+        },
+    ) {
+        const cookstoveFile = files?.cook_stove_img?.[0];
+        const cookstoveareaFile = files?.cook_stove_area_img?.[0];
+
+        const userId = req.user.userId;
+
+        return this.auditService.syncAudits(
+            sdto,
+            cookstoveFile,
+            cookstoveareaFile,
+            userId,
+        );
+    }
+
+
+    @Post('audit_data')
+    async getUpdatedAudit(@Body('date') date: string) {
+        return this.auditService.getupdateData(new Date(date));
     }
 }

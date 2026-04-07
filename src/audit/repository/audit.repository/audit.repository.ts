@@ -1,8 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { CreateAuditDto } from 'src/audit/createAudit.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { OPERATOR_SQL } from 'src/filters/operator.map';
+import * as Sentry from '@sentry/node';
+import { DateTime } from 'luxon';
+import { updateAuditDto } from 'src/audit/updateAudit.dto';
+
 
 @Injectable()
 export class AuditRepository {
@@ -10,17 +14,205 @@ export class AuditRepository {
     constructor(private readonly db: DatabaseService) { }
 
 
+    private formatDateForDB(date: any): string | null {
+        if (!date) return null;
+
+        return (typeof date === 'string'
+            ? DateTime.fromISO(date)
+            : DateTime.fromJSDate(date)
+        )
+            .toUTC()
+            .toFormat("yyyy-MM-dd HH:mm:ss");
+    }
+
+    async getUpdatedDataByDate(date: Date) {
+
+        try {
+
+            const rows: any = await this.db.query(
+                `
+                  SELECT *
+                  FROM audit
+                  WHERE server_time > ?
+                  OR modified_date > ?
+                  `,
+                [date, date],
+            );
+
+            return rows;
+
+        } catch (error) {
+            Sentry.captureException(error);
+            console.error('getUpdatedDataByDate error', error);
+            throw error;
+        }
+    }
+
+
+    async getUserTimezone(userId: number): Promise<string> {
+        const result: any = await this.db.query(
+            `SELECT timezone FROM ab_admin WHERE adminID = ? LIMIT 1`,
+            [userId]
+        );
+        return result?.[0]?.timezone || 'UTC';
+    }
+
+    async updateAudits(
+        auditId: number,
+        dto: updateAuditDto,
+        filePaths: any,
+        userid: number,
+    ) {
+
+        // merge dto + file paths
+        try {
+
+            const updateData = {
+                ...dto,
+                ...filePaths,
+            };
+
+
+
+            console.log("updated Data is", updateData);
+
+            // remove undefined
+            const filteredData = Object.fromEntries(
+                Object.entries(updateData).filter(([_, value]) => value !== undefined),
+            );
+
+            let modified_date: string;
+            if (filteredData.modified_date) {
+                const raw = filteredData.modified_date;
+                modified_date = (typeof raw === 'string'
+                    ? DateTime.fromISO(raw)
+                    : DateTime.fromJSDate(raw as Date)
+                )
+                    .toUTC()                           // ✅ convert to UTC
+                    .toFormat("yyyy-MM-dd HH:mm:ss"); // ✅ MySQL format
+            } else {
+                // No modified_date sent → generate fresh in UTC
+                modified_date = DateTime.utc()
+                    .toFormat("yyyy-MM-dd HH:mm:ss"); // ✅ current UTC time
+            }
+
+
+            const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
+
+            const { modified_date: _, ...restDto } = filteredData;
+
+
+
+            const fields = Object.keys(restDto);
+
+            if (!fields.length && !modified_date) {
+                return { message: 'Nothing to update' };
+            }
+
+            let setClause = fields.map((f) => `${f} = ?`).join(', ');
+            const values = Object.values(restDto);
+
+            // 7. Always set modified_date (local timezone, not NOW())
+            setClause += `${setClause ? ', ' : ''}modified_date = ?`;
+            values.push(modified_date);
+
+            // 8. Always set modified_by
+            setClause += `, modified_by = ?`;
+            values.push(userid);
+
+            // 9. Always set server_time
+            setClause += `, server_time = ?`;
+            values.push(server_time);
+
+
+            const sql = `
+            UPDATE audit
+            SET ${setClause}
+            WHERE audit_id = ?
+          `;
+
+            await this.db.query(sql, [...values, auditId]);
+
+            return { message: 'Audit updated successfully' };
+
+        }
+        catch (error) {
+            Sentry.captureException(error);
+
+            console.error("update audit error is", error)
+
+
+            if (error.code === "ER_NO_REFERENCED_ROW_2") {
+                throw new ConflictException("Invalid foreign key reference");
+            }
+
+            throw new InternalServerErrorException(
+                "Failed to modify audit"
+            );
+        }
+
+    }
+
+    private formatCreateDate(date: any, timezone: string): string | null {
+        if (!date) return null;
+
+        return (typeof date === 'string'
+            ? DateTime.fromISO(date)
+            : DateTime.fromJSDate(date)
+        )
+            .setZone(timezone)
+            .toFormat("yyyy-MM-dd HH:mm:ss");
+    }
+
+
+    async getAuditById(aid: number) {
+        try {
+            const rows = await this.db.query(
+                'SELECT * FROM audit WHERE audit_id = ? LIMIT 1',
+                [aid]
+            );
+            return rows[0];
+        }
+        catch (error) {
+            Sentry.captureException(error);
+            console.error("getBeneficiaryById error", error)
+        }
+    }
+
+
     async insertDataAudit(
         data: CreateAuditDto,
-        username: string,
-        connection
+        userId: number,
+        timezone: string,
     ) {
         try {
 
-            const payload = {
+            const payload: any = {
                 ...data,
-                created_by: username
+                created_by: userId
             };
+
+            if (payload.created_date) {
+                payload.created_date = this.formatCreateDate(payload.created_date, timezone);
+
+            }
+            else {
+                payload.created_date = DateTime.now()
+                    .setZone(timezone)
+                    .toFormat("yyyy-MM-dd HH:mm:ss");
+            }
+
+
+            // ✅ normalize other date fields
+            const DATE_FIELDS = ['visit_date', 'date_of_cookstove_recieved'];
+            DATE_FIELDS.forEach(field => {
+                if (payload[field]) {
+                    payload[field] = this.formatDateForDB(payload[field]);
+                }
+            });
+
+            delete payload.remove_cookstove_area;
+            delete payload.remove_cookstove;
 
 
             // convert undefined → null
@@ -35,7 +227,7 @@ export class AuditRepository {
             const values = Object.values(payload);
 
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const [result] = await connection.query(
+            const result = await this.db.query(
                 `INSERT INTO audit (${columns}) VALUES (${placeholders})`,
                 values
             );
@@ -52,7 +244,7 @@ export class AuditRepository {
         }
     }
 
-    async updateFilesPath(monitoringId: number, files: any, connection) {
+    async updateFilesPath(auditId: number, files: any) {
         try {
             const fields: string[] = [];
             const values: any[] = [];
@@ -74,9 +266,9 @@ export class AuditRepository {
       WHERE audit_id = ?
     `;
 
-            values.push(monitoringId);
+            values.push(auditId);
 
-            const [result] = await connection.query(sql, values);
+            const result = await this.db.query(sql, values);
 
             return result;
 
@@ -85,7 +277,7 @@ export class AuditRepository {
             console.error("UpdateFilepath error", error);
 
             throw new InternalServerErrorException(
-                'Failed to update beneficiary file paths'
+                'Failed to update audit file paths'
             );
         }
     }
@@ -154,7 +346,7 @@ export class AuditRepository {
               `;
 
         const result = await this.db.query(sql, values);
-        return result[0]?.total??0;
+        return result[0]?.total ?? 0;
     }
 
     async getTotalCount(): Promise<number> {
