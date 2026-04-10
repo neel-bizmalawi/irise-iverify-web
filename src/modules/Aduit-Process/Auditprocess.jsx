@@ -5,6 +5,7 @@ import AppPagination from "../../components/AppPagination";
 import AppTable from "../../components/AppTable";
 import AppTableFilter from "../../components/AppTableFilter";
 //import EditAuditDialog from "./EditAuditDialog";
+import ConfirmInactiveDialog from "../../components/ConfirmInactiveDialog";  // ← added
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
@@ -186,6 +187,10 @@ const AuditProcess = () => {
 
   const [userOptions, setUserOptions] = useState([]);
 
+  // ── NEW: confirm dialog state ─────────────────────────────────────────────
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  
   // ── Columns ───────────────────────────────────────────────────────────────
   const columns = useMemo(
     () => [
@@ -234,7 +239,7 @@ const AuditProcess = () => {
         label: "Training Before Receiving",
         align: "center",
       },
-      { key: "rea_conset", label: "REA Consent", align: "center" },
+      { key: "read_conset", label: "READ Consent", align: "center" },
       { key: "sign_consent", label: "Sign Consent", align: "center" },
       {
         key: "delivered_condition",
@@ -242,7 +247,7 @@ const AuditProcess = () => {
         align: "center",
       },
       {
-        key: "delivered_cook_stove",
+        key: "date_of_cookstove_recieved",
         label: "Delivered Cook Stove",
         align: "center",
         render: fmtDate,
@@ -263,14 +268,6 @@ const AuditProcess = () => {
         align: "center",
         render: (value) => <ImageThumb src={value} alt="Cook Stove Area" />,
       },
-      { key: "remarks", label: "Remarks", align: "center" },
-      { key: "s_is_sync", label: "Sync Status", align: "center" },
-      // {
-      //   key: "created_date",
-      //   label: "Created Date",
-      //   align: "center",
-      //   render: fmtDate,
-      // },
       {
         key: "created_date",
         label: "Created Date",
@@ -305,7 +302,7 @@ const AuditProcess = () => {
               size="small"
               variant="outlined"
               color="error"
-              onClick={() => handleDelete(row.audit_id)}
+              onClick={() => handleDeleteClick(row.audit_id)}  // ← changed
             >
               Delete
             </Button>
@@ -353,8 +350,8 @@ const AuditProcess = () => {
         options: ["yes", "no"],
       },
       {
-        key: "rea_conset",
-        label: "REA Consent",
+        key: "read_conset",
+        label: "READ Consent",
         type: "select",
         options: ["yes", "no"],
       },
@@ -459,18 +456,16 @@ const AuditProcess = () => {
           payment_requested: item.payment_requested ?? "-",
           payment_requested_by: item.payment_requested_by ?? "-",
           training_before_receiving: item.training_before_receiving ?? "-",
-          rea_conset: item.rea_conset ?? "-",
+          read_conset: item.read_conset ?? "-",
           sign_consent: item.sign_consent ?? "-",
           delivered_condition: item.delivered_condition ?? "-",
-          delivered_cook_stove: item.delivered_cook_stove ?? null,
+          date_of_cookstove_recieved: item.date_of_cookstove_recieved ?? null,
           where_received: item.where_received ?? "-",
           where_trained: item.where_trained ?? "-",
           latitude: item.latitude ?? "-",
           longitude: item.longitude ?? "-",
           photo_path_cook_stove: item.photo_path_cook_stove || null,
           photo_path_cook_stove_area: item.photo_path_cook_stove_area || null,
-          remarks: item.remarks ?? "-",
-          s_is_sync: item.s_is_sync ?? "-",
           created_date: item.created_date ?? null,
           created_by_name: item.created_by_name ?? "-",
           modified_date: item.modified_date ?? null,
@@ -505,14 +500,23 @@ const AuditProcess = () => {
     setPage(1);
   };
 
-  const handleDelete = async (id) => {
+  // ── NEW: open confirm dialog instead of deleting directly ─────────────────
+  const handleDeleteClick = (id) => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  // ── NEW: actual delete called after confirmation ───────────────────────────
+  const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`${API_BASE_URL}/audit/delete/${id}`);
+      await axios.put(`${API_BASE_URL}/audit/ustatus/${pendingDeleteId}`);
       toast.success("Audit record deleted successfully!");
       await fetchData(page, pageSize, activeFilters);
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete audit record");
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -547,13 +551,11 @@ const AuditProcess = () => {
       fd.append("rea_conset", formData.rea_conset);
       fd.append("sign_consent", formData.sign_consent);
       fd.append("delivered_condition", formData.delivered_condition);
-      fd.append("delivered_cook_stove", formData.delivered_cook_stove || "");
+      fd.append("date_of_cookstove_recieved", formData.date_of_cookstove_recieved || "");
       fd.append("where_received", formData.where_received || "");
       fd.append("where_trained", formData.where_trained || "");
       if (formData.latitude) fd.append("latitude", formData.latitude);
       if (formData.longitude) fd.append("longitude", formData.longitude);
-      fd.append("remarks", formData.remarks || "");
-      fd.append("s_is_sync", formData.s_is_sync || "Y");
 
       if (formData.photo_path_cook_stove instanceof File) {
         fd.append("photo_path_cook_stove", formData.photo_path_cook_stove);
@@ -618,15 +620,13 @@ const AuditProcess = () => {
         rea_conset: item.rea_conset ?? "no",
         sign_consent: item.sign_consent ?? "no",
         delivered_condition: item.delivered_condition ?? "no",
-        delivered_cook_stove: item.delivered_cook_stove
-          ? item.delivered_cook_stove.substring(0, 10)
+        date_of_cookstove_recieved: item.date_of_cookstove_recieved
+          ? item.date_of_cookstove_recieved.substring(0, 10)
           : "",
         where_received: item.where_received ?? "",
         where_trained: item.where_trained ?? "",
         latitude: item.latitude ?? "",
         longitude: item.longitude ?? "",
-        remarks: item.remarks ?? "",
-        s_is_sync: item.s_is_sync ?? "Y",
         photo_path_cook_stove: item.photo_path_cook_stove || null,
         photo_path_cook_stove_area: item.photo_path_cook_stove_area || null,
       });
@@ -729,6 +729,18 @@ const AuditProcess = () => {
         onSubmit={handleSubmitAudit}
         initialData={editData}
       /> */}
+
+      {/* ── NEW: Confirm delete dialog ──────────────────────────────────── */}
+      <ConfirmInactiveDialog
+        open={confirmOpen}
+        onClose={() => {
+          setConfirmOpen(false);
+          setPendingDeleteId(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Audit Record"
+        message="Are you sure you want to delete this audit record?"
+      />
     </Box>
   );
 };

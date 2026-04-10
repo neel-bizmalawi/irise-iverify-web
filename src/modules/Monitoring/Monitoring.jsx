@@ -4,6 +4,7 @@ import Breadcrumb from "../../components/Breadcrumb";
 import AppPagination from "../../components/AppPagination";
 import AppTable from "../../components/AppTable";
 import AppTableFilter from "../../components/AppTableFilter";
+import ConfirmInactiveDialog from "../../components/ConfirmInactiveDialog";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ExportButtons from "../../components/ExportButtons";
@@ -11,28 +12,12 @@ import { API_BASE_URL } from "../../config";
 
 const BASE_IMAGE_URL = API_BASE_URL;
 
-// ── Build absolute URL from a relative path ───────────────────────────────────
 const buildImageUrl = (src) => {
   if (!src || src === "-" || src === "null" || src === null) return null;
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
   const path = src.startsWith("/") ? src : `/${src}`;
   return `${BASE_IMAGE_URL}${path}`;
 };
-
-// const buildImageUrl = (src) => {
-//   if (!src || src === "-" || src === "null" || src === null) return null;
-//   if (
-//     src.startsWith("/Users/") ||
-//     src.startsWith("/home/") ||
-//     src.match(/^[A-Z]:\\/i)
-//   )
-//     return null;
-//   if (src.startsWith("http://") || src.startsWith("https://")) return src;
-//   const path = src.startsWith("/") ? src : `/${src}`;
-//   return `${BASE_IMAGE_URL}${path}`;
-// };
-
-// ── Full-screen image preview modal ──────────────────────────────────────────
 
 const ImagePreviewModal = ({ open, src, alt, onClose }) => {
   if (!open || !src) return null;
@@ -106,7 +91,6 @@ const ImagePreviewModal = ({ open, src, alt, onClose }) => {
   );
 };
 
-// ── Thumbnail cell component ──────────────────────────────────────────────────
 const ImageThumb = ({ src, alt }) => {
   const [broken, setBroken] = React.useState(false);
   const [preview, setPreview] = React.useState(false);
@@ -173,7 +157,6 @@ const ImageThumb = ({ src, alt }) => {
   );
 };
 
-// ── Date formatter ────────────────────────────────────────────────────────────
 const fmtDate = (value) =>
   value
     ? new Date(value).toLocaleString("en-IN", {
@@ -200,119 +183,47 @@ const Monitoring = () => {
 
   const [userOptions, setUserOptions] = useState([]);
 
+  // ── NEW: confirm dialog state ─────────────────────────────────────────────
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
   // ── Columns ───────────────────────────────────────────────────────────────
   const columns = useMemo(
     () => [
       { key: "id", label: "ID", align: "center" },
       { key: "user_id", label: "User ID", align: "center" },
       { key: "national_id", label: "National ID", align: "center" },
-      { key: "agent_name", label: "Agent Name" },
-      {
-        key: "visit_at",
-        label: "Visit At",
-        align: "center",
-        render: fmtDate,
-      },
+      { key: "visit_at", label: "Visit At", align: "center", render: fmtDate },
       { key: "old_gps_lat", label: "Old GPS Lat", align: "center" },
       { key: "old_gps_lng", label: "Old GPS Lng", align: "center" },
       { key: "new_gps_lat", label: "New GPS Lat", align: "center" },
       { key: "new_gps_lng", label: "New GPS Lng", align: "center" },
       { key: "device_serial_no", label: "Device Serial No", align: "center" },
-      {
-        key: "new_device_serial_no",
-        label: "New Device Serial No",
-        align: "center",
-      },
+      { key: "new_device_serial_no", label: "New Device Serial No", align: "center" },
       { key: "hh_name_same", label: "HH Name Same", align: "center" },
       { key: "stoves_present", label: "Stoves Present", align: "center" },
       { key: "stove_being_used", label: "Stove Being Used", align: "center" },
       { key: "times_used_today", label: "Times Used Today", align: "center" },
       { key: "stove_condition", label: "Stove Condition", align: "center" },
-      // {
-      //   key: "photo_url",
-      //   label: "Photo URL",
-      //   align: "center",
-      //   render: (value) => <ImageThumb src={value} alt="Photo" />,
-      // },
-//--------------------------
-      // {
-      //   key: "photo_url",
-      //   label: "Photo URL",
-      //   align: "center",
-      //   render: (value) =>
-      //     value && value !== "-" ? (
-      //       <a
-      //         href={value}
-      //         target="_blank"
-      //         rel="noreferrer"
-      //         style={{ fontSize: "0.75rem", wordBreak: "break-all" }}
-      //       >
-      //         {value}
-      //       </a>
-      //     ) : (
-      //       "-"
-      //     ),
-      // },
-
-  //    { key: "nfc_tag_status", label: "NFC Tag Status", align: "center" },
-      {
-        key: "user_satisfaction",
-        label: "User Satisfaction",
-        align: "center",
-      },
+      { key: "user_satisfaction", label: "User Satisfaction", align: "center" },
       { key: "fuel_type", label: "Fuel Type", align: "center" },
       { key: "daily_fuel_cost", label: "Daily Fuel Cost", align: "center" },
-      {
-        key: "savings_3_months",
-        label: "Savings (3 Months)",
-        align: "center",
-      },
-      {
-        key: "est_fuel_last3meals_kg",
-        label: "Est. Fuel Last 3 Meals (kg)",
-        align: "center",
-      },
+      { key: "savings_3_months", label: "Savings (3 Months)", align: "center" },
+      { key: "est_fuel_last3meals_kg", label: "Est. Fuel Last 3 Meals (kg)", align: "center" },
       { key: "needs_training", label: "Needs Training", align: "center" },
       { key: "training_type", label: "Training Type", align: "center" },
-      {
-        key: "training_performed",
-        label: "Training Performed",
-        align: "center",
-      },
-      {
-        key: "training_not_done_reason",
-        label: "Training Not Done Reason",
-        align: "center",
-      },
+      { key: "training_performed", label: "Training Performed", align: "center" },
       { key: "needs_more_visits", label: "Needs More Visits", align: "center" },
-      {
-        key: "more_visits_reason",
-        label: "More Visits Reason",
-        align: "center",
-      },
-      {
-        key: "health_hospital_less",
-        label: "Health Hospital Less",
-        align: "center",
-      },
-      {
-        key: "health_better_air",
-        label: "Health Better Air",
-        align: "center",
-      },
+      { key: "more_visits_reason", label: "More Visits Reason", align: "center" },
+      { key: "health_hospital_less", label: "Health Hospital Less", align: "center" },
+      { key: "health_better_air", label: "Health Better Air", align: "center" },
       {
         key: "photo_path",
         label: "Photo",
         align: "center",
         render: (value) => <ImageThumb src={value} alt="Monitoring Photo" />,
       },
-      // {
-      //   key: "created_date",
-      //   label: "Created Date",
-      //   align: "center",
-      //   render: fmtDate,
-      // },
-       {
+      {
         key: "created_date",
         label: "Created Date",
         align: "center",
@@ -329,12 +240,7 @@ const Monitoring = () => {
             : "-",
       },
       { key: "created_by_name", label: "Created By", align: "center" },
-      {
-        key: "modified_date",
-        label: "Modified Date",
-        align: "center",
-        render: fmtDate,
-      },
+      { key: "modified_date", label: "Modified Date", align: "center", render: fmtDate },
       { key: "modified_by_name", label: "Modified By", align: "center" },
       {
         key: "actions",
@@ -346,7 +252,7 @@ const Monitoring = () => {
               size="small"
               variant="outlined"
               color="error"
-              onClick={() => handleDelete(row.id)}
+              onClick={() => handleDeleteClick(row.id)}  // ← changed
             >
               Delete
             </Button>
@@ -361,89 +267,20 @@ const Monitoring = () => {
   useEffect(() => {
     setFilterFields([
       { key: "national_id", label: "National ID", type: "text" },
-      { key: "agent_name", label: "Agent Name", type: "text" },
       { key: "device_serial_no", label: "Device Serial No", type: "text" },
-      {
-        key: "new_device_serial_no",
-        label: "New Device Serial No",
-        type: "text",
-      },
-      {
-        key: "hh_name_same",
-        label: "HH Name Same",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "stoves_present",
-        label: "Stoves Present",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "stove_being_used",
-        label: "Stove Being Used",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "stove_condition",
-        label: "Stove Condition",
-        type: "select",
-        options: ["Good", "Fair", "Poor"],
-      },
-      {
-        key: "user_satisfaction",
-        label: "User Satisfaction",
-        type: "select",
-        options: ["Happy", "Neutral", "Unhappy"],
-      },
-      {
-        key: "fuel_type",
-        label: "Fuel Type",
-        type: "select",
-        options: ["Indigenous Wood", "Charcoal", "Pellets", "LPG", "Other"],
-      },
-      {
-        key: "needs_training",
-        label: "Needs Training",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "needs_more_visits",
-        label: "Needs More Visits",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "health_hospital_less",
-        label: "Health: Hospital Less",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "health_better_air",
-        label: "Health: Better Air",
-        type: "select",
-        options: ["yes", "no"],
-      },
-      {
-        key: "created_by",
-        label: "Created By",
-        type: "searchable",
-        options: userOptions,
-        labelKey: "name",
-        onSearch: fetchUsers,
-      },
-      {
-        key: "modified_by",
-        label: "Modified By",
-        type: "searchable",
-        options: userOptions,
-        labelKey: "name",
-        onSearch: fetchUsers,
-      },
+      { key: "new_device_serial_no", label: "New Device Serial No", type: "text" },
+      { key: "hh_name_same", label: "HH Name Same", type: "select", options: ["yes", "no"] },
+      { key: "stoves_present", label: "Stoves Present", type: "select", options: ["yes", "no"] },
+      { key: "stove_being_used", label: "Stove Being Used", type: "select", options: ["yes", "no"] },
+      { key: "stove_condition", label: "Stove Condition", type: "select", options: ["Good", "Fair", "Poor"] },
+      { key: "user_satisfaction", label: "User Satisfaction", type: "select", options: ["Happy", "Neutral", "Unhappy"] },
+      { key: "fuel_type", label: "Fuel Type", type: "select", options: ["Indigenous Wood", "Charcoal", "Pellets", "LPG", "Other"] },
+      { key: "needs_training", label: "Needs Training", type: "select", options: ["yes", "no"] },
+      { key: "needs_more_visits", label: "Needs More Visits", type: "select", options: ["yes", "no"] },
+      { key: "health_hospital_less", label: "Health: Hospital Less", type: "select", options: ["yes", "no"] },
+      { key: "health_better_air", label: "Health: Better Air", type: "select", options: ["yes", "no"] },
+      { key: "created_by", label: "Created By", type: "searchable", options: userOptions, labelKey: "name", onSearch: fetchUsers },
+      { key: "modified_by", label: "Modified By", type: "searchable", options: userOptions, labelKey: "name", onSearch: fetchUsers },
       { key: "visit_at", label: "Visit At", type: "date" },
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
@@ -472,11 +309,7 @@ const Monitoring = () => {
 
         const cleanFilters =
           Array.isArray(filters) && filters.length > 0
-            ? filters.map(({ field, operator, value }) => ({
-                field,
-                operator,
-                value,
-              }))
+            ? filters.map(({ field, operator, value }) => ({ field, operator, value }))
             : [];
 
         const res = await axios.post(
@@ -561,24 +394,29 @@ const Monitoring = () => {
     setPage(1);
   };
 
-  const handleDelete = async (id) => {
+  // ── NEW: open confirm dialog instead of deleting directly ─────────────────
+  const handleDeleteClick = (id) => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  // ── NEW: actual delete called after confirmation ───────────────────────────
+  const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`${API_BASE_URL}/monitoring/delete/${id}`);
+      await axios.put(`${API_BASE_URL}/monitoring/ustatus/${pendingDeleteId}`);
       toast.success("Monitoring record deleted successfully!");
       await fetchData(page, pageSize, activeFilters);
     } catch (error) {
       toast.error("Failed to delete monitoring record");
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
   const fetchAllForExport = async () => {
     const cleanFilters =
       Array.isArray(activeFilters) && activeFilters.length > 0
-        ? activeFilters.map(({ field, operator, value }) => ({
-            field,
-            operator,
-            value,
-          }))
+        ? activeFilters.map(({ field, operator, value }) => ({ field, operator, value }))
         : [];
     const res = await axios.post(
       `${API_BASE_URL}/monitoring/list`,
@@ -597,7 +435,6 @@ const Monitoring = () => {
         items={[{ label: "Monitoring", path: "/monitoring" }]}
       />
 
-      {/* Top Row */}
       <Box
         sx={{
           mb: 2,
@@ -648,6 +485,18 @@ const Monitoring = () => {
           setPageSize(newSize);
           setPage(1);
         }}
+      />
+
+      {/* ── NEW: Confirm delete dialog ──────────────────────────────────── */}
+      <ConfirmInactiveDialog
+        open={confirmOpen}
+        onClose={() => {
+          setConfirmOpen(false);
+          setPendingDeleteId(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Monitoring Record"
+        message="Are you sure you want to delete this monitoring record?"
       />
     </Box>
   );
