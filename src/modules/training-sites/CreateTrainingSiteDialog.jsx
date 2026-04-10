@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -158,6 +158,9 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
   const [districtLoading, setDistrictLoading] = React.useState(false);
   const [authorityLoading, setAuthorityLoading] = React.useState(false);
 
+  const [selectedDistrict, setSelectedDistrict] = useState(null);
+
+  const id = selectedDistrict?.district_id || null;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isEdit = Boolean(initialData);
@@ -205,23 +208,25 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
     fetchDistricts();
   }, [open]);
 
+  const fetchAuthorities = async ({ id }) => {
+    try {
+      setAuthorityLoading(true);
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/authority_slug/${id}`,
+      );
+      setAuthorityOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("Authority fetch error:", error);
+    } finally {
+      setAuthorityLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (!open) return;
-    const fetchAuthorities = async () => {
-      try {
-        setAuthorityLoading(true);
-        const res = await axios.get(
-          `${API_BASE_URL}/training-site/authority_slug`,
-        );
-        setAuthorityOptions(res.data?.data || []);
-      } catch (error) {
-        console.error("Authority fetch error:", error);
-      } finally {
-        setAuthorityLoading(false);
-      }
-    };
-    fetchAuthorities();
-  }, [open]);
+    if (id) {
+      fetchAuthorities({ id });
+    }
+  }, [id]);
 
   const searchDistrict = async (query) => {
     try {
@@ -454,6 +459,7 @@ const CreateTrainingSiteDialog = ({ open, onClose, onSubmit, initialData }) => {
                 onChange={(val) => {
                   formik.setFieldValue("district", val?.district_name ?? "");
                   formik.setFieldTouched("district", true, false);
+                  setSelectedDistrict(val);
                 }}
                 onCreate={createDistrict}
                 allowCreate={false}
