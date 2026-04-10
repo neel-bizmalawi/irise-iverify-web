@@ -30,10 +30,10 @@ export class TrainingSiteController {
         return this.TrainingSiteService.getDistrict();
     }
 
-    @Get('authority_slug')
-    async fetchAuthority() {
+    @Get('authority_slug/:id')
+    async fetchAuthority( @Param('id', ParseIntPipe) id: number) {
 
-        return this.TrainingSiteService.getAuthority();
+        return this.TrainingSiteService.getAuthority(id);
     }
 
     @Get('cookstove_slug')

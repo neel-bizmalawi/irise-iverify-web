@@ -127,8 +127,8 @@ export class TrainingSiteService {
   }
 
 
-  async getAuthority() {
-    const data = await this.trainingSiteRepo.getAuthority();
+  async getAuthority(dist_id:number) {
+    const data = await this.trainingSiteRepo.getAuthority(dist_id);
 
     return {
       message: 'Authority fetched',

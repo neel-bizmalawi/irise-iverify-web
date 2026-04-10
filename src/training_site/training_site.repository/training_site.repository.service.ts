@@ -239,15 +239,31 @@ export class TrainingSiteRepositoryService {
   }
 
   async getDistrict() {
+    try{
     const rows: any = await this.db.query('SELECT * FROM ab_district');
     return rows;
+    }
+    catch(error)
+    {
+            Sentry.captureException(error);
+
+      console.error("get District error",error)
+    }
   }
 
-  async getAuthority() {
+  async getAuthority(dist_id) {
+    try{
     const rows: any = await this.db.query(
-      'SELECT * FROM ab_traditional_authority',
+      `SELECT * FROM ab_traditional_authority where district_id = ${dist_id}`,
     );
     return rows;
+  }
+  catch(error)
+  {
+          Sentry.captureException(error);
+
+    console.error("get authority error",error)
+  }
   }
 
   async getcookstove() {
