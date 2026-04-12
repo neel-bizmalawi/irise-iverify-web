@@ -5,9 +5,11 @@ import { BadRequestException, Body, Controller, Post, Req, Res } from '@nestjs/c
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import type { Response, Request } from 'express';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 
 
 @Controller('auth')
+@ApiTags('auth')
 export class AuthController {
 
     constructor(private authService: AuthService, private jwtService: JwtService, // ✅ ADD THIS
@@ -18,6 +20,18 @@ export class AuthController {
 
 
     @Post('verifyUser')
+    @ApiOperation({ summary: 'User login with email and password' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                validemail: { type: 'string', example: 'user@example.com' },
+                validPass: { type: 'string', example: 'password123' }
+            }
+        }
+    })
+    @ApiResponse({ status: 200, description: 'Login successful' })
+    @ApiResponse({ status: 401, description: 'Invalid credentials' })
     async LoginByEmail(
         @Body() body,
         @Res({ passthrough: true }) res: Response,
@@ -55,6 +69,9 @@ export class AuthController {
 
 
 @Post('logout')
+@ApiOperation({ summary: 'User logout' })
+@ApiResponse({ status: 200, description: 'Logout successful' })
+@ApiResponse({ status: 400, description: 'Token missing' })
 logout(@Req() req) {
 
   const token = req.headers.authorization?.split(" ")[1];

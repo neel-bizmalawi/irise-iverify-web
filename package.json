@@ -29,6 +29,7 @@
     "@nestjs/platform-express": "^11.1.16",
     "@nestjs/schedule": "^6.1.1",
     "@nestjs/serve-static": "^5.0.4",
+    "@nestjs/swagger": "^11.2.7",
     "@sentry/node": "^10.43.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
