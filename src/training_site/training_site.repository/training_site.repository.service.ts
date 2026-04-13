@@ -321,7 +321,7 @@ ON ts.traditional_authority = ta.authority_id
   }
 
   async getTrainingAllsites() {
-    const rows: any = await this.db.query('SELECT training_site FROM training_sites');
+    const rows: any = await this.db.query('SELECT training_site,training_point_id FROM training_sites');
     return rows;
   }
 

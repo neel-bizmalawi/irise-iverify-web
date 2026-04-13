@@ -180,7 +180,9 @@ export class BeneficiaryRepositoryService {
   async getBeneficiaryById(bid: number) {
     try {
       const rows = await this.db.query(
-        'SELECT * FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+        `SELECT bf.*, tr.training_site AS training_site_name
+ FROM beneficiaries bf LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site WHERE beneficiary_id = ? LIMIT 1`,
         [bid]
       );
       return rows[0];

@@ -126,6 +126,15 @@ export class TrainingSiteService {
     };
   }
 
+    async getAuth() {
+    const data = await this.trainingSiteRepo.getTAuth();
+
+    return {
+      message: 'District fetched',
+      data
+    };
+  }
+
 
   async getAuthority(dist_id:number) {
     const data = await this.trainingSiteRepo.getAuthority(dist_id);

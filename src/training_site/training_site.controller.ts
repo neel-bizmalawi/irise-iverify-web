@@ -30,6 +30,12 @@ export class TrainingSiteController {
         return this.TrainingSiteService.getDistrict();
     }
 
+        @Get('authority_slug')
+    async fetchAuth() {
+
+        return this.TrainingSiteService.getAuth();
+    }
+
     @Get('authority_slug/:id')
     async fetchAuthority( @Param('id', ParseIntPipe) id: number) {
 
