@@ -38,13 +38,12 @@ const TrainingSites = () => {
   const [districtLoading, setDistrictLoading] = useState(false);
   const [authorityLoading, setAuthorityLoading] = useState(false);
 
-  // Memoize columns to prevent recreation on each render
   const columns = useMemo(
     () => [
       { key: "training_point_id", label: "Training Point ID", align: "center" },
       { key: "training_site", label: "Training Site" },
-      { key: "district", label: "District" },
-      { key: "traditional_authority", label: "Traditional Authority" },
+      { key: "district_name", label: "District" },
+      { key: "traditional_authority_name", label: "Traditional Authority" },
       { key: "gvh_name", label: "Group Village Head" },
       { key: "village_head_name", label: "Village Head Name" },
       { key: "road_access", label: "Road Access", align: "center" },
@@ -64,7 +63,6 @@ const TrainingSites = () => {
         label: "Number of People Present",
         align: "center",
       },
-
       { key: "created_by_name", label: "Created By", align: "center" },
       { key: "modified_by_name", label: "Modified By", align: "center" },
       {
@@ -77,9 +75,6 @@ const TrainingSites = () => {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
-                // hour: "2-digit",
-                // minute: "2-digit",
-                // timeZone: "UTC",
               })
             : "-",
       },
@@ -95,11 +90,10 @@ const TrainingSites = () => {
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
-               timeZone: "UTC",
+                timeZone: "UTC",
               })
             : "-",
       },
-   
       {
         key: "modified_date",
         label: "Modified Date",
@@ -112,11 +106,9 @@ const TrainingSites = () => {
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
-               // timeZone: "UTC",
               })
             : "-",
       },
-      
       {
         key: "actions",
         label: "Actions",
@@ -145,7 +137,7 @@ const TrainingSites = () => {
         },
       },
     ],
-    [], // Empty deps – columns never change
+    [],
   );
 
   useEffect(() => {
@@ -165,7 +157,7 @@ const TrainingSites = () => {
         type: "searchable",
         options: authorityOptions,
         labelKey: "authority_name",
-        onSearch: searchAuthority,
+        onSearch: searchAuthorityFilter,
       },
       { key: "gvh_name", label: "Group Village Head", type: "text" },
       { key: "village_head_name", label: "Village Head Name", type: "text" },
@@ -184,8 +176,6 @@ const TrainingSites = () => {
         label: "Household Radius (km)",
         type: "number",
       },
-
-      // { key: "created_by", label: "Created By", type: "text" },
       {
         key: "created_by",
         label: "Created By",
@@ -194,7 +184,6 @@ const TrainingSites = () => {
         labelKey: "name",
         onSearch: fetchusers,
       },
-      // { key: "modified_by", label: "Modified By", type: "text" },
       {
         key: "modified_by",
         label: "Modified By",
@@ -210,19 +199,18 @@ const TrainingSites = () => {
 
   useEffect(() => {
     fetchDistricts();
-    fetchAuthorities();
+    // FIX: load all authorities (no id) for the filter panel
+    fetchAuthoritiesForFilter();
     fetchusers();
   }, []);
 
   const searchDistrict = async (query) => {
     try {
       setDistrictLoading(true);
-
       const res = await axios.get(
         `${API_BASE_URL}/training-site/search-district`,
         { params: { search: query } },
       );
-
       setDistrictOptions(res.data?.data || []);
     } catch (error) {
       console.error("District search error:", error);
@@ -234,7 +222,6 @@ const TrainingSites = () => {
   const fetchusers = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/user/getAllUsers`);
-
       setCreateOptions(res.data?.data || []);
       setModifiedByOptions(res.data?.data || []);
     } catch (error) {
@@ -242,53 +229,14 @@ const TrainingSites = () => {
     }
   };
 
-  const searchAuthority = async (query) => {
+  // FIX: Filter panel uses /authority_slug/ without an id
+  const fetchAuthoritiesForFilter = async (search = "") => {
     try {
       setAuthorityLoading(true);
-
       const res = await axios.get(
-        `${API_BASE_URL}/training-site/search-authority`,
-        { params: { search: query } },
+        `${API_BASE_URL}/training-site/authority_slug/`,
+        { params: { search } },
       );
-
-      setAuthorityOptions(res.data?.data || []);
-    } catch (error) {
-      console.error("District search error:", error);
-    } finally {
-      setAuthorityLoading(false);
-    }
-  };
-
-  const fetchDistricts = async (search = "") => {
-    try {
-      setDistrictLoading(true);
-
-      const res = await axios.get(
-        `${API_BASE_URL}/training-site/district_slug`,
-        {
-          params: { search },
-        },
-      );
-
-      setDistrictOptions(res.data?.data || []);
-    } catch (error) {
-      console.error("District fetch error:", error);
-    } finally {
-      setDistrictLoading(false);
-    }
-  };
-
-  const fetchAuthorities = async (search = "") => {
-    try {
-      setAuthorityLoading(true);
-
-      const res = await axios.get(
-        `${API_BASE_URL}/training-site/authority_slug`,
-        {
-          params: { search },
-        },
-      );
-
       setAuthorityOptions(res.data?.data || []);
     } catch (error) {
       console.error("Authority fetch error:", error);
@@ -297,7 +245,37 @@ const TrainingSites = () => {
     }
   };
 
-  // Fetch data with pagination and filters
+  // FIX: For filter search, also use /authority_slug/ (no district id)
+  const searchAuthorityFilter = async (query) => {
+    try {
+      setAuthorityLoading(true);
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/authority_slug/`,
+        { params: { search: query } },
+      );
+      setAuthorityOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("Authority filter search error:", error);
+    } finally {
+      setAuthorityLoading(false);
+    }
+  };
+
+  const fetchDistricts = async (search = "") => {
+    try {
+      setDistrictLoading(true);
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/district_slug`,
+        { params: { search } },
+      );
+      setDistrictOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District fetch error:", error);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+
   const fetchData = useCallback(
     async (pageNum, limitNum, filters = []) => {
       try {
@@ -315,12 +293,7 @@ const TrainingSites = () => {
         const res = await axios.post(
           `${API_BASE_URL}/training-site/list`,
           { filters: cleanFilters },
-          {
-            params: {
-              page: pageNum,
-              limit: limitNum,
-            },
-          },
+          { params: { page: pageNum, limit: limitNum } },
         );
 
         const response = res.data;
@@ -329,8 +302,6 @@ const TrainingSites = () => {
           setTableData([]);
           setTotalItems(0);
           setTotalPages(0);
-
-          [];
           return;
         }
 
@@ -338,8 +309,8 @@ const TrainingSites = () => {
           id: item.training_point_id,
           training_point_id: item.training_point_id,
           training_site: item.training_site,
-          district: item.district,
-          traditional_authority: item.traditional_authority,
+          district_name: item.district_name,
+          traditional_authority_name: item.traditional_authority_name,
           gvh_name: item.gvh_name,
           village_head_name: item.village_head_name,
           road_access: item.road_access,
@@ -371,15 +342,14 @@ const TrainingSites = () => {
     },
     [columns],
   );
-  // Fetch when page, pageSize, or activeFilters change
+
   useEffect(() => {
     fetchData(page, pageSize, activeFilters);
   }, [page, pageSize, activeFilters, fetchData]);
 
-  // Handlers for filter changes
   const handleApplyFilters = (filters) => {
     setActiveFilters(filters);
-    setPage(1); // Reset to first page when filters change
+    setPage(1);
   };
 
   const handleClearFilters = () => {
@@ -387,7 +357,6 @@ const TrainingSites = () => {
     setPage(1);
   };
 
-  // Create / Update submission
   const handleSubmitTrainingSite = async (formData) => {
     try {
       setLoading(true);
@@ -403,8 +372,6 @@ const TrainingSites = () => {
         house_hold_radius: Number(formData.houseHoldRadius),
         total_people: Number(formData.totalPeople),
         road_access: formData.roadAccess,
-       // ...(!editId && { created_date: new Date().toISOString() }),
-      
       };
 
       const config = {
@@ -430,7 +397,6 @@ const TrainingSites = () => {
         toast.success("Training site created successfully!");
       }
 
-      // After mutation, refresh the list (reset to page 1, keep current filters)
       setPage(1);
       await fetchData(1, pageSize, activeFilters);
 
@@ -451,7 +417,8 @@ const TrainingSites = () => {
     }
   };
 
-  // Edit: fetch single record and open dialog
+  // FIX: Pass districtName and traditionalAuthorityName into editData
+  // so the dialog can pre-populate the SearchableCreatableSelect labels
   const handleEdit = async (id) => {
     try {
       setLoading(true);
@@ -468,10 +435,13 @@ const TrainingSites = () => {
 
       setEditData({
         trainingSiteName: item.training_site ?? "",
+        // Pass both the id (for the form value) and the name (for the select label)
         district: item.district ?? "",
+        districtName: item.district_name ?? "",
         groupVillageHead: item.gvh_name ?? "",
         villageHeadName: item.village_head_name ?? "",
         traditionalAuthority: item.traditional_authority ?? "",
+        traditionalAuthorityName: item.traditional_authority_name ?? "",
         totalCookstoves: item.cookstoves_count ?? "",
         totalHouseHolds: item.house_holds_count ?? "",
         houseHoldRadius: item.house_hold_radius ?? "",
@@ -508,7 +478,6 @@ const TrainingSites = () => {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   const fetchAllForExport = async () => {
     const cleanFilters =
       Array.isArray(activeFilters) && activeFilters.length > 0
@@ -534,7 +503,6 @@ const TrainingSites = () => {
         items={[{ label: "Training Sites", path: "/training" }]}
       />
 
-      {/* Top Row */}
       <Box
         sx={{
           mb: 2,
@@ -589,7 +557,6 @@ const TrainingSites = () => {
         />
       )}
 
-      {/* Pagination */}
       <AppPagination
         page={page}
         totalPages={totalPages}
@@ -602,7 +569,6 @@ const TrainingSites = () => {
         }}
       />
 
-      {/* Dialog */}
       <CreateTrainingSiteDialog
         open={openDialog}
         onClose={() => {
@@ -631,6 +597,7 @@ const TrainingSites = () => {
 export default TrainingSites;
 
 
+
 // import React, { useState, useEffect, useCallback, useMemo } from "react";
 // import { Box, Button, CircularProgress } from "@mui/material";
 // import Breadcrumb from "../../components/Breadcrumb";
@@ -638,6 +605,7 @@ export default TrainingSites;
 // import AppTable from "../../components/AppTable";
 // import AppTableFilter from "../../components/AppTableFilter";
 // import CreateTrainingSiteDialog from "./CreateTrainingSiteDialog";
+// import ConfirmInactiveDialog from "../../components/ConfirmInactiveDialog";
 // import axios from "axios";
 // import { toast } from "react-toastify";
 // import ExportButtons from "../../components/ExportButtons";
@@ -659,6 +627,9 @@ export default TrainingSites;
 //   const [editId, setEditId] = useState(null);
 //   const [editData, setEditData] = useState(null);
 
+//   const [confirmOpen, setConfirmOpen] = useState(false);
+//   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
 //   const [districtOptions, setDistrictOptions] = useState([]);
 //   const [authorityOptions, setAuthorityOptions] = useState([]);
 //   const [createOptions, setCreateOptions] = useState([]);
@@ -672,8 +643,8 @@ export default TrainingSites;
 //     () => [
 //       { key: "training_point_id", label: "Training Point ID", align: "center" },
 //       { key: "training_site", label: "Training Site" },
-//       { key: "district", label: "District" },
-//       { key: "traditional_authority", label: "Traditional Authority" },
+//       { key: "district_name", label: "District" },
+//       { key: "traditional_authority_name", label: "Traditional Authority" },
 //       { key: "gvh_name", label: "Group Village Head" },
 //       { key: "village_head_name", label: "Village Head Name" },
 //       { key: "road_access", label: "Road Access", align: "center" },
@@ -745,29 +716,33 @@ export default TrainingSites;
 //               })
 //             : "-",
 //       },
+      
 //       {
 //         key: "actions",
 //         label: "Actions",
 //         align: "center",
-//         render: (_, row) => (
-//           <Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
-//             <Button
-//               size="small"
-//               variant="outlined"
-//               onClick={() => handleEdit(row.training_point_id)}
-//             >
-//               Edit
-//             </Button>
-//             <Button
-//               size="small"
-//               variant="outlined"
-//               color="error"
-//               onClick={() => handleDelete(row.training_point_id)}
-//             >
-//               Delete
-//             </Button>
-//           </Box>
-//         ),
+//         render: (_, row) => {
+//           if (row.status?.toLowerCase().trim() === "inactive") return null;
+//           return (
+//             <Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
+//               <Button
+//                 size="small"
+//                 variant="outlined"
+//                 onClick={() => handleEdit(row.training_point_id)}
+//               >
+//                 Edit
+//               </Button>
+//               <Button
+//                 size="small"
+//                 variant="outlined"
+//                 color="error"
+//                 onClick={() => handleDeleteClick(row.training_point_id)}
+//               >
+//                 Delete
+//               </Button>
+//             </Box>
+//           );
+//         },
 //       },
 //     ],
 //     [], // Empty deps – columns never change
@@ -835,7 +810,7 @@ export default TrainingSites;
 
 //   useEffect(() => {
 //     fetchDistricts();
-//     fetchAuthorities();
+//    // fetchAuthorities();
 //     fetchusers();
 //   }, []);
 
@@ -903,24 +878,24 @@ export default TrainingSites;
 //     }
 //   };
 
-//   const fetchAuthorities = async (search = "") => {
-//     try {
-//       setAuthorityLoading(true);
+//   // const fetchAuthorities = async (search = "") => {
+//   //   try {
+//   //     setAuthorityLoading(true);
 
-//       const res = await axios.get(
-//         `${API_BASE_URL}/training-site/authority_slug`,
-//         {
-//           params: { search },
-//         },
-//       );
+//   //     const res = await axios.get(
+//   //       `${API_BASE_URL}/training-site/authority_slug`,
+//   //       {
+//   //         params: { search },
+//   //       },
+//   //     );
 
-//       setAuthorityOptions(res.data?.data || []);
-//     } catch (error) {
-//       console.error("Authority fetch error:", error);
-//     } finally {
-//       setAuthorityLoading(false);
-//     }
-//   };
+//   //     setAuthorityOptions(res.data?.data || []);
+//   //   } catch (error) {
+//   //     console.error("Authority fetch error:", error);
+//   //   } finally {
+//   //     setAuthorityLoading(false);
+//   //   }
+//   // };
 
 //   // Fetch data with pagination and filters
 //   const fetchData = useCallback(
@@ -963,8 +938,8 @@ export default TrainingSites;
 //           id: item.training_point_id,
 //           training_point_id: item.training_point_id,
 //           training_site: item.training_site,
-//           district: item.district,
-//           traditional_authority: item.traditional_authority,
+//           district_name: item.district_name,
+//           traditional_authority_name: item.traditional_authority_name,
 //           gvh_name: item.gvh_name,
 //           village_head_name: item.village_head_name,
 //           road_access: item.road_access,
@@ -1114,15 +1089,22 @@ export default TrainingSites;
 //     }
 //   };
 
-//   // Delete
-//   const handleDelete = async (id) => {
+//   const handleDeleteClick = (id) => {
+//     setPendingDeleteId(id);
+//     setConfirmOpen(true);
+//   };
+
+//   const handleDeleteConfirm = async () => {
 //     try {
-//       await axios.delete(`${API_BASE_URL}/training-site/Delete_training/${id}`);
-//       toast.success("Training site deleted successfully!");
-//       // Refresh the list (stay on current page, keep filters)
+//       await axios.put(
+//         `${API_BASE_URL}/training-site/Delete_training/${pendingDeleteId}`,
+//       );
+//       toast.success("Training site marked as inactive!");
 //       await fetchData(page, pageSize, activeFilters);
 //     } catch (error) {
-//       toast.error("Failed to delete training site");
+//       toast.error("Failed to update status");
+//     } finally {
+//       setPendingDeleteId(null);
 //     }
 //   };
 
@@ -1231,8 +1213,20 @@ export default TrainingSites;
 //         onSubmit={handleSubmitTrainingSite}
 //         initialData={editData}
 //       />
+
+//       <ConfirmInactiveDialog
+//         open={confirmOpen}
+//         onClose={() => {
+//           setConfirmOpen(false);
+//           setPendingDeleteId(null);
+//         }}
+//         onConfirm={handleDeleteConfirm}
+//         title="Delete Training Site"
+//         message="Are you sure you want to delete this Training Site?"
+//       />
 //     </Box>
 //   );
 // };
 
 // export default TrainingSites;
+

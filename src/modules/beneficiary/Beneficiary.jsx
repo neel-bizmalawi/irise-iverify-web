@@ -210,7 +210,7 @@ const Beneficiary = () => {
       { key: "beneficiary_id", label: "Beneficiary ID", align: "center" },
       { key: "first_name", label: "First Name" },
       { key: "last_name", label: "Last Name" },
-      { key: "training_site", label: "Training Site" },
+      { key: "training_site_name", label: "Training Site" },
       { key: "mobile_no", label: "Contact No", align: "center" },
       { key: "national_id", label: "National ID", align: "center" },
       { key: "cooking_method", label: "Cooking Method" },
@@ -471,7 +471,7 @@ const Beneficiary = () => {
       },
       { key: "created_date", label: "Created Date", type: "date" },
       { key: "modified_date", label: "Modified Date", type: "date" },
-      { key: "distribution_date", label: "Distribution Date", type: "date" }
+      { key: "distribution_date", label: "Distribution Date", type: "date" },
     ]);
   }, [
     trainingSiteOptions,
@@ -582,7 +582,7 @@ const Beneficiary = () => {
         const mappedData = response.data.map((item) => ({
           id: item.beneficiary_id,
           beneficiary_id: item.beneficiary_id,
-          training_site: item.training_site,
+          training_site_name: item.training_site_name,
           first_name: item.first_name,
           last_name: item.last_name,
           mobile_no: item.mobile_no,
@@ -657,7 +657,7 @@ const Beneficiary = () => {
       const fd = new FormData();
 
       // Text fields
-      fd.append("training_site", formData.training_site);
+      fd.append("training_site", formData.training_point_id);
       fd.append("first_name", formData.first_name);
       fd.append("last_name", formData.last_name);
       fd.append("mobile_no", formData.mobile_no);
@@ -822,7 +822,8 @@ const Beneficiary = () => {
       const item = items;
 
       setEditData({
-        training_site: item.training_site ?? "",
+        training_site: item.training_site_name ?? "",
+        training_point_id: item.training_site ?? "",
         first_name: item.first_name ?? "",
         last_name: item.last_name ?? "",
         mobile_no: item.mobile_no ?? "",
@@ -1006,8 +1007,6 @@ const Beneficiary = () => {
 };
 
 export default Beneficiary;
-
-
 
 // import React, { useState, useEffect, useCallback, useMemo } from "react";
 // import { Box, Button, CircularProgress, Typography } from "@mui/material";

@@ -46,6 +46,7 @@ const BASE_IMAGE_URL = API_BASE_URL;
 
 const initialValues = {
   training_site: "",
+  training_point_id: "",
   first_name: "",
   last_name: "",
   mobile_no: "",
@@ -193,18 +194,18 @@ const ImageUploadField = ({
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-     // ✅ Validate file type
-  if (!allowedTypes.includes(file.type)) {
-    alert("Only JPG, JPEG, and PNG files are allowed.");
-    e.target.value = "";
-    return;
-  }
-  // ✅ Size validation (2MB)
-  if (file.size > MAX_FILE_SIZE) {
-    alert("File size should not exceed 2MB.");
-    e.target.value = "";
-    return;
-  }
+    // ✅ Validate file type
+    if (!allowedTypes.includes(file.type)) {
+      alert("Only JPG, JPEG, and PNG files are allowed.");
+      e.target.value = "";
+      return;
+    }
+    // ✅ Size validation (2MB)
+    if (file.size > MAX_FILE_SIZE) {
+      alert("File size should not exceed 2MB.");
+      e.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => setPreview(ev.target.result);
@@ -212,12 +213,11 @@ const ImageUploadField = ({
     onChange(file);
   };
 
-
   const handleRemove = (e) => {
     e.stopPropagation();
     setPreview(null);
     setImgError(false);
-     setRemoved(true);
+    setRemoved(true);
     onChange(null);
     onChange("REMOVED");
     if (inputRef.current) inputRef.current.value = "";
@@ -759,11 +759,19 @@ const CreateBeneficiaryDialog = ({
               }}
             >
               {" "}
-              <FormControl
+              {/* <FormControl
                 fullWidth
                 error={
                   formik.touched.training_site &&
                   Boolean(formik.errors.training_site)
+                }
+              > */}
+              <FormControl
+                fullWidth
+                error={
+                  formik.touched.training_site &&
+                  Boolean(formik.errors.training_site) &&
+                  !formik.values.training_point_id
                 }
               >
                 <FieldLabel
@@ -783,20 +791,49 @@ const CreateBeneficiaryDialog = ({
                   loading={false}
                   labelKey="training_site"
                   onSearch={onSearchTrainingSite}
+                  // onChange={(val) => {
+                  //   formik.setFieldValue(
+                  //     "training_site",
+                  //     val?.training_site ?? "",
+                  //   );
+                  //   formik.setFieldValue(
+                  //     "training_point_id",
+                  //     val?.training_point_id ?? "",
+                  //   );
+                  //   // Only touch when a real option is selected, not while typing
+                  //   if (val?.training_site) {
+                  //     formik.setFieldTouched("training_site", true, false);
+                  //   }
+                  // }}
                   onChange={(val) => {
                     formik.setFieldValue(
                       "training_site",
                       val?.training_site ?? "",
                     );
-                    formik.setFieldTouched("training_site", true, false);
+                    formik.setFieldValue(
+                      "training_point_id",
+                      val?.training_point_id ?? "",
+                    );
+                    if (val?.training_point_id) {
+                      formik.setFieldTouched("training_site", true, false);
+                    } else {
+                      formik.setFieldTouched("training_site", false, false);
+                    }
                   }}
                   onCreate={() => {}}
                   allowCreate={false}
                   width="100%"
                   height={46}
                 />
-                {formik.touched.training_site &&
+                {/* {formik.touched.training_site &&
                   formik.errors.training_site && (
+                    <FormHelperText error>
+                      {formik.errors.training_site}
+                    </FormHelperText>
+                  )} */}
+                {formik.touched.training_site &&
+                  formik.errors.training_site &&
+                  !formik.values.training_point_id && (
                     <FormHelperText error>
                       {formik.errors.training_site}
                     </FormHelperText>
