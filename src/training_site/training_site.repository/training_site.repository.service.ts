@@ -106,6 +106,11 @@ export class TrainingSiteRepositoryService {
       FROM training_sites ts
       LEFT JOIN ab_admin a ON ts.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
+       LEFT JOIN ab_district d
+ON ts.district = d.district_id
+
+LEFT JOIN ab_traditional_authority ta
+ON ts.traditional_authority = ta.authority_id
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     `;
 
@@ -169,9 +174,18 @@ export class TrainingSiteRepositoryService {
       const sql = `
       SELECT
         ts.*,
+         d.district_name AS district_name,
+  ta.authority_name AS traditional_authority_name,
+
         a.name AS created_by_name,
         a2.name AS modified_by_name
       FROM training_sites ts
+       LEFT JOIN ab_district d
+ON ts.district = d.district_id
+
+LEFT JOIN ab_traditional_authority ta
+ON ts.traditional_authority = ta.authority_id
+
       LEFT JOIN ab_admin a ON ts.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -199,9 +213,17 @@ export class TrainingSiteRepositoryService {
     const sql = `
       SELECT
         ts.*,
+         d.district_name AS district_name,
+  ta.authority_name AS traditional_authority_name,
         a.name AS created_by_name,
         a2.name AS modified_by_name
       FROM training_sites ts
+      LEFT JOIN ab_district d
+ON ts.district = d.district_id
+
+LEFT JOIN ab_traditional_authority ta
+ON ts.traditional_authority = ta.authority_id
+
       LEFT JOIN ab_admin a ON ts.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON ts.modified_by = a2.adminID
               WHERE (ts.status IS NULL OR ts.status = 'active')
@@ -214,10 +236,19 @@ export class TrainingSiteRepositoryService {
     return rows;
   }
 
-
   async getTrainingbyID(training_id: number) {
     const rows: any = await this.db.query(
-      'SELECT * FROM training_sites WHERE training_point_id = ? LIMIT 1',
+      `SELECT ts.* ,
+         d.district_name AS district_name,
+  ta.authority_name AS traditional_authority_name FROM training_sites ts
+
+   LEFT JOIN ab_district d
+ON ts.district = d.district_id
+
+LEFT JOIN ab_traditional_authority ta
+ON ts.traditional_authority = ta.authority_id
+
+ WHERE ts.training_point_id = ? LIMIT 1`,
       [training_id],
     );
     return rows;
@@ -239,31 +270,42 @@ export class TrainingSiteRepositoryService {
   }
 
   async getDistrict() {
-    try{
-    const rows: any = await this.db.query('SELECT * FROM ab_district');
-    return rows;
+    try {
+      const rows: any = await this.db.query('SELECT * FROM ab_district');
+      return rows;
     }
-    catch(error)
-    {
-            Sentry.captureException(error);
+    catch (error) {
+      Sentry.captureException(error);
 
-      console.error("get District error",error)
+      console.error("get District error", error)
+    }
+  }
+
+
+   async getTAuth() {
+    try {
+      const rows: any = await this.db.query('SELECT * FROM ab_traditional_authority');
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get District error", error)
     }
   }
 
   async getAuthority(dist_id) {
-    try{
-    const rows: any = await this.db.query(
-      `SELECT * FROM ab_traditional_authority where district_id = ${dist_id}`,
-    );
-    return rows;
-  }
-  catch(error)
-  {
-          Sentry.captureException(error);
+    try {
+      const rows: any = await this.db.query(
+        `SELECT * FROM ab_traditional_authority where district_id = ${dist_id}`,
+      );
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
 
-    console.error("get authority error",error)
-  }
+      console.error("get authority error", error)
+    }
   }
 
   async getcookstove() {

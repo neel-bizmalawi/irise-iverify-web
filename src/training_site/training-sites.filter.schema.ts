@@ -37,14 +37,27 @@ export const TRAINING_SITES_FILTER_SCHEMA = {
     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
   },
 
-  district: {
-    column: 'ts.district',
+  // district: {
+  //   column: 'ts.district',
+  //   type: 'text',
+  //   operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
+  // },
+
+    district: {
+    column: 'd.district_name',
     type: 'text',
     operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
   },
 
-  traditional_authority: {
-    column: 'ts.traditional_authority',
+  // traditional_authority: {
+  //   column: 'ts.traditional_authority',
+  //   type: 'text',
+  //   operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
+  // },
+  
+
+   traditional_authority: {
+    column: 'ta.authority_name',
     type: 'text',
     operators: ['equals', 'contains', 'isEmpty', 'is_not_empty', 'starts_with', 'ends_with'],
   },
