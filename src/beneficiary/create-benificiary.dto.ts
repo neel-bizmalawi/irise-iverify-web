@@ -11,9 +11,13 @@ import {
 
 export class CreateBeneficiarydto {
 
-  @IsOptional()
-  @IsString()
-  training_site?: string;
+
+  
+        @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    training_site?: number;
+
 
   @IsOptional()
   @Type(() => Number)

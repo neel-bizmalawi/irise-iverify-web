@@ -69,7 +69,7 @@ export class BeneficiaryRepositoryService {
           .toFormat("yyyy-MM-dd HH:mm:ss");
       }
 
-         if (payload.distribution_date) {
+      if (payload.distribution_date) {
         payload.distribution_date = this.formatDateForDB(payload.distribution_date);
 
       }
@@ -269,6 +269,8 @@ export class BeneficiaryRepositoryService {
       const sql = `
       SELECT COUNT(*) as total
       FROM beneficiaries bf
+        LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site
       LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -340,9 +342,12 @@ export class BeneficiaryRepositoryService {
 
       const sql = `
         SELECT bf.*,
-            a.name AS created_by_name,
+         tr.training_site AS training_site_name,
+      a.name AS created_by_name,
         a2.name AS modified_by_name
         FROM beneficiaries bf
+        LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site
            LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -372,9 +377,14 @@ export class BeneficiaryRepositoryService {
 
       const sql = `
       SELECT bf.*,
+        tr.training_site AS training_site_name,
       a.name AS created_by_name,
         a2.name AS modified_by_name
       FROM beneficiaries bf
+      
+       LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site
+
        LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         WHERE (bf.status IS NULL OR bf.status = 'active')
@@ -440,10 +450,8 @@ export class BeneficiaryRepositoryService {
           .toFormat("yyyy-MM-dd HH:mm:ss"); // ✅ current UTC time
       }
 
-      console.log(`modified_date (UTC): ${modified_date}`);
-            const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
+      const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
 
-      console.log(`server time (UTC): ${server_time}`);
 
 
       const { modified_date: _, ...restDto } = filteredData;
@@ -467,7 +475,7 @@ export class BeneficiaryRepositoryService {
       setClause += `, modified_by = ?`;
       values.push(userid);
 
-       // 9. Always set server_time
+      // 9. Always set server_time
       setClause += `, server_time = ?`;
       values.push(server_time);
 
@@ -528,21 +536,21 @@ export class BeneficiaryRepositoryService {
   }
 
 
-     async deleteBenebyId(bid: number) {
-        try {
-            const [rows] = await this.db.query(
-                'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
-                [bid]
-            );
-            return rows;
-        }
-        catch (error) {
-                Sentry.captureException(error);
-
-            console.error("delete monitoring repository error", error)
-            throw new InternalServerErrorException("failed to delte monitoring in repo");
-        }
+  async deleteBenebyId(bid: number) {
+    try {
+      const [rows] = await this.db.query(
+        'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+        [bid]
+      );
+      return rows;
     }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("delete monitoring repository error", error)
+      throw new InternalServerErrorException("failed to delte monitoring in repo");
+    }
+  }
 
 
   async getUpdatedDataByDate(date: Date) {

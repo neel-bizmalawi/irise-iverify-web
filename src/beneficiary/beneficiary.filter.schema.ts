@@ -9,8 +9,14 @@ export const BENEFICIARY_FILTER_SCHEMA = {
         operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
     },
 
-    training_site: {
-        column: 'bf.training_site',
+    // training_site: {
+    //     column: 'bf.training_site',
+    //     type: 'select',
+    //     operators: ['equals', 'isEmpty', 'is_not_empty'],
+    // },
+
+        training_site: {
+        column: 'tr.training_site',
         type: 'select',
         operators: ['equals', 'isEmpty', 'is_not_empty'],
     },
