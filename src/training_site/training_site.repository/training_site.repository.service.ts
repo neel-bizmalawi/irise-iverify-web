@@ -286,6 +286,7 @@ ON ts.traditional_authority = ta.authority_id
     try {
       const rows: any = await this.db.query('SELECT * FROM ab_traditional_authority');
       return rows;
+      
     }
     catch (error) {
       Sentry.captureException(error);

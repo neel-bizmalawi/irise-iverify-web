@@ -32,7 +32,6 @@ export class TrainingSiteController {
 
         @Get('authority_slug')
     async fetchAuth() {
-
         return this.TrainingSiteService.getAuth();
     }
 

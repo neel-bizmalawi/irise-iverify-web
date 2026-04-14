@@ -128,7 +128,6 @@ export class TrainingSiteService {
 
     async getAuth() {
     const data = await this.trainingSiteRepo.getTAuth();
-
     return {
       message: 'District fetched',
       data
