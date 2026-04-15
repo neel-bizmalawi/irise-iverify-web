@@ -6,6 +6,7 @@ import { OPERATOR_SQL } from 'src/filters/operator.map';
 import * as Sentry from '@sentry/node';
 import { DateTime } from 'luxon';
 import { updateAuditDto } from 'src/audit/updateAudit.dto';
+import { ResultSetHeader } from 'mysql2';
 
 
 @Injectable()
@@ -284,7 +285,7 @@ export class AuditRepository {
 
 
     async getFilteredCount(filters: any[]) {
-        const where: string[] = [];
+        const where: string[] = [`(af.status IS NULL OR af.status = 'active')`];
         const values: any[] = [];
 
         filters.forEach((f) => {
@@ -350,13 +351,13 @@ export class AuditRepository {
     }
 
     async getTotalCount(): Promise<number> {
-        const rows: any = await this.db.query('select count(*) as total from audit',);
+        const rows: any = await this.db.query(`select count(*) as total from audit where (status is null or status = 'active')`,);
         return rows[0].total;
     }
 
 
     async findWithFilters(filters: any[], page: number, limit: number) {
-        const where: string[] = [];
+        const where: string[] = [`(af.status IS NULL OR af.status = 'active')`];
         const values: any[] = [];
 
         filters.forEach((f) => {
@@ -439,6 +440,8 @@ export class AuditRepository {
   FROM audit af
    LEFT JOIN ab_admin a ON af.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON af.modified_by = a2.adminID
+       WHERE (af.status IS NULL OR af.status = 'active')
+
   ORDER BY audit_id DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
@@ -455,5 +458,23 @@ export class AuditRepository {
         );
         return rows;
     }
+
+
+    async setStatusbyId(mid: number) {
+        try {
+            const rows = await this.db.query<ResultSetHeader>(
+                'update audit set status = ? where audit_id=? LIMIT 1',
+                ['inactive', mid]
+            );
+            return rows;
+        }
+        catch (error) {
+            Sentry.captureException(error);
+
+            console.error("delete audit repository error", error)
+            throw new InternalServerErrorException("failed to delte audit in repo");
+        }
+    }
+
 
 }

@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Body, Controller, Delete, Param, ParseIntPipe, Post, Query, Req, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Param, ParseIntPipe, Post, Put, Query, Req, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AuditService } from './audit.service';
@@ -116,4 +116,10 @@ export class AuditController {
     async getUpdatedAudit(@Body('date') date: string) {
         return this.auditService.getupdateData(new Date(date));
     }
+
+          @Put('ustatus/:id')
+        async setStatus(@Param('id', ParseIntPipe) id: number,) {
+    
+            return this.auditService.setStausAudit(id)
+        }
 }
