@@ -70,7 +70,6 @@ export class BeneficiaryService {
     userId: number
   ) {
 
-
     let beneficiaryFolderPath: string | null = null; // beneficiaryFolderPath can be string or null initial value is null
     let beneficiaryId: number | null = null; // 👈 FIX: declare here
 
@@ -79,6 +78,10 @@ export class BeneficiaryService {
 
       const timezone = await this.beneficiaryRepo.getUserTimezone(userId);
 
+      // AUTO SET DISTRIBUTION DATE
+if (household_pic || cookstove_pic) {
+  dto.distribution_date = dto.distribution_date ?? new Date();
+}
 
       const beneficiary = await this.beneficiaryRepo.insertDataBeneficiary(dto, userId, timezone);
 
@@ -202,6 +205,66 @@ export class BeneficiaryService {
     }
   }
 
+
+  async getMissingNID() {
+
+    try {
+
+      const data = await this.beneficiaryRepo.getMissingNId();
+
+      if (!data) {
+
+        return {
+          success: false,
+          message: 'No missing national id',
+          statusCode: 404
+        };
+      }
+
+
+      return {
+        message: "NID Count fetched succesfully"
+        , data
+      }
+    } catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get NID Count error ", error)
+      throw new InternalServerErrorException("Failed to fetch national id count");
+
+    }
+  }
+
+    async getHouseHoldCount() {
+
+    try {
+
+      const data = await this.beneficiaryRepo.getHouseHoldCounts();
+
+      if (!data) {
+
+        return {
+          success: false,
+          message: 'No House Hold Distrubution',
+          statusCode: 404
+        };
+      }
+
+
+      return {
+        message: "HouseHold Count fetched succesfully"
+        , data
+      }
+    } catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get NID Count error ", error)
+      throw new InternalServerErrorException("Failed to fetch national id count");
+
+    }
+  }
+
+
   async getBeneficiarylist(
     page: number,
     limit: number,
@@ -319,8 +382,8 @@ export class BeneficiaryService {
     userId: number
   ) {
 
-    let uploadedFiles: string[] = [];      // new files written
-    let oldFilesToDelete: string[] = [];   // old files to delete after DB succeeds
+    let uploadedFiles: string[] = [];    
+    let oldFilesToDelete: string[] = [];   
 
     try {
 

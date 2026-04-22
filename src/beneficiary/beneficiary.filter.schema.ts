@@ -9,13 +9,19 @@ export const BENEFICIARY_FILTER_SCHEMA = {
         operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
     },
 
+    district: {
+        column: 'tr.district',
+        type: 'number',
+        operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
+    },
+
     // training_site: {
     //     column: 'bf.training_site',
     //     type: 'select',
     //     operators: ['equals', 'isEmpty', 'is_not_empty'],
     // },
 
-        training_site: {
+    training_site: {
         column: 'tr.training_site',
         type: 'select',
         operators: ['equals', 'isEmpty', 'is_not_empty'],
@@ -78,13 +84,13 @@ export const BENEFICIARY_FILTER_SCHEMA = {
     language: {
         column: 'bf.language',
         type: 'select',
-        operators: ['equals','not_equals', 'Empty', 'Not Empty'],
+        operators: ['equals', 'not_equals', 'Empty', 'Not Empty'],
     },
 
     cooking_method: {
         column: 'bf.cooking_method',
         type: 'select',
-        operators: ['equals','not_equals', 'isEmpty', 'is_not_empty'],
+        operators: ['equals', 'not_equals', 'isEmpty', 'is_not_empty'],
     },
 
     other_cookstove: {
@@ -135,7 +141,7 @@ export const BENEFICIARY_FILTER_SCHEMA = {
     //     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
     // },
 
-       created_by: {
+    created_by: {
         column: 'a.name',
         type: 'text',
         operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
@@ -147,7 +153,7 @@ export const BENEFICIARY_FILTER_SCHEMA = {
     //     operators: ['contains', 'equals', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
     // },
 
-    
+
     modified_by: {
         column: 'a2.name',
         type: 'text',

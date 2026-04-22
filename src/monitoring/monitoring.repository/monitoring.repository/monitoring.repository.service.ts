@@ -673,7 +673,7 @@ export class MonitoringRepositoryService {
 
     async setStatusbyId(mid: number) {
         try {
-            const [rows] = await this.db.query(
+            const rows = await this.db.query(
                 'update monitoring_data set status = ? where monitoring_id=? LIMIT 1',
                 ['inactive', mid]
             );

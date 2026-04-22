@@ -281,12 +281,65 @@ ON ts.traditional_authority = ta.authority_id
     }
   }
 
+  async getDistrictCountrepo() {
+    try {
+      const rows: any = await this.db.query(`
+    SELECT 
+        d.district_id,
+        d.district_name,
+        COUNT(ts.training_point_id) AS trainingSiteCount
+    FROM ab_district d
+    LEFT JOIN training_sites ts 
+        ON ts.district = d.district_id
+          WHERE (ts.status IS NULL OR ts.status = 'active')
+    GROUP BY d.district_id, d.district_name
+    ORDER BY d.district_name ASC
+  `);
 
-   async getTAuth() {
+
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get District error", error)
+    }
+  }
+
+
+  async getAuthorityCountRepo() {
+
+    try {
+      const rows: any = await this.db.query(`
+SELECT 
+    ta.authority_id,
+    ta.authority_name,
+    COUNT(ts.training_point_id) AS trainingSiteCount
+FROM ab_traditional_authority ta
+LEFT JOIN training_sites ts
+    ON ts.traditional_authority = ta.authority_id
+              WHERE (ts.status IS NULL OR ts.status = 'active')
+
+GROUP BY ta.authority_id, ta.authority_name
+ORDER BY ta.authority_name ASC;
+  `);
+
+
+      return rows;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get District error", error)
+    }
+  }
+
+
+  async getTAuth() {
     try {
       const rows: any = await this.db.query('SELECT * FROM ab_traditional_authority');
       return rows;
-      
+
     }
     catch (error) {
       Sentry.captureException(error);

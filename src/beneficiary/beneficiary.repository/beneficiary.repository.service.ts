@@ -212,6 +212,52 @@ ON tr.training_point_id = bf.training_site WHERE beneficiary_id = ? LIMIT 1`,
     }
   }
 
+
+  async getMissingNId(): Promise<number> {
+
+    try {
+      const rows: any = await this.db.query(
+        `
+SELECT COUNT(*) AS missingNidCount
+FROM beneficiaries
+WHERE (national_id IS NULL OR national_id = '')
+  AND (status IS NULL OR status = 'active');
+  `
+      );
+
+      return rows[0].missingNidCount;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("getMssingNID error is", error)
+      throw error;
+    }
+  }
+
+  async getHouseHoldCounts(): Promise<number> {
+
+    try {
+      const rows: any = await this.db.query(
+        `
+SELECT COUNT(*) AS distributedCount
+FROM beneficiaries
+WHERE distribution_date IS NOT NULL
+  AND (status IS NULL OR status = 'active');
+  `
+      );
+
+      return rows[0].distributedCount;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get total household error is", error)
+      throw error;
+    }
+  }
+
+
   async getFilteredCount(filters: any[]) {
     try {
       const where: string[] = [`(bf.status IS NULL OR bf.status = 'active')`];
