@@ -180,6 +180,10 @@ const Beneficiary = () => {
   const [tableData, setTableData] = useState([]);
   const [filterFields, setFilterFields] = useState([]);
   const [activeFilters, setActiveFilters] = useState([]);
+    const [districtLoading, setDistrictLoading] = useState(false);
+      const [districtOptions, setDistrictOptions] = useState([]);
+    
+  
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -380,6 +384,18 @@ const Beneficiary = () => {
       { key: "national_id", label: "National ID", type: "text" },
       { key: "device_serial_no", label: "Device Serial No", type: "text" },
 
+        {
+        key: "district",
+        label: "District",
+        type: "searchable",
+        options: districtOptions,
+        labelKey: "district_name",
+          valueKey: "district_id",        // ← sends district_id as filter value
+          onSearch: searchDistrict,      // ← enables live search
+
+      },
+
+
       { key: "females_below_18", label: "Females Below 18", type: "number" },
       { key: "females_above_18", label: "Females Above 18", type: "number" },
       { key: "males_below_18", label: "Males Below 18", type: "number" },
@@ -482,11 +498,45 @@ const Beneficiary = () => {
   ]);
 
   useEffect(() => {
+        fetchDistricts();
     fetchTrainingSites();
     fetchCookingMethods();
     fetchLanguages();
     fetchUsers();
   }, []);
+
+     const searchDistrict = async (query) => {
+    try {
+      setDistrictLoading(true);
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/search-district`,
+        { params: { search: query } },
+      );
+      setDistrictOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District search error:", error);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+
+    const fetchDistricts = async (search = "") => {
+    try {
+      setDistrictLoading(true);
+      const res = await axios.get(
+        `${API_BASE_URL}/training-site/district_slug`,
+        { params: { search } },
+      );
+      setDistrictOptions(res.data?.data || []);
+    } catch (error) {
+      console.error("District fetch error:", error);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+
+ 
+
 
   const fetchTrainingSites = async (search = "") => {
     try {

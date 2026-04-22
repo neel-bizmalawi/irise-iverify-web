@@ -175,13 +175,27 @@ const ValueInput = ({ field, value, onChange, fullWidth = false }) => {
         getOptionLabel={(option) =>
           typeof option === "string" ? option : option[field.labelKey] || ""
         }
-        value={value || null}
+        // value={value || null}
+
+        value={
+  dedupedOptions.find(
+    (opt) => (field.valueKey ? opt[field.valueKey] : opt[field.labelKey]) === value
+  ) || null
+}
+
         onInputChange={(event, newValue) => {
           field.onSearch?.(newValue);
         }}
+        // onChange={(event, newValue) => {
+        //   onChange(newValue?.[field.labelKey] || "");
+        // }}
         onChange={(event, newValue) => {
-          onChange(newValue?.[field.labelKey] || "");
-        }}
+  const val = newValue
+    ? (field.valueKey ? newValue[field.valueKey] : newValue[field.labelKey]) ?? ""
+    : "";
+  onChange(val);
+}}
+
         renderOption={(props, option) => {
           const label =
             typeof option === "string" ? option : option[field.labelKey] || "";
@@ -764,9 +778,34 @@ const AppTableFilter = ({
                         {r.operator.replace(/_/g, " ")}
                       </span>{" "}
                       {/* <b>{r.value}</b> */}
-                      {!NO_VALUE_OPERATORS.includes(r.operator) && (
+                      {/* {!NO_VALUE_OPERATORS.includes(r.operator) && (
                         <b>{r.value}</b>
-                      )}
+                      )} */}
+
+                      {!NO_VALUE_OPERATORS.includes(r.operator) && (
+<b>
+
+    {(() => {
+
+      if (fieldDef?.valueKey && fieldDef?.options?.length) {
+
+        const match = fieldDef.options.find(
+
+          (opt) => opt[fieldDef.valueKey] === r.value
+
+        );
+
+        return match ? match[fieldDef.labelKey] : r.value;
+
+      }
+
+      return r.value;
+
+    })()}
+</b>
+
+)}
+ 
                     </Typography>
                   }
                   onDelete={() => {
