@@ -107,7 +107,6 @@ export class BeneficiaryRepositoryService {
 
     } catch (error: any) {
 
-      Sentry.captureException(error);
 
       console.error("❌ insertBeneficiary DB error:", error);
 
@@ -539,7 +538,6 @@ ON tr.training_point_id = bf.training_site
 
     }
     catch (error) {
-      Sentry.captureException(error);
 
       console.error("updateBeneficiary error is", error)
       if (error.code === "ER_DUP_ENTRY") {
