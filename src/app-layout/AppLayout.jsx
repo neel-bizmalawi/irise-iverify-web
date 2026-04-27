@@ -87,14 +87,14 @@ const appTheme = createTheme({
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
 
-const navItems = [
+const allNavItems  = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
   { icon: UserCheck, label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
-  // { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
-  // { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
-  // { icon: BarChart3 , label: "Customer Dashboard", path: "/dashboard" },
+  { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
+  { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
+  { icon: BarChart3 , label: "Customer Dashboard", path: "/dashboard" },
 ];
 
 const bottomNavItems = [
@@ -115,6 +115,33 @@ const SidebarContent = ({
   // Read user info from localStorage (set during login)
   const userName = localStorage.getItem("userName") || "User";
   const userRole = localStorage.getItem("role") || "user";
+  const getNavItemsByRole = () => {
+  if (userRole === "admin") {
+    return allNavItems;
+  }
+
+  if (userRole === "employee") {
+    return allNavItems.filter(item =>
+      [
+        "/training",
+        "/beneficiary",
+        "/monitoring",
+        "/auditprocess",
+      ].includes(item.path)
+    );
+  }
+
+  if (userRole === "customer") {
+    return allNavItems.filter(item =>
+      item.path === "/dashboard"
+    );
+  }
+
+  return [];
+};
+
+const navItems = getNavItemsByRole();
+
   const initials = userName
     .split(" ")
     .map((n) => n[0])

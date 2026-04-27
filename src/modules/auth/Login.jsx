@@ -46,6 +46,7 @@ export default function Login() {
 
       localStorage.setItem("token", AccessTokenss);
       localStorage.setItem("userName", user?.name || username);
+      localStorage.setItem("role", user?.role);
 
       toast.success("Login successful!");
 
