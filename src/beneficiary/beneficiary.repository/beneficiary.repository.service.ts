@@ -179,9 +179,13 @@ export class BeneficiaryRepositoryService {
   async getBeneficiaryById(bid: number) {
     try {
       const rows = await this.db.query(
-        `SELECT bf.*, tr.training_site AS training_site_name
- FROM beneficiaries bf LEFT JOIN training_sites tr
-ON tr.training_point_id = bf.training_site WHERE beneficiary_id = ? LIMIT 1`,
+        `SELECT bf.*, tr.training_site AS training_site_name, d.district_name AS district_name
+ FROM beneficiaries bf
+ LEFT JOIN training_sites tr
+ ON tr.training_point_id = bf.training_site
+ LEFT JOIN ab_district d
+ ON tr.district = d.district_id
+ WHERE beneficiary_id = ? LIMIT 1`,
         [bid]
       );
       return rows[0];
@@ -390,11 +394,14 @@ ON tr.training_point_id = bf.training_site
       const sql = `
         SELECT bf.*,
          tr.training_site AS training_site_name,
+         d.district_name AS district_name,
       a.name AS created_by_name,
         a2.name AS modified_by_name
         FROM beneficiaries bf
         LEFT JOIN training_sites tr
 ON tr.training_point_id = bf.training_site
+        LEFT JOIN ab_district d
+ON tr.district = d.district_id
            LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -425,13 +432,15 @@ ON tr.training_point_id = bf.training_site
       const sql = `
       SELECT bf.*,
         tr.training_site AS training_site_name,
+        d.district_name AS district_name,
       a.name AS created_by_name,
         a2.name AS modified_by_name
       FROM beneficiaries bf
       
        LEFT JOIN training_sites tr
 ON tr.training_point_id = bf.training_site
-
+       LEFT JOIN ab_district d
+ON tr.district = d.district_id
        LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         WHERE (bf.status IS NULL OR bf.status = 'active')
