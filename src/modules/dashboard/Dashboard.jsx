@@ -712,7 +712,7 @@ const Dashboard = () => {
   const fetchTAData = useCallback(async () => {
     try {
       const res = await axios.get(
-        "http://192.168.0.106:3001/training-site/authority_count_slug",
+        `${API_BASE_URL}/training-site/authority_count_slug`,
       );
 
       const data = res.data?.data || [];
@@ -739,7 +739,7 @@ const Dashboard = () => {
   const fetchDistrictData = useCallback(async () => {
     try {
       const res = await axios.get(
-        "http://192.168.0.106:3001/training-site/district_count_slug",
+        `${API_BASE_URL}/training-site/district_count_slug`,
       );
 
       const data = res.data?.data || [];
