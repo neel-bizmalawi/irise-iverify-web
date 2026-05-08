@@ -70,7 +70,7 @@ export class AuditService {
       AuditId = Audit.insertId;
 
       if (AuditId === null) {
-        throw new Error("Invalid beneficiary ID");
+        throw new Error("Invalid audit ID");
       }
 
       // create folder once
@@ -101,7 +101,9 @@ export class AuditService {
       );
 
 
-      return { message: "Audits Created Successfully" };
+      return { message: "Audits Created Successfully",
+                audit_id:AuditId
+       };
 
     } catch (error) {
 
@@ -191,7 +193,7 @@ export class AuditService {
       const [cookstoveFilepath, cookstove_areaFilepath] =
         await Promise.all([
           this.replaceBeneficiaryFile(cookstoveFile, aid, "cookstove", folderPath, exisitingAudit?.photo_path_cook_stove, udto.remove_cookstove),
-          this.replaceBeneficiaryFile(cookstoveareaFile, aid, "beneficiary_signature", folderPath, exisitingAudit?.photo_path_cook_stove_area, udto.remove_cookstove_area),
+          this.replaceBeneficiaryFile(cookstoveareaFile, aid, "cookstove_area", folderPath, exisitingAudit?.photo_path_cook_stove_area, udto.remove_cookstove_area),
         ]);
 
 
@@ -233,7 +235,7 @@ export class AuditService {
     }
     catch (error) {
       Sentry.captureException(error);
-      console.error("updateBeneficiary error", error);
+      console.error("updateAudit error", error);
 
       // ✅ DB failed — delete newly uploaded files only
       await Promise.all(
@@ -372,7 +374,7 @@ export class AuditService {
 
 
         await this.updateAudit(
-          dto,                  // UpdateBeneficiaryDto fields
+          dto,                  
           cookstoveFile,
           cookstoveareaFile,
           dto.audit_id,
@@ -387,7 +389,6 @@ export class AuditService {
         };
       }
 
-      // CREATE — no beneficiary_id
 
       const result = await this.CreateAuditing(
         dto,
@@ -400,12 +401,13 @@ export class AuditService {
         success: true,
         action: 'created',
         message: 'Audit created successfully',
+        auditid:result.audit_id
       };
 
     } catch (error) {
       Sentry.captureException(error);
-      console.error('syncBeneficiary error', error);
-      throw new InternalServerErrorException('Failed to sync beneficiary');
+      console.error('syncAudit error', error);
+      throw new InternalServerErrorException('Failed to sync Audit');
     }
   }
 
@@ -439,6 +441,42 @@ export class AuditService {
       throw new InternalServerErrorException("Failed to get updated data",);
     }
   }
+
+
+    async setStausAudit(mid: number) {
+  
+          try {
+              if (!mid) {
+                  throw new BadRequestException("Monitoring id is missing");
+              }
+  
+              const result = await this.auditRepo.setStatusbyId(mid);
+  
+              // If no rows were deleted
+              if (!result || result.affectedRows === 0) {
+                  throw new BadRequestException("Audit not found or already deleted");
+              }
+  
+              const folderPath = path.join(
+                  process.cwd(),
+                  "uploads",
+                  "monitoring",
+                  String(mid)
+              );
+  
+              if (fs.existsSync(folderPath)) {
+                  await fs.promises.rm(folderPath, { recursive: true, force: true });//rmSync means remove
+              }
+  
+              return { message: "Monitorings deleted successfully" };
+          }
+          catch (error) {
+              Sentry.captureException(error);
+  
+              console.error("delete monitoring error", error);
+              throw error;
+          }
+      }
 
 
 }

@@ -97,6 +97,17 @@ export class BeneficiaryController {
         return this.beneficiaryservice.getBeneficiaryData(id)
     }
 
+    @Get('get_miss_natinoID')
+    async getMissNationId() {
+        return this.beneficiaryservice.getMissingNID()
+    }
+
+    @Get('get_household_count')
+    async getHouseHoldCount() {
+        return this.beneficiaryservice.getHouseHoldCount()
+    }
+
+
     @Post('list')
     async getBeneficiary(
         @Query('page') page = '1',
@@ -118,49 +129,47 @@ export class BeneficiaryController {
     }
 
 
-     @Post('Beneficiary_data')
+    @Post('Beneficiary_data')
     async getupdatedataBeneficiary(@Body('date') date: string) {
         return this.beneficiaryservice.getupdateData(new Date(date));
     }
-    
-
-        @Post('bene_sync')
-@UseGuards(AuthGuard('jwt'))
-@UseInterceptors(
-  FileFieldsInterceptor([
-    { name: 'national_id_attachment', maxCount: 1 },
-    { name: 'signature', maxCount: 1 },
-    { name: 'house_pic', maxCount: 1 },
-    { name: 'cookstove_pic', maxCount: 1 },
-  ]),
-)
-async syncBeneficiary(
-  @Body() sdto: CreateBeneficiarydto,
-  @Req() req: any,
-  @UploadedFiles()
-  files: {
-    national_id_attachment?: Express.Multer.File[];
-    signature?: Express.Multer.File[];
-    house_pic?: Express.Multer.File[];
-    cookstove_pic?: Express.Multer.File[];
-  },
-) {
-  const nationalIdFile = files?.national_id_attachment?.[0];
-  const signatureFile = files?.signature?.[0];
-  const householdFile = files?.house_pic?.[0];
-  const cookstoveFile = files?.cookstove_pic?.[0];
-  const userId = req.user.userId;
-
-  return this.beneficiaryservice.syncBeneficiary(
-    sdto,
-    nationalIdFile,
-    signatureFile,
-    householdFile,
-    cookstoveFile,
-    userId,
-  );
-}
 
 
+    @Post('bene_sync')
+    @UseGuards(AuthGuard('jwt'))
+    @UseInterceptors(
+        FileFieldsInterceptor([
+            { name: 'national_id_attachment', maxCount: 1 },
+            { name: 'signature', maxCount: 1 },
+            { name: 'house_pic', maxCount: 1 },
+            { name: 'cookstove_pic', maxCount: 1 },
+        ]),
+    )
+    async syncBeneficiary(
+        @Body() sdto: CreateBeneficiarydto,
+        @Req() req: any,
+        @UploadedFiles()
+        files: {
+            national_id_attachment?: Express.Multer.File[];
+            signature?: Express.Multer.File[];
+            house_pic?: Express.Multer.File[];
+            cookstove_pic?: Express.Multer.File[];
+        },
+    ) {
+        const nationalIdFile = files?.national_id_attachment?.[0];
+        const signatureFile = files?.signature?.[0];
+        const householdFile = files?.house_pic?.[0];
+        const cookstoveFile = files?.cookstove_pic?.[0];
+        const userId = req.user.userId;
+
+        return this.beneficiaryservice.syncBeneficiary(
+            sdto,
+            nationalIdFile,
+            signatureFile,
+            householdFile,
+            cookstoveFile,
+            userId,
+        );
+    }
 
 }

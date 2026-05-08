@@ -26,8 +26,23 @@ export class TrainingSiteController {
 
     @Get('district_slug')
     async fetchDistrict() {
-
         return this.TrainingSiteService.getDistrict();
+    }
+
+
+      @Get('district_count_slug')
+    async fetchDistrictCount() {
+        return this.TrainingSiteService.getDistrictCounts();
+    }
+
+     @Get('authority_count_slug')
+    async fetchAuthorityCount() {
+        return this.TrainingSiteService.getAuthorityCount();
+    }
+    
+        @Get('authority_slug')
+    async fetchAuth() {
+        return this.TrainingSiteService.getAuth();
     }
 
     @Get('authority_slug/:id')

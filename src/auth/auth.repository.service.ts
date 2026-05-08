@@ -12,7 +12,7 @@ export class AuthRepositoryService {
 
     const rows: any = await this.db.query(
       `
-  SELECT adminID, email, name, password,status 
+  SELECT adminID, email, name, password,status,role 
   FROM ab_admin 
   WHERE (email = ? OR user_name = ?) 
 

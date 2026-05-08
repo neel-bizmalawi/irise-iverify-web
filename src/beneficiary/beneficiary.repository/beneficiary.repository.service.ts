@@ -69,7 +69,7 @@ export class BeneficiaryRepositoryService {
           .toFormat("yyyy-MM-dd HH:mm:ss");
       }
 
-         if (payload.distribution_date) {
+      if (payload.distribution_date) {
         payload.distribution_date = this.formatDateForDB(payload.distribution_date);
 
       }
@@ -107,7 +107,6 @@ export class BeneficiaryRepositoryService {
 
     } catch (error: any) {
 
-      Sentry.captureException(error);
 
       console.error("❌ insertBeneficiary DB error:", error);
 
@@ -180,7 +179,13 @@ export class BeneficiaryRepositoryService {
   async getBeneficiaryById(bid: number) {
     try {
       const rows = await this.db.query(
-        'SELECT * FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+        `SELECT bf.*, tr.training_site AS training_site_name, d.district_name AS district_name
+ FROM beneficiaries bf
+ LEFT JOIN training_sites tr
+ ON tr.training_point_id = bf.training_site
+ LEFT JOIN ab_district d
+ ON tr.district = d.district_id
+ WHERE beneficiary_id = ? LIMIT 1`,
         [bid]
       );
       return rows[0];
@@ -209,6 +214,52 @@ export class BeneficiaryRepositoryService {
       throw error;
     }
   }
+
+
+  async getMissingNId(): Promise<number> {
+
+    try {
+      const rows: any = await this.db.query(
+        `
+SELECT COUNT(*) AS missingNidCount
+FROM beneficiaries
+WHERE (national_id IS NULL OR national_id = '')
+  AND (status IS NULL OR status = 'active');
+  `
+      );
+
+      return rows[0].missingNidCount;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("getMssingNID error is", error)
+      throw error;
+    }
+  }
+
+  async getHouseHoldCounts(): Promise<number> {
+
+    try {
+      const rows: any = await this.db.query(
+        `
+SELECT COUNT(*) AS distributedCount
+FROM beneficiaries
+WHERE distribution_date IS NOT NULL
+  AND (status IS NULL OR status = 'active');
+  `
+      );
+
+      return rows[0].distributedCount;
+    }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("get total household error is", error)
+      throw error;
+    }
+  }
+
 
   async getFilteredCount(filters: any[]) {
     try {
@@ -269,6 +320,8 @@ export class BeneficiaryRepositoryService {
       const sql = `
       SELECT COUNT(*) as total
       FROM beneficiaries bf
+        LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site
       LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -340,9 +393,15 @@ export class BeneficiaryRepositoryService {
 
       const sql = `
         SELECT bf.*,
-            a.name AS created_by_name,
+         tr.training_site AS training_site_name,
+         d.district_name AS district_name,
+      a.name AS created_by_name,
         a2.name AS modified_by_name
         FROM beneficiaries bf
+        LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site
+        LEFT JOIN ab_district d
+ON tr.district = d.district_id
            LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -372,9 +431,16 @@ export class BeneficiaryRepositoryService {
 
       const sql = `
       SELECT bf.*,
+        tr.training_site AS training_site_name,
+        d.district_name AS district_name,
       a.name AS created_by_name,
         a2.name AS modified_by_name
       FROM beneficiaries bf
+      
+       LEFT JOIN training_sites tr
+ON tr.training_point_id = bf.training_site
+       LEFT JOIN ab_district d
+ON tr.district = d.district_id
        LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         WHERE (bf.status IS NULL OR bf.status = 'active')
@@ -440,10 +506,8 @@ export class BeneficiaryRepositoryService {
           .toFormat("yyyy-MM-dd HH:mm:ss"); // ✅ current UTC time
       }
 
-      console.log(`modified_date (UTC): ${modified_date}`);
-            const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
+      const server_time = DateTime.utc().toFormat("yyyy-MM-dd HH:mm:ss");
 
-      console.log(`server time (UTC): ${server_time}`);
 
 
       const { modified_date: _, ...restDto } = filteredData;
@@ -467,7 +531,7 @@ export class BeneficiaryRepositoryService {
       setClause += `, modified_by = ?`;
       values.push(userid);
 
-       // 9. Always set server_time
+      // 9. Always set server_time
       setClause += `, server_time = ?`;
       values.push(server_time);
 
@@ -483,7 +547,6 @@ export class BeneficiaryRepositoryService {
 
     }
     catch (error) {
-      Sentry.captureException(error);
 
       console.error("updateBeneficiary error is", error)
       if (error.code === "ER_DUP_ENTRY") {
@@ -528,21 +591,21 @@ export class BeneficiaryRepositoryService {
   }
 
 
-     async deleteBenebyId(bid: number) {
-        try {
-            const [rows] = await this.db.query(
-                'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
-                [bid]
-            );
-            return rows;
-        }
-        catch (error) {
-                Sentry.captureException(error);
-
-            console.error("delete monitoring repository error", error)
-            throw new InternalServerErrorException("failed to delte monitoring in repo");
-        }
+  async deleteBenebyId(bid: number) {
+    try {
+      const [rows] = await this.db.query(
+        'delete FROM beneficiaries WHERE beneficiary_id = ? LIMIT 1',
+        [bid]
+      );
+      return rows;
     }
+    catch (error) {
+      Sentry.captureException(error);
+
+      console.error("delete monitoring repository error", error)
+      throw new InternalServerErrorException("failed to delte monitoring in repo");
+    }
+  }
 
 
   async getUpdatedDataByDate(date: Date) {

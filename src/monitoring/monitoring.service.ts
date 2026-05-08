@@ -91,6 +91,7 @@ export class MonitoringService {
         const oldLong = beneficiary.longitude;
 
 
+
         // 🔹 DEVICE SERIAL
         if (dto.new_device_serial_no !== undefined) {
             dto.device_serial_no = oldDeviceSerial;
@@ -323,7 +324,9 @@ export class MonitoringService {
 
 
 
-            return { message: "Monitoring site created successfully" };
+            return { message: "Monitoring site created successfully" ,
+                monitoring_id:monitoringId
+            };
 
         }
         catch (error) {
@@ -436,19 +439,6 @@ export class MonitoringService {
                 fileUpdates.photo_path = monitoringIdFile.dbPath;
 
             }
-
-            // await this.monitorServiceRepo.updateMonitoring(mid, udto, fileUpdates, userId);
-
-            // if (isAnyChanged && Object.keys(updatePayload).length > 0) {
-            //     await this.monitorServiceRepo.updateBeneficiaryDeviceAndLocation(
-            //         udto.beneficiary_id,
-            //         {
-            //             ...updatePayload,
-            //             modified_date: udto.modified_date,
-            //         },
-            //         userId
-            //     );
-            // }
 
             let modified_date: string;
 
@@ -699,6 +689,7 @@ export class MonitoringService {
                 success: true,
                 action: 'created',
                 message: 'Monitoring created successfully',
+                monitoring_id:result.monitoring_id
             };
 
         } catch (error) {

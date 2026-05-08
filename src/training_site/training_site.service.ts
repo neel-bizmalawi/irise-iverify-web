@@ -126,6 +126,51 @@ export class TrainingSiteService {
     };
   }
 
+    async getDistrictCounts() {
+      try{
+    const data = await this.trainingSiteRepo.getDistrictCountrepo();
+
+    return {
+      message: 'District fetched',
+      data
+    };
+  }
+  catch(error)
+  {
+          Sentry.captureException(error);
+
+    console.error("get disrict error is",error);
+  }
+  }
+
+
+      async getAuthorityCount() {
+      try{
+    const data = await this.trainingSiteRepo.getAuthorityCountRepo();
+
+    return {
+      message: 'District fetched',
+      data
+    };
+  }
+  catch(error)
+  {
+          Sentry.captureException(error);
+
+    console.error("get disrict error is",error);
+  }
+  }
+
+
+
+    async getAuth() {
+    const data = await this.trainingSiteRepo.getTAuth();
+    return {
+      message: 'District fetched',
+      data
+    };
+  }
+
 
   async getAuthority(dist_id:number) {
     const data = await this.trainingSiteRepo.getAuthority(dist_id);

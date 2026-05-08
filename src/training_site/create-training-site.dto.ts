@@ -15,8 +15,10 @@ export class CreateTrainingSiteDto {
     training_site: string;
 
     @IsOptional()
-    @IsString()
-    district: string;
+    @Type(() => Number)
+    @IsNumber()
+    district: number;
+
 
     @IsOptional()
     @IsString()
@@ -26,9 +28,11 @@ export class CreateTrainingSiteDto {
     @IsString()
     village_head_name?: string;
 
-    @IsOptional()
-    @IsString()
-    traditional_authority?: string;
+
+        @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    traditional_authority?: number;
 
     @IsOptional()
     @IsNumber()
