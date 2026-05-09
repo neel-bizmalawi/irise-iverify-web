@@ -21,6 +21,8 @@ async function bootstrap() {
     origin: '*',
   });
 
+  app.setGlobalPrefix('api'); // Set global prefix for all routes
+
   // Swagger setup
   const config = new DocumentBuilder()
     .setTitle('I-Verify Backend API')
@@ -34,7 +36,7 @@ async function bootstrap() {
     .addTag('audit', 'Audit trail endpoints')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/docs', app, document);
 
   app.useGlobalPipes(
     new ValidationPipe({
