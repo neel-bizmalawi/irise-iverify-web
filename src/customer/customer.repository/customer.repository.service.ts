@@ -12,12 +12,12 @@ import * as Sentry from '@sentry/node';
 export class CustomerRepositoryService {
   constructor(private readonly db: DatabaseService) { }
 
-  private readonly tableName = 'ab_customer';
-  private readonly primaryKey = 'customerID';
+  private readonly tableName = 'ab_admin';
+  private readonly primaryKey = 'adminID';
 
   async insertCustomer(data: CreateCustomerDto, userId: number) {
     try {
-      const { name, user_name, email, password, role, user_setting, status, mobile_number, timezone } = data;
+      const { name, user_name, email, password, user_setting, status, mobile_number, timezone, beneficiary_count } = data;
       const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
       const result = await this.db.query(
@@ -33,20 +33,22 @@ export class CustomerRepositoryService {
       status,
       mobile_number,
       timezone,
+      beneficiary_count,
       created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?,?,?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
         [
           name ?? null,
           user_name ?? null,
           email ?? null,
           hashedPassword ?? null,
-          role ?? null,
+          'customer',
           user_setting ?? null,
           status ?? null,
           mobile_number ?? null,
           timezone ?? null,
+          beneficiary_count ?? null,
           userId ?? null,
         ],
       );
@@ -83,6 +85,10 @@ export class CustomerRepositoryService {
       filteredDto.password = await bcrypt.hash(filteredDto.password, 10);
     }
 
+    if (Object.prototype.hasOwnProperty.call(filteredDto, 'role')) {
+      filteredDto.role = 'customer';
+    }
+
     if (!fields.length) {
       return { message: 'Nothing to update' };
     }
@@ -96,7 +102,7 @@ export class CustomerRepositoryService {
     const sql = `
     UPDATE ${this.tableName}
     SET ${setClause}, modified_date = NOW(), modified_by = ?
-    WHERE ${this.primaryKey} = ?
+    WHERE ${this.primaryKey} = ? AND role = 'customer'
   `;
 
     const result: any = await this.db.query(
@@ -163,7 +169,8 @@ export class CustomerRepositoryService {
     ON cs.created_by = creator.adminID
     LEFT JOIN ab_admin modifier 
     ON cs.modified_by = modifier.adminID
-    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    WHERE cs.role = 'customer'
+    ${where.length ? 'AND ' + where.join(' AND ') : ''}
       `;
 
     const result = await this.db.query(sql, values);
@@ -171,7 +178,7 @@ export class CustomerRepositoryService {
   }
 
   async getTotalCount(): Promise<number> {
-    const rows: any = await this.db.query(`select count(*) as total from ${this.tableName}`);
+    const rows: any = await this.db.query(`select count(*) as total from ${this.tableName} where role = ?`, ['customer']);
     return rows[0].total;
   }
 
@@ -192,6 +199,7 @@ export class CustomerRepositoryService {
   ON cs.created_by = creator.adminID
   LEFT JOIN ab_admin modifier 
   ON cs.modified_by = modifier.adminID
+  WHERE cs.role = 'customer'
   ORDER BY ${this.primaryKey} DESC
   LIMIT ${safeLimit} OFFSET ${safeOffset}
 `;
@@ -261,7 +269,8 @@ export class CustomerRepositoryService {
       ON cs.created_by = creator.adminID
       LEFT JOIN ab_admin modifier 
       ON cs.modified_by = modifier.adminID
-      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+      WHERE cs.role = 'customer'
+      ${where.length ? 'AND ' + where.join(' AND ') : ''}
       ORDER BY cs.${this.primaryKey} DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}
     `;
@@ -272,16 +281,16 @@ export class CustomerRepositoryService {
 
   async getCustomersByid(customerId: number) {
     const rows = await this.db.query(
-      `SELECT * FROM ${this.tableName} WHERE ${this.primaryKey} = ? LIMIT 1`,
-      [customerId]
+      `SELECT * FROM ${this.tableName} WHERE ${this.primaryKey} = ? AND role = ? LIMIT 1`,
+      [customerId, 'customer']
     );
     return rows;
   }
 
   async deleteCustomerId(customerId: number) {
     const rows:any = await this.db.query(
-      `update ${this.tableName} set status = ? where ${this.primaryKey} = ? LIMIT 1`,
-      ['inactive', customerId]
+      `update ${this.tableName} set status = ? where ${this.primaryKey} = ? AND role = ? LIMIT 1`,
+      ['inactive', customerId, 'customer']
     );
     return rows;
   }
@@ -299,7 +308,7 @@ export class CustomerRepositoryService {
 
   async getAllCustomer() {
     try {
-      const rows = await this.db.query(`select name from ${this.tableName}`);
+      const rows = await this.db.query(`select name from ${this.tableName} where role = ?`, ['customer']);
       return rows;
     }
     catch (error) {

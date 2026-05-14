@@ -5,7 +5,9 @@ import {
     IsEmail,
     MinLength,
     IsEnum,
+    IsNumber,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateCustomerDto {
 
@@ -45,4 +47,9 @@ export class CreateCustomerDto {
     @IsOptional()
     @IsString()
     timezone?: string;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    beneficiary_count?: number;
 }

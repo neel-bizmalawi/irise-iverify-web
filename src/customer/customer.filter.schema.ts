@@ -3,7 +3,13 @@
 export const CUSTOMER_FILTER_SCHEMA = {
 
   customerID: {
-    column: 'cs.customerID',
+    column: 'cs.adminID',
+    type: 'number',
+    operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
+  },
+
+  adminID: {
+    column: 'cs.adminID',
     type: 'number',
     operators: ['equals', 'gt', 'gte', 'lt', 'lte'],
   },
@@ -36,6 +42,12 @@ export const CUSTOMER_FILTER_SCHEMA = {
     column: 'cs.mobile_number',
     type: 'text',
     operators: ['equals', 'contains', 'starts_with', 'ends_with', 'isEmpty', 'is_not_empty'],
+  },
+
+  beneficiaryCount: {
+    column: 'cs.beneficiary_count',
+    type: 'number',
+    operators: ['equals', 'gt', 'gte', 'lt', 'lte', 'isEmpty', 'is_not_empty'],
   },
 
   created_by: {
