@@ -1,15 +1,16 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import AppLayout from "./app-layout/AppLayout";
-import Dashboard from "./modules/dashboard/Dashboard";
-import TrainingSites from "./modules/training-sites/TrainingSites";
-import Beneficiary from "./modules/beneficiary/Beneficiary";
-import Users from "./modules/users/Users";
-import Login from "./modules/auth/Login";
-import { ToastContainer } from "react-toastify";
-import CustomerDashboard from "./modules/dashboard/CustomerDashboard";
-import Monitoring from "./modules/Monitoring/Monitoring";
-import AuditProcess from "./modules/Aduit-Process/Auditprocess";
-import RoleProtectedRoute from "./components/RoleProtectedRoute";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import AppLayout from "./app-layout/AppLayout"
+import Dashboard from "./modules/dashboard/Dashboard"
+import TrainingSites from "./modules/training-sites/TrainingSites"
+import Beneficiary from "./modules/beneficiary/Beneficiary"
+import Users from "./modules/users/Users"
+import Customers from "./modules/customers/Customers"
+import Login from "./modules/auth/Login"
+import { ToastContainer } from "react-toastify"
+import CustomerDashboard from "./modules/dashboard/CustomerDashboard"
+import Monitoring from "./modules/Monitoring/Monitoring"
+import AuditProcess from "./modules/Aduit-Process/Auditprocess"
+import RoleProtectedRoute from "./components/RoleProtectedRoute"
 
 function App() {
   return (
@@ -69,6 +70,16 @@ function App() {
             }
           />
 
+          {/* Customers */}
+          <Route
+            path="/customers"
+            element={
+              <RoleProtectedRoute allowedRoles={["admin"]}>
+                <Customers />
+              </RoleProtectedRoute>
+            }
+          />
+
           {/* Monitoring */}
           <Route
             path="/monitoring"
@@ -114,7 +125,7 @@ function App() {
         theme="colored"
       />
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App

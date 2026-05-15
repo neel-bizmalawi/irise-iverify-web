@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react"
 import {
   Outlet,
   NavLink,
   useLocation,
   useNavigate,
   Navigate,
-} from "react-router-dom";
+} from "react-router-dom"
 import {
   Box,
   Drawer,
@@ -29,11 +29,12 @@ import {
   Menu,
   MenuItem,
   ListItemIcon as MuiListItemIcon,
-} from "@mui/material";
+} from "@mui/material"
 import {
   LayoutDashboard,
   GraduationCap,
   Users,
+  UsersRound,
   Menu as MenuIcon,
   X,
   ChevronDown,
@@ -49,12 +50,12 @@ import {
   UserCheck,
   UserCog2,
   BarChart3,
-} from "lucide-react";
-import eStove from "../assets/images/eStove.png";
-import eStoveFire from "../assets/images/eStoveFire.png";
-import { checkTokenExpiry } from "../utils/checkTokenExpiry";
-import { FactCheck } from "@mui/icons-material";
-import { API_BASE_URL } from "../config";
+} from "lucide-react"
+import eStove from "../assets/images/eStove.png"
+import eStoveFire from "../assets/images/eStoveFire.png"
+import { checkTokenExpiry } from "../utils/checkTokenExpiry"
+import { FactCheck } from "@mui/icons-material"
+import { API_BASE_URL } from "../config"
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const appTheme = createTheme({
@@ -81,25 +82,26 @@ const appTheme = createTheme({
       },
     },
   },
-});
+})
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SIDEBAR_WIDTH = 240;
-const SIDEBAR_COLLAPSED_WIDTH = 72;
+const SIDEBAR_WIDTH = 240
+const SIDEBAR_COLLAPSED_WIDTH = 72
 
-const allNavItems  = [
+const allNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: GraduationCap, label: "Training Sites", path: "/training" },
   { icon: UserCheck, label: "Beneficiary", path: "/beneficiary" },
   { icon: Users, label: "Users", path: "/users" },
+  { icon: UsersRound, label: "Customers", path: "/customers" },
   { icon: ClipboardList, label: "Monitoring Tasks", path: "/monitoring" },
   { icon: FileCheck, label: "Audit Process", path: "/auditprocess" },
-  { icon: BarChart3 , label: "Customer Dashboard", path: "/dashboard" },
-];
+  { icon: BarChart3, label: "Customer Dashboard", path: "/dashboard" },
+]
 
 const bottomNavItems = [
   // { icon: Settings, label: "Settings", path: "/settings" },
-];
+]
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 const SidebarContent = ({
@@ -109,63 +111,58 @@ const SidebarContent = ({
   isMobile,
   onLogout,
 }) => {
-  const location = useLocation();
-  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
+  const location = useLocation()
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null)
 
   // Read user info from localStorage (set during login)
-  const userName = localStorage.getItem("userName") || "User";
-  const userRole = localStorage.getItem("role") || "user";
+  const userName = localStorage.getItem("userName") || "User"
+  const userRole = localStorage.getItem("role") || "user"
   const getNavItemsByRole = () => {
-  if (userRole === "admin") {
-    return allNavItems;
+    if (userRole === "admin") {
+      return allNavItems
+    }
+
+    if (userRole === "employee") {
+      return allNavItems.filter((item) =>
+        ["/training", "/beneficiary", "/monitoring", "/auditprocess"].includes(
+          item.path,
+        ),
+      )
+    }
+
+    if (userRole === "customer") {
+      return allNavItems.filter((item) => item.path === "/dashboard")
+    }
+
+    return []
   }
 
-  if (userRole === "employee") {
-    return allNavItems.filter(item =>
-      [
-        "/training",
-        "/beneficiary",
-        "/monitoring",
-        "/auditprocess",
-      ].includes(item.path)
-    );
-  }
-
-  if (userRole === "customer") {
-    return allNavItems.filter(item =>
-      item.path === "/dashboard"
-    );
-  }
-
-  return [];
-};
-
-const navItems = getNavItemsByRole();
+  const navItems = getNavItemsByRole()
 
   const initials = userName
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2)
 
   const isActive = (path) =>
     path === "/"
       ? location.pathname === "/"
-      : location.pathname.startsWith(path);
+      : location.pathname.startsWith(path)
 
   const handleProfileClick = (e) => {
-    setProfileMenuAnchor(e.currentTarget);
-  };
+    setProfileMenuAnchor(e.currentTarget)
+  }
 
   const handleProfileClose = () => {
-    setProfileMenuAnchor(null);
-  };
+    setProfileMenuAnchor(null)
+  }
 
   const handleLogoutClick = () => {
-    handleProfileClose();
-    onLogout();
-  };
+    handleProfileClose()
+    onLogout()
+  }
 
   return (
     <Box
@@ -504,44 +501,44 @@ const navItems = getNavItemsByRole();
         </Menu>
       </Box>
     </Box>
-  );
-};
+  )
+}
 
 //  AppLayout Inner
 const AppLayoutInner = () => {
-  const muiTheme = useTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down("md"));
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const muiTheme = useTheme()
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("md"))
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   // ── Auth Guard ──
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token")
 
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) return <Navigate to="/login" replace />
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const currentToken = localStorage.getItem("token");
+      const currentToken = localStorage.getItem("token")
 
       if (checkTokenExpiry(currentToken)) {
-        localStorage.removeItem("token");
-        navigate("/login");
+        localStorage.removeItem("token")
+        navigate("/login")
       }
-    }, 5000);
+    }, 5000)
 
-    return () => clearInterval(interval);
-  }, [navigate]);
+    return () => clearInterval(interval)
+  }, [navigate])
 
   const sidebarWidth = desktopCollapsed
     ? SIDEBAR_COLLAPSED_WIDTH
-    : SIDEBAR_WIDTH;
+    : SIDEBAR_WIDTH
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       //await fetch("API_BASE_URL/auth/logout",
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
@@ -549,16 +546,16 @@ const AppLayoutInner = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      });
+      })
     } catch (error) {
-      console.error("Logout API error:", error);
+      console.error("Logout API error:", error)
     } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      localStorage.removeItem("userName");
-      navigate("/login");
+      localStorage.removeItem("token")
+      localStorage.removeItem("role")
+      localStorage.removeItem("userName")
+      navigate("/login")
     }
-  };
+  }
 
   return (
     <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -685,8 +682,8 @@ const AppLayoutInner = () => {
         </Box>
       </Box>
     </Box>
-  );
-};
+  )
+}
 
 //  AppLayout
 const AppLayout = () => (
@@ -694,6 +691,6 @@ const AppLayout = () => (
     <CssBaseline />
     <AppLayoutInner />
   </ThemeProvider>
-);
+)
 
-export default AppLayout;
+export default AppLayout
