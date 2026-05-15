@@ -14,6 +14,7 @@ import { join } from 'path';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { AuditModule } from './audit/audit.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CustomerModule } from './customer/customer.module';
 
 
 @Module({
@@ -31,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     BeneficiaryModule,
     UserModule,
+    CustomerModule,
     MonitoringModule,
     AuditModule
   ],
