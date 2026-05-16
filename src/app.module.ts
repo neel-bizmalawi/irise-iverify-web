@@ -23,7 +23,7 @@ import { CustomerModule } from './customer/customer.module';
 
      ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
+      serveRoot: '/api/uploads',
     }),
     ConfigModule.forRoot({
       isGlobal: true, // 👈 IMPORTANT
