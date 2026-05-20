@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateCustomerDto } from './customer.dto';
 import { UpdateCustomerDto } from './updatecustomer.dto';
 import { CustomerRepositoryService } from './customer.repository/customer.repository.service';
@@ -48,9 +48,7 @@ export class CustomerService {
         catch (error) {
             console.error("UpdateCustomer error", error)
 
-            throw new InternalServerErrorException(
-                'Failed to update customer',
-            )
+            throw error;
         }
     }
 
@@ -124,6 +122,85 @@ export class CustomerService {
         return {
             message: "data fetched succesfully",
             data
+        }
+    }
+
+    async updateBeneficiaries(customerId: number, userId: number) {
+        try {
+            if (!customerId) {
+                throw new BadRequestException("Customer id is missing");
+            }
+
+            const customer = await this.customerRepo.getCustomersByid(customerId);
+
+            if (!customer || customer.length === 0) {
+                throw new NotFoundException("Customer not found");
+            }
+
+            const result = await this.customerRepo.updateRandomBeneficiaries(customerId, userId);
+
+            const changedNow = result.assignedNow + result.unassignedNow;
+
+            return {
+                success: changedNow > 0,
+                message: changedNow > 0
+                    ? 'Beneficiaries updated successfully'
+                    : 'Beneficiaries already up to date',
+                assignedNow: result.assignedNow,
+                unassignedNow: result.unassignedNow,
+                assigned_beneficiary_count: result.assignedCount,
+                beneficiary_count: result.beneficiaryCount,
+                remaining_beneficiary_count: result.remainingToAssign,
+                excess_beneficiary_count: result.excessBeneficiaryCount,
+                can_assign_beneficiaries: result.remainingToAssign > 0,
+                can_update_beneficiaries: result.remainingToAssign > 0 || result.excessBeneficiaryCount > 0,
+            }
+        } catch (error) {
+            console.error("updateBeneficiaries error", error);
+            throw error;
+        }
+    }
+
+    async assignBeneficiaries(customerId: number, userId: number) {
+        return this.updateBeneficiaries(customerId, userId);
+    }
+
+    async getAssignedBeneficiaries(customerId: number, page: number, limit: number) {
+        try {
+            if (!customerId) {
+                throw new BadRequestException("Customer id is missing");
+            }
+
+            if (page < 1) page = 1;
+            if (limit < 1) limit = 10;
+
+            const customer = await this.customerRepo.getCustomersByid(customerId);
+
+            if (!customer || customer.length === 0) {
+                throw new NotFoundException("Customer not found");
+            }
+
+            const totalRecords = await this.customerRepo.getAssignedBeneficiariesTotal(customerId);
+            const totalPages = Math.ceil(totalRecords / limit);
+            const data = await this.customerRepo.getAssignedBeneficiaries(customerId, page, limit);
+
+            const start = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
+            const end = Math.min(page * limit, totalRecords);
+
+            return {
+                currentPage: page,
+                limit,
+                start,
+                end,
+                totalRecords,
+                totalPages,
+                nextPage: page < totalPages ? page + 1 : null,
+                previousPage: page > 1 ? page - 1 : null,
+                data,
+            };
+        } catch (error) {
+            console.error("getAssignedBeneficiaries error", error);
+            throw error;
         }
     }
 
