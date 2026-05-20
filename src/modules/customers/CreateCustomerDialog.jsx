@@ -99,7 +99,7 @@ const getValidationSchema = (isEdit) =>
       .required("Full name is required"),
     userName: Yup.string()
       .min(3, "Minimum 3 characters")
-      .required("Customer name is required"),
+      .required("User name is required"),
     email: Yup.string()
       .email("Invalid email address")
       .required("Email is required"),
@@ -343,7 +343,7 @@ const CreateCustomerDialog = ({ open, onClose, onSubmit, initialData }) => {
             </FormControl>
           </Grid>
 
-          {/* Customer Name */}
+          {/* User Name */}
           <Grid item xs={12} sm={5}>
             <FormControl
               fullWidth
@@ -351,7 +351,7 @@ const CreateCustomerDialog = ({ open, onClose, onSubmit, initialData }) => {
             >
               <FieldLabel
                 icon={PersonOutlineOutlinedIcon}
-                label="Customer Name"
+                label="User Name"
                 required
               />
               <StyledInput
