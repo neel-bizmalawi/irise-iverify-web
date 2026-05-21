@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react"
-import { Box, Button, CircularProgress, Chip } from "@mui/material"
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Tooltip,
+  Typography,
+} from "@mui/material"
 import Breadcrumb from "../../components/Breadcrumb"
 import AppPagination from "../../components/AppPagination"
 import AppTable from "../../components/AppTable"
@@ -9,6 +21,54 @@ import axios from "axios"
 import { toast } from "react-toastify"
 import ExportButtons from "../../components/ExportButtons"
 import { API_BASE_URL } from "../../config"
+import { Pencil, RefreshCw, UserCheck, UserX } from "lucide-react"
+
+const isApiTrue = (value) => {
+  if (value === true) return true
+  if (typeof value === "number") return value === 1
+  if (typeof value === "string") {
+    return ["true", "1", "yes"].includes(value.toLowerCase().trim())
+  }
+  return false
+}
+
+const toCount = (value) => {
+  const count = Number(value)
+  return Number.isFinite(count) ? count : 0
+}
+
+const canUpdateBeneficiaries = (item) => {
+  const explicitFlag =
+    item.can_update_beneficiaries ?? item.canUpdateBeneficiaries
+
+  if (explicitFlag !== undefined && explicitFlag !== null) {
+    return isApiTrue(explicitFlag)
+  }
+
+  return (
+    toCount(
+      item.remaining_beneficiary_count ?? item.remainingBeneficiaryCount,
+    ) > 0 ||
+    toCount(item.excess_beneficiary_count ?? item.excessBeneficiaryCount) > 0
+  )
+}
+
+const actionIconSx = {
+  width: 34,
+  height: 34,
+  border: "1px solid #d1d5db",
+  color: "#374151",
+  background: "#ffffff",
+  "&:hover": {
+    background: "#f8fafc",
+    borderColor: "#9ca3af",
+  },
+  "&.Mui-disabled": {
+    color: "#cbd5e1",
+    borderColor: "#e5e7eb",
+    background: "#f8fafc",
+  },
+}
 
 const Customers = () => {
   const [tableData, setTableData] = useState([])
@@ -25,6 +85,9 @@ const Customers = () => {
 
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState(null)
+  const [beneficiaryUpdateCustomerId, setBeneficiaryUpdateCustomerId] =
+    useState(null)
+  const [updatingBeneficiaries, setUpdatingBeneficiaries] = useState(false)
 
   const [createOptions, setCreateOptions] = useState([])
   const [modifiedByOptions, setModifiedByOptions] = useState([])
@@ -127,39 +190,87 @@ const Customers = () => {
         key: "actions",
         label: "Actions",
         align: "center",
+        width: 180,
         render: (_, row) => {
           const isInactive = row.status?.toLowerCase().trim() === "inactive"
 
           return (
-            <Box sx={{ display: "flex", gap: 1, justifyContent: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                flexWrap: "nowrap",
+                minWidth: 150,
+              }}
+            >
+              <Tooltip title="Update Beneficiary" arrow>
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label="Update Beneficiary"
+                    disabled={!row.can_update_beneficiaries}
+                    onClick={() => handleOpenBeneficiaryUpdate(row.adminID)}
+                    sx={actionIconSx}
+                  >
+                    <RefreshCw size={16} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+
               {!isInactive ? (
                 <>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => handleEdit(row.adminID)}
-                  >
-                    Edit
-                  </Button>
+                  <Tooltip title="Edit" arrow>
+                    <IconButton
+                      size="small"
+                      aria-label="Edit"
+                      onClick={() => handleEdit(row.adminID)}
+                      sx={actionIconSx}
+                    >
+                      <Pencil size={16} />
+                    </IconButton>
+                  </Tooltip>
 
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    onClick={() => handleDeactivate(row.adminID)}
+                  <Tooltip title="Inactive" arrow>
+                    <IconButton
+                      size="small"
+                      aria-label="Inactive"
+                      color="error"
+                      onClick={() => handleDeactivate(row.adminID)}
+                      sx={{
+                        ...actionIconSx,
+                        color: "#dc2626",
+                        borderColor: "#fecaca",
+                        "&:hover": {
+                          background: "#fef2f2",
+                          borderColor: "#fca5a5",
+                        },
+                      }}
                   >
-                    Inactive
-                  </Button>
+                    <UserX size={16} />
+                  </IconButton>
+                </Tooltip>
                 </>
               ) : (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="success"
-                  onClick={() => handleActivate(row.adminID)}
-                >
-                  Active
-                </Button>
+                <Tooltip title="Active" arrow>
+                  <IconButton
+                    size="small"
+                    aria-label="Active"
+                    onClick={() => handleActivate(row.adminID)}
+                    sx={{
+                      ...actionIconSx,
+                      color: "#16a34a",
+                      borderColor: "#bbf7d0",
+                      "&:hover": {
+                        background: "#f0fdf4",
+                        borderColor: "#86efac",
+                      },
+                    }}
+                  >
+                    <UserCheck size={16} />
+                  </IconButton>
+                </Tooltip>
               )}
             </Box>
           )
@@ -250,6 +361,19 @@ const Customers = () => {
             item.mobile_number ?? item.mobile_no ?? item.contactNo ?? null,
           beneficiaryCount:
             item.beneficiary_count ?? item.beneficiaryCount ?? null,
+          assignedBeneficiaryCount:
+            item.assigned_beneficiary_count ??
+            item.assignedBeneficiaryCount ??
+            null,
+          remainingBeneficiaryCount:
+            item.remaining_beneficiary_count ??
+            item.remainingBeneficiaryCount ??
+            null,
+          excessBeneficiaryCount:
+            item.excess_beneficiary_count ??
+            item.excessBeneficiaryCount ??
+            null,
+          can_update_beneficiaries: canUpdateBeneficiaries(item),
           timezone: item.timezone ?? null,
           status: item.status,
           created_by_name: item.created_by_name,
@@ -432,6 +556,58 @@ const Customers = () => {
     }
   }
 
+  const handleOpenBeneficiaryUpdate = (customerId) => {
+    setBeneficiaryUpdateCustomerId(customerId)
+  }
+
+  const handleCloseBeneficiaryUpdate = () => {
+    if (!updatingBeneficiaries) {
+      setBeneficiaryUpdateCustomerId(null)
+    }
+  }
+
+  const handleConfirmBeneficiaryUpdate = async () => {
+    if (!beneficiaryUpdateCustomerId) return
+
+    try {
+      setUpdatingBeneficiaries(true)
+      const token = localStorage.getItem("token")
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+
+      const res = await axios.post(
+        `${API_BASE_URL}/customer/update-beneficiaries/${beneficiaryUpdateCustomerId}`,
+        {},
+        config,
+      )
+      const response = res.data || {}
+
+      if (response.message) {
+        toast.success(response.message)
+      }
+      if (Number(response.assignedNow) > 0) {
+        toast.success(`${response.assignedNow} beneficiaries assigned`)
+      }
+      if (Number(response.unassignedNow) > 0) {
+        toast.success(`${response.unassignedNow} beneficiaries unassigned`)
+      }
+
+      setBeneficiaryUpdateCustomerId(null)
+      await fetchData(page, pageSize, activeFilters)
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Failed to update beneficiary assignments"
+      toast.error(Array.isArray(message) ? message.join(" | ") : message)
+    } finally {
+      setUpdatingBeneficiaries(false)
+    }
+  }
+
   const fetchAllForExport = async () => {
     const cleanFilters =
       Array.isArray(activeFilters) && activeFilters.length > 0
@@ -537,6 +713,57 @@ const Customers = () => {
         onSubmit={handleSubmitCustomer}
         initialData={editData}
       />
+
+      <Dialog
+        open={Boolean(beneficiaryUpdateCustomerId)}
+        onClose={handleCloseBeneficiaryUpdate}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "14px",
+            p: 1,
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem", pb: 0 }}>
+          Update Beneficiary
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            Update beneficiary assignments for this customer?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={handleCloseBeneficiaryUpdate}
+            disabled={updatingBeneficiaries}
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmBeneficiaryUpdate}
+            disabled={updatingBeneficiaries}
+            sx={{
+              textTransform: "none",
+              borderRadius: "8px",
+              fontWeight: 600,
+              background: "#16a34a",
+              boxShadow: "none",
+              "&:hover": { background: "#15803d", boxShadow: "none" },
+            }}
+          >
+            {updatingBeneficiaries ? "Updating..." : "Confirm"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
