@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "react"
 import {
   Box,
   Typography,
@@ -9,58 +9,80 @@ import {
   Paper,
   CircularProgress,
   Link,
-} from "@mui/material";
+} from "@mui/material"
 import {
   Visibility,
   VisibilityOff,
   PersonOutline,
   LockOutlined,
-} from "@mui/icons-material";
-import eStove from "../../assets/images/eStoveLogin.png";
-import { alpha } from "@mui/material/styles";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { toast } from "react-toastify";
-import { API_BASE_URL } from "../../config";
+} from "@mui/icons-material"
+import eStove from "../../assets/images/eStoveLogin.png"
+import { alpha } from "@mui/material/styles"
+import { useNavigate } from "react-router-dom"
+import axios from "axios"
+import { toast } from "react-toastify"
+import { API_BASE_URL } from "../../config"
+
+const getTokenPayload = (token) => {
+  if (!token || !token.includes(".")) return {}
+  try {
+    const payload = token.split(".")[1]
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
+    return JSON.parse(atob(normalized))
+  } catch {
+    return {}
+  }
+}
 
 export default function Login() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
-  const [showPass, setShowPass] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
-    if (!username || !password) return;
+    if (!username || !password) return
 
     try {
-      setLoading(true);
+      setLoading(true)
 
       const response = await axios.post(`${API_BASE_URL}/auth/verifyUser`, {
         validemail: username,
         validPass: password,
-      });
+      })
 
-      const { AccessTokenss, user } = response.data;
+      const { AccessTokenss, user } = response.data
+      const tokenUser = getTokenPayload(AccessTokenss)
+      const customerId =
+        user?.customerID ??
+        user?.customer_id ??
+        user?.id ??
+        tokenUser?.customerID ??
+        tokenUser?.customer_id ??
+        tokenUser?.id ??
+        ""
 
-      localStorage.setItem("token", AccessTokenss);
-      localStorage.setItem("userName", user?.name || username);
-      localStorage.setItem("role", user?.role);
+      localStorage.setItem("token", AccessTokenss)
+      localStorage.setItem("userName", user?.name || username)
+      localStorage.setItem("role", user?.role)
+      localStorage.setItem("user", JSON.stringify(user || {}))
+      if (customerId) localStorage.setItem("customerId", customerId)
 
-      toast.success("Login successful!");
+      toast.success("Login successful!")
 
-      navigate("/");
+      navigate(user?.role === "customer" ? "/dashboard" : "/")
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Login error:", error)
 
       toast.error(
         error.response?.data?.message || "Invalid username or password",
-      );
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const inputStyles = {
     borderRadius: 2,
@@ -83,7 +105,7 @@ export default function Login() {
       caretColor: "#fff",
       transition: "background-color 9999s ease-in-out 0s",
     },
-  };
+  }
 
   return (
     <Box
@@ -158,7 +180,7 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") handleLogin();
+            if (e.key === "Enter") handleLogin()
           }}
           sx={{
             mb: 3,
@@ -220,5 +242,5 @@ export default function Login() {
         </Button>
       </Paper>
     </Box>
-  );
+  )
 }

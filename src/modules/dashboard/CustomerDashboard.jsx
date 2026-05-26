@@ -1,36 +1,36 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE_URL } from "../../config";
-import { Download, TrendingUp } from "lucide-react";
+import React, { useEffect, useState } from "react"
+import axios from "axios"
+import { API_BASE_URL } from "../../config"
+import {
+  Baby,
+  Download,
+  Mars,
+  TrendingUp,
+  UserRound,
+  Venus,
+} from "lucide-react"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MANUAL CONSTANTS — update these to match your programme targets
 // ─────────────────────────────────────────────────────────────────────────────
-const COOKSTOVE_TARGET = 50000; // target cookstoves for progress bar
-const CREDITS_PER_STOVE = 8.6688; // carbon credits per stove
-const AVG_SAVINGS_MWK = 3000; // fallback if no monitoring savings data
-const AVG_WOOD_KG = 4.53; // fallback if no monitoring fuel data
-const TREES_FALLBACK = 38; // fallback trees saved per month
-
+const CREDITS_PER_STOVE = 8.6688 // carbon credits per stove
+const AVG_SAVINGS_MWK = 3000 // fallback if no monitoring savings data
+const AVG_WOOD_KG = 4.53 // fallback if no monitoring fuel data
+const TREES_FALLBACK = 38 // fallback trees saved per month
+const SHOW_MONITORING_CARDS = false // keep Environmental, Economic, Health hidden for now
 // ─────────────────────────────────────────────────────────────────────────────
 // APIs USED IN THIS DASHBOARD:
 //
-//  1. POST /beneficiary/list  { filters:[] } ?page=1&limit=1
-//     → totalRecords           → "Cookstove Deployed" count & progress bar
-//
-//  2. POST /beneficiary/list  { filters:[] } ?page=1&limit=100000
-//     → data[].created_date    → Carbon Credits bar chart (group by month × CREDITS_PER_STOVE)
-//     → data[].created_date    → Sparkline (monthly registrations)
+//  1. POST /beneficiary/list  { filters:[] } ?page=1&limit=100000
+//     → total rows             → Total Cookstoves Deployed
+//     → total rows × CREDITS_PER_STOVE → Total Carbon Credits / Estimated tCO2e
+//     → household member fields → Total People Impacted
+//     → distribution_date/created_date → Carbon Credits bar chart (month × CREDITS_PER_STOVE)
+//     → distribution_date/created_date → Sparkline (monthly deployments)
 //     → data[].females_above_18, females_below_18,
 //        males_above_18, males_below_18  → Gender Distribution donut
-//     → totalRecords           → People Impacted (fallback if training-site empty)
-//     → data[].national_id     → Households count (unique national_ids as proxy)
 //
-//  3. POST /training-site/list { filters:[] } ?page=1&limit=100000
-//     → data[].total_people    → "People Impacted" (sum)          ← NEEDS BACKEND
-//     → data[].house_holds_count → "Households" (sum)             ← NEEDS BACKEND
-//
-//  4. POST /monitoring/list  { filters:[] } ?page=1&limit=100000
+//  2. POST /monitoring/list  { filters:[] } ?page=1&limit=100000
 //     → data[].health_better_air === "yes"  → Health gauge %
 //     → data[].savings_3_months             → Economic avg savings
 //     → data[].est_fuel_last3meals_kg       → Environmental avg wood saved
@@ -38,35 +38,107 @@ const TREES_FALLBACK = 38; // fallback trees saved per month
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"));
-const fmtDec = (n, d) => (n == null ? "—" : Number(n).toFixed(d ?? 2));
+const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"))
+const fmtDec = (n, d) => (n == null ? "—" : Number(n).toFixed(d ?? 2))
+const fmtSpace = (n) => fmt(n).replace(/,/g, " ")
+const fmtDecSpace = (n, d) => fmtDec(n, d).replace(/,/g, " ")
+
+const toNum = (value) => Number(value) || 0
+
+const householdMembers = (row) =>
+  toNum(row.females_above_18) +
+  toNum(row.females_below_18) +
+  toNum(row.males_above_18) +
+  toNum(row.males_below_18)
+
+const getDeploymentDate = (row) => row.distribution_date || row.created_date
+
+const getStoredUser = () => {
+  if (typeof localStorage === "undefined") return {}
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}")
+  } catch {
+    return {}
+  }
+}
+
+const getStoredTokenPayload = () => {
+  if (typeof localStorage === "undefined") return {}
+  const token = localStorage.getItem("token")
+  if (!token || !token.includes(".")) return {}
+  try {
+    const payload = token.split(".")[1]
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
+    return JSON.parse(atob(normalized))
+  } catch {
+    return {}
+  }
+}
+
+const getStoredCustomerId = () => {
+  if (typeof localStorage === "undefined") return null
+  const user = getStoredUser()
+  const tokenUser = getStoredTokenPayload()
+  return (
+    localStorage.getItem("customerId") ||
+    user.customerID ||
+    user.customer_id ||
+    user.adminID ||
+    user.adminId ||
+    user.id ||
+    tokenUser.customerID ||
+    tokenUser.customer_id ||
+    tokenUser.adminID ||
+    tokenUser.adminId ||
+    tokenUser.id ||
+    null
+  )
+}
+
+const getRowCustomerId = (row) =>
+  row.customerID ??
+  row.customer_id ??
+  row.customerId ??
+  row.assigned_customer_id ??
+  row.assignedCustomerId ??
+  row.customer_admin_id ??
+  row.customerAdminID ??
+  row.customer_adminID ??
+  row.adminID ??
+  null
+
+const scopeRowsForCustomer = (rows, role, customerId) => {
+  if (String(role).toLowerCase() !== "customer") return rows
+  if (!customerId) return []
+  return rows.filter((row) => String(getRowCustomerId(row)) === String(customerId))
+}
 
 const csvDL = (rows, name) => {
   const blob = new Blob([rows.map((r) => r.join(",")).join("\n")], {
     type: "text/csv",
-  });
-  const url = URL.createObjectURL(blob);
+  })
+  const url = URL.createObjectURL(blob)
   const a = Object.assign(document.createElement("a"), {
     href: url,
     download: name,
-  });
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
+  })
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 const useWindowWidth = () => {
   const [w, setW] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1200,
-  );
+  )
   useEffect(() => {
-    const h = () => setW(window.innerWidth);
-    window.addEventListener("resize", h);
-    return () => window.removeEventListener("resize", h);
-  }, []);
-  return w;
-};
+    const h = () => setW(window.innerWidth)
+    window.addEventListener("resize", h)
+    return () => window.removeEventListener("resize", h)
+  }, [])
+  return w
+}
 
 // ── Skeleton loader ───────────────────────────────────────────────────────────
 const Sk = ({ w = 80, h = 28 }) => (
@@ -81,7 +153,7 @@ const Sk = ({ w = 80, h = 28 }) => (
       animation: "cdShimmer 1.4s infinite",
     }}
   />
-);
+)
 
 // ── White card panel ──────────────────────────────────────────────────────────
 const Panel = ({ children, style = {}, delay = 0 }) => (
@@ -98,7 +170,7 @@ const Panel = ({ children, style = {}, delay = 0 }) => (
   >
     {children}
   </div>
-);
+)
 
 const PTitle = ({ children }) => (
   <div
@@ -113,7 +185,7 @@ const PTitle = ({ children }) => (
   >
     {children}
   </div>
-);
+)
 
 const DLBtn = ({ onClick }) => (
   <button
@@ -133,7 +205,7 @@ const DLBtn = ({ onClick }) => (
   >
     <Download size={15} color="#2e7d32" />
   </button>
-);
+)
 
 // ── Donut Chart ───────────────────────────────────────────────────────────────
 const Donut = ({
@@ -145,10 +217,19 @@ const Donut = ({
 }) => {
   const r = size / 2 - sw,
     cx = size / 2,
-    cy = size / 2;
-  const circ = 2 * Math.PI * r;
-  const tot = segments.reduce((s, x) => s + (x.value || 0), 0) || 1;
-  let off = 0;
+    cy = size / 2
+  const circ = 2 * Math.PI * r
+  const tot = segments.reduce((s, x) => s + (x.value || 0), 0) || 1
+  const preparedSegments = segments.reduce(
+    (acc, seg) => {
+      const dash = ((seg.value || 0) / tot) * circ
+      acc.items.push({ ...seg, dash, offset: acc.offset })
+      acc.offset += dash
+      return acc
+    },
+    { items: [], offset: 0 },
+  ).items
+
   return (
     <svg
       viewBox={`0 0 ${size} ${size}`}
@@ -164,27 +245,22 @@ const Donut = ({
         stroke="#e5e7eb"
         strokeWidth={sw}
       />
-      {segments.map((seg, i) => {
-        const dash = ((seg.value || 0) / tot) * circ;
-        const el = (
-          <circle
-            key={i}
-            cx={cx}
-            cy={cy}
-            r={r}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={sw}
-            strokeDasharray={`${dash} ${circ - dash}`}
-            strokeDashoffset={-(off - circ * 0.25)}
-            style={{
-              transition: "stroke-dasharray 1.2s cubic-bezier(.22,.68,0,1)",
-            }}
-          />
-        );
-        off += dash;
-        return el;
-      })}
+      {preparedSegments.map((seg, i) => (
+        <circle
+          key={i}
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill="none"
+          stroke={seg.color}
+          strokeWidth={sw}
+          strokeDasharray={`${seg.dash} ${circ - seg.dash}`}
+          strokeDashoffset={-(seg.offset - circ * 0.25)}
+          style={{
+            transition: "stroke-dasharray 1.2s cubic-bezier(.22,.68,0,1)",
+          }}
+        />
+      ))}
       {centerLabel && (
         <text
           x={cx}
@@ -213,8 +289,8 @@ const Donut = ({
         </text>
       )}
     </svg>
-  );
-};
+  )
+}
 
 // ── Sparkline ─────────────────────────────────────────────────────────────────
 const Spark = ({ data = [], color = "#2e7d32", w = 130, h = 70 }) => {
@@ -231,15 +307,15 @@ const Spark = ({ data = [], color = "#2e7d32", w = 130, h = 70 }) => {
           strokeDasharray="4 4"
         />
       </svg>
-    );
-  const max = Math.max(...data, 1);
-  const min = 0;
-  const rng = max - min || 1;
+    )
+  const max = Math.max(...data, 1)
+  const min = 0
+  const rng = max - min || 1
   const pts = data.map(
     (v, i) =>
       `${(i / (data.length - 1)) * w},${h - ((v - min) / rng) * (h - 10) - 5}`,
-  );
-  const [lx, ly] = pts[pts.length - 1].split(",").map(Number);
+  )
+  const [lx, ly] = pts[pts.length - 1].split(",").map(Number)
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
       <polyline
@@ -252,8 +328,8 @@ const Spark = ({ data = [], color = "#2e7d32", w = 130, h = 70 }) => {
       />
       <circle cx={lx} cy={ly} r={4} fill={color} />
     </svg>
-  );
-};
+  )
+}
 
 // ── Carbon Credits Bar Chart ──────────────────────────────────────────────────
 const CarbonBar = ({ data = [] }) => {
@@ -269,15 +345,15 @@ const CarbonBar = ({ data = [] }) => {
       >
         <span style={{ fontSize: 12, color: "#9ca3af" }}>No data yet</span>
       </div>
-    );
-  const max = Math.max(...data.map((d) => d.v), 1);
-  const gridMax = Math.ceil(max / 20) * 20 || 80;
+    )
+  const max = Math.max(...data.map((d) => d.v), 1)
+  const gridMax = Math.ceil(max / 20) * 20 || 80
   const steps = [
     gridMax,
     Math.round(gridMax * 0.6),
     Math.round(gridMax * 0.3),
     0,
-  ];
+  ]
   return (
     <div style={{ position: "relative", height: 160, paddingTop: 8 }}>
       <div
@@ -307,7 +383,7 @@ const CarbonBar = ({ data = [] }) => {
                 flexShrink: 0,
               }}
             >
-              {g}
+              {Number(g).toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </span>
             <div style={{ flex: 1, borderTop: "1px dashed #e8f5e9" }} />
           </div>
@@ -326,7 +402,7 @@ const CarbonBar = ({ data = [] }) => {
         }}
       >
         {data.map((d, i) => {
-          const pct = Math.max((d.v / gridMax) * 100, d.v > 0 ? 5 : 0);
+          const pct = Math.max((d.v / gridMax) * 100, d.v > 0 ? 5 : 0)
           return (
             <div
               key={i}
@@ -341,6 +417,9 @@ const CarbonBar = ({ data = [] }) => {
               }}
             >
               <div
+                title={`${d.l}: ${Number(d.v).toLocaleString("en-US", {
+                  maximumFractionDigits: 2,
+                })} credits`}
                 style={{
                   width: "55%",
                   background: "#2e7d32",
@@ -356,20 +435,436 @@ const CarbonBar = ({ data = [] }) => {
                 {d.l}
               </span>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
-};
+  )
+}
+
+const getNiceDemographicAxisMax = (value) => {
+  if (value <= 500) return 500
+  if (value <= 1000) return 1000
+  if (value <= 5000) return 5000
+  return Math.ceil(value / 5000) * 5000
+}
+
+const DemographicIcon = ({ age = "adult", gender = "female" }) => {
+  const BaseIcon = age === "child" ? Baby : UserRound
+  const GenderIcon = gender === "female" ? Venus : Mars
+
+  return (
+    <span
+      style={{
+        position: "relative",
+        width: 28,
+        height: 28,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <BaseIcon size={24} strokeWidth={2.8} />
+      <GenderIcon
+        size={12}
+        strokeWidth={3}
+        style={{
+          position: "absolute",
+          right: -3,
+          bottom: -2,
+          background: "#e8f5e9",
+          borderRadius: "50%",
+        }}
+      />
+    </span>
+  )
+}
+
+// ── Household Demographic Impact Chart ───────────────────────────────────────
+const HouseholdDemographicChart = ({ rows = [] }) => {
+  const visibleRows = rows.filter(
+    (row) => (row.leftValue || 0) > 0 || (row.rightValue || 0) > 0,
+  )
+  const dataMax = Math.max(
+    ...visibleRows.flatMap((row) => [row.leftValue || 0, row.rightValue || 0]),
+    1,
+  )
+  const axisMax = getNiceDemographicAxisMax(dataMax)
+  const max = axisMax
+  const axisTicks = [
+    axisMax,
+    Math.round(axisMax * 0.75),
+    Math.round(axisMax * 0.5),
+    Math.round(axisMax * 0.25),
+    0,
+    Math.round(axisMax * 0.25),
+    Math.round(axisMax * 0.5),
+    Math.round(axisMax * 0.75),
+    axisMax,
+  ]
+  const formatAxisTick = (value) => {
+    if (value === 0) return "0"
+    if (value < 1000) return fmt(value)
+    const thousands = value / 1000
+    return `${Number.isInteger(thousands) ? thousands : Number(thousands.toFixed(2))}K`
+  }
+
+  if (!visibleRows.length) {
+    return (
+      <div
+        style={{
+          minHeight: 180,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#9ca3af",
+          fontSize: 13,
+          fontWeight: 600,
+        }}
+      >
+        No demographic data yet
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minWidth: 0, overflowX: "auto", paddingBottom: 4 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "180px minmax(120px,1fr) 2px minmax(120px,1fr) 180px",
+          minWidth: 760,
+          gap: 0,
+          alignItems: "end",
+          marginBottom: 18,
+        }}
+      >
+        <div />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            color: "#229b42",
+            fontSize: 14,
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+          }}
+        >
+          FEMALE
+          <Venus size={18} strokeWidth={3} />
+        </div>
+        <div />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            color: "#229b42",
+            fontSize: 14,
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+          }}
+        >
+          <Mars size={18} strokeWidth={3} />
+          MALE
+        </div>
+        <div />
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {visibleRows.map((row) => {
+          const leftPct = ((row.leftValue || 0) / max) * 100
+          const rightPct = ((row.rightValue || 0) / max) * 100
+
+          return (
+            <div
+              key={`${row.leftLabel}-${row.rightLabel}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "180px minmax(120px,1fr) 2px minmax(120px,1fr) 180px",
+                minWidth: 760,
+                alignItems: "center",
+                minHeight: 58,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: "50%",
+                    background: "#e8f5e9",
+                    color: "#229b42",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                    fontSize: 16,
+                    flexShrink: 0,
+                  }}
+                >
+                  {row.leftIcon}
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#111827",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {row.leftLabel}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                      marginTop: 4,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {row.leftSubLabel}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  gap: 10,
+                  minWidth: 0,
+                }}
+              >
+                {row.leftValue > 0 && (
+                  <>
+                    <span
+                      style={{
+                        color: "#26b34b",
+                        fontSize: 14,
+                        fontWeight: 900,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {fmt(row.leftValue)}
+                    </span>
+                    <div
+                      title={`${row.leftLabel}: ${fmt(row.leftValue)} beneficiaries`}
+                      style={{
+                        width: `${Math.max(leftPct, 4)}%`,
+                        height: 38,
+                        background:
+                          "linear-gradient(90deg,#5ec777 0%,#27a84d 100%)",
+                        borderRadius: "6px 0 0 6px",
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+
+              <div
+                style={{
+                  width: 2,
+                  height: 54,
+                  background: "#d1d5db",
+                  justifySelf: "center",
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  gap: 10,
+                  minWidth: 0,
+                }}
+              >
+                {row.rightValue > 0 && (
+                  <>
+                    <div
+                      title={`${row.rightLabel}: ${fmt(row.rightValue)} beneficiaries`}
+                      style={{
+                        width: `${Math.max(rightPct, 4)}%`,
+                        height: 38,
+                        background:
+                          "linear-gradient(90deg,#1167d8 0%,#0b74e8 100%)",
+                        borderRadius: "0 6px 6px 0",
+                      }}
+                    />
+                    <span
+                      style={{
+                        color: "#1167d8",
+                        fontSize: 14,
+                        fontWeight: 900,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {fmt(row.rightValue)}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 12,
+                  minWidth: 0,
+                  paddingLeft: 14,
+                }}
+              >
+                <div style={{ textAlign: "right" }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#111827",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {row.rightLabel}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                      marginTop: 4,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {row.rightSubLabel}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: "50%",
+                    background: "#e8f5e9",
+                    color: "#229b42",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                    fontSize: 16,
+                    flexShrink: 0,
+                  }}
+                >
+                  {row.rightIcon}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "180px minmax(120px,1fr) 2px minmax(120px,1fr) 180px",
+          minWidth: 760,
+          marginTop: 12,
+        }}
+      >
+        <div />
+        <div style={{ gridColumn: "2 / 5" }}>
+          <div
+            style={{
+              position: "relative",
+              height: 14,
+              gridTemplateColumns: "repeat(8,1fr)",
+            }}
+          >
+            {Array.from({ length: 9 }).map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  position: "absolute",
+                  left: `${(index / 8) * 100}%`,
+                  top: 0,
+                  width: 1,
+                  height: 12,
+                  background: "#d1d5db",
+                  transform: "translateX(-0.5px)",
+                }}
+              />
+            ))}
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                borderTop: "1px solid #d1d5db",
+              }}
+            />
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(9,1fr)",
+              color: "#374151",
+              fontSize: 13,
+              fontWeight: 800,
+              marginTop: 2,
+            }}
+          >
+            {axisTicks.map((tick, index) => (
+              <span
+                key={`${tick}-${index}`}
+                style={{
+                  textAlign:
+                    index === 0
+                      ? "left"
+                      : index === axisTicks.length - 1
+                        ? "right"
+                        : "center",
+                }}
+              >
+                {formatAxisTick(tick)}
+              </span>
+            ))}
+          </div>
+          <div
+            style={{
+              textAlign: "center",
+              color: "#6b7280",
+              fontSize: 13,
+              fontWeight: 700,
+              marginTop: 12,
+            }}
+          >
+            Number of People
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ── Health Gauge (orange arc) ─────────────────────────────────────────────────
 const HealthGauge = ({ pct = 0 }) => {
   const r = 40,
     cx = 55,
-    cy = 55;
-  const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
+    cy = 55
+  const circ = 2 * Math.PI * r
+  const dash = (pct / 100) * circ
   return (
     <svg width={110} height={110} viewBox="0 0 110 110">
       <circle
@@ -403,43 +898,8 @@ const HealthGauge = ({ pct = 0 }) => {
         {pct}%
       </text>
     </svg>
-  );
-};
-
-// ── Progress Bar ──────────────────────────────────────────────────────────────
-const Progress = ({ pct }) => (
-  <div style={{ marginTop: 12 }}>
-    <div
-      style={{
-        height: 8,
-        background: "#e5e7eb",
-        borderRadius: 99,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          width: `${pct}%`,
-          height: "100%",
-          background: "linear-gradient(90deg,#2e7d32,#66bb6a)",
-          borderRadius: 99,
-          transition: "width 1.4s cubic-bezier(.22,.68,0,1)",
-        }}
-      />
-    </div>
-    <div
-      style={{
-        fontSize: 12,
-        color: "#2e7d32",
-        fontWeight: 700,
-        marginTop: 6,
-        textAlign: "center",
-      }}
-    >
-      {pct}% Complete
-    </div>
-  </div>
-);
+  )
+}
 
 // ── Inline Icons ──────────────────────────────────────────────────────────────
 const IcoStove = () => (
@@ -456,7 +916,7 @@ const IcoStove = () => (
     <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
     <polyline points="9 22 9 12 15 12 15 22" />
   </svg>
-);
+)
 const IcoCredit = () => (
   <svg
     width={20}
@@ -471,7 +931,23 @@ const IcoCredit = () => (
     <rect x="2" y="5" width="20" height="14" rx="2" />
     <line x1="2" y1="10" x2="22" y2="10" />
   </svg>
-);
+)
+const IcoReduction = () => (
+  <svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#2e7d32"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2v20" />
+    <path d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6" />
+    <path d="M19 14l3 3-3 3" />
+  </svg>
+)
 const IcoPeople = () => (
   <svg
     width={20}
@@ -488,17 +964,17 @@ const IcoPeople = () => (
     <path d="M23 21v-2a4 4 0 00-3-3.87" />
     <path d="M16 3.13a4 4 0 010 7.75" />
   </svg>
-);
+)
 
 // ── Top Stat Card ─────────────────────────────────────────────────────────────
 const StatCard = ({
   icon: Icon,
   label,
   mainValue,
+  mainSuffix,
+  recentValue,
+  recentLabel = "In the Last 3 months",
   loading,
-  subLabel,
-  subValue,
-  extra,
 }) => (
   <Panel style={{ border: "1.5px solid #e8f5e9" }}>
     <div
@@ -521,7 +997,7 @@ const StatCard = ({
           flexShrink: 0,
         }}
       >
-        <Icon />
+        {React.createElement(Icon)}
       </div>
       <span
         style={{
@@ -535,143 +1011,125 @@ const StatCard = ({
         {label}
       </span>
     </div>
-    <div
-      style={{
-        fontSize: "clamp(22px,2.8vw,32px)",
-        fontWeight: 900,
-        color: "#111827",
-        lineHeight: 1,
-        fontFamily: "'DM Mono',monospace",
-        marginBottom: 4,
-      }}
-    >
-      {loading ? <Sk w={100} h={30} /> : mainValue}
-    </div>
-    {extra}
-    {subLabel && (
-      <div style={{ marginTop: 10 }}>
-        <div
+    {loading ? (
+      <div style={{ textAlign: "center", margin: "18px 0 22px" }}>
+        <Sk w={120} h={38} />
+      </div>
+    ) : (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "center",
+          gap: 8,
+          flexWrap: "wrap",
+          textAlign: "center",
+          margin: "18px 0 22px",
+        }}
+      >
+        <span
           style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "#6b7280",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            marginBottom: 3,
-          }}
-        >
-          {subLabel}
-        </div>
-        <div
-          style={{
-            fontSize: "clamp(16px,2vw,22px)",
-            fontWeight: 800,
-            color: "#2e7d32",
+            fontSize: "clamp(26px,3.2vw,38px)",
+            fontWeight: 900,
+            color: "#35c96d",
+            lineHeight: 1,
             fontFamily: "'DM Mono',monospace",
+            letterSpacing: 0,
           }}
         >
-          {loading ? <Sk w={70} h={20} /> : subValue}
-        </div>
+          {mainValue}
+        </span>
+        {mainSuffix && (
+          <span
+            style={{
+              fontSize: "clamp(12px,1.2vw,16px)",
+              fontWeight: 900,
+              color: "#111827",
+              lineHeight: 1.1,
+              textAlign: "left",
+            }}
+          >
+            {mainSuffix}
+          </span>
+        )}
+      </div>
+    )}
+    {recentValue != null && (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "center",
+          gap: 8,
+          flexWrap: "wrap",
+          color: "#4a4a4a",
+          fontSize: "clamp(11px,1vw,13px)",
+          fontWeight: 700,
+          lineHeight: 1.25,
+        }}
+      >
+        <span style={{ color: "#35c96d", fontWeight: 800 }}>
+          {loading ? <Sk w={58} h={16} /> : recentValue}
+        </span>
+        <span>{recentLabel}</span>
       </div>
     )}
   </Panel>
-);
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN CustomerDashboard
 // ─────────────────────────────────────────────────────────────────────────────
 const CustomerDashboard = () => {
-  const width = useWindowWidth();
-  const isMobile = width < 640;
+  const width = useWindowWidth()
+  const isMobile = width < 640
   const userName =
     (typeof localStorage !== "undefined" && localStorage.getItem("userName")) ||
-    "Customer";
+    "Customer"
+  const userRole =
+    (typeof localStorage !== "undefined" && localStorage.getItem("role")) || ""
+  const customerId = getStoredCustomerId()
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [loading, setLoading] = useState(true);
-  const [benCount, setBenCount] = useState(null);
-  const [allBens, setAllBens] = useState([]);
-  const [allMonitoring, setAllMonitoring] = useState([]);
-  const [allSites, setAllSites] = useState([]); // from /training-site/list
-  const [monthlyBars, setMonthlyBars] = useState([]);
+  const [loading, setLoading] = useState(true)
+  const [allBens, setAllBens] = useState([])
+  const [allMonitoring, setAllMonitoring] = useState([])
+  const [monthlyBars, setMonthlyBars] = useState([])
 
-  // ── Fetch ALL data ─────────────────────────────────────────────────────────
+  // ── Fetch dashboard data ───────────────────────────────────────────────────
   useEffect(() => {
-    (async () => {
-      setLoading(true);
+    ;(async () => {
+      setLoading(true)
       try {
-        const [bCnt, bBulk, mBulk, sBulk] = await Promise.allSettled([
-          // ── API 1: Beneficiary count (cheap — limit:1) ──────────────────────
-          // Used for: Cookstove Deployed number + progress bar
-          axios.post(
-            `${API_BASE_URL}/beneficiary/list`,
-            { filters: [] },
-            { params: { page: 1, limit: 1 } },
-          ),
-
-          // ── API 2: All beneficiary records ─────────────────────────────────
-          // Used for:
-          //   • females_above_18 + females_below_18 → Gender Distribution donut
-          //   • males_above_18 + males_below_18     → Gender Distribution donut
-          //   • created_date                         → Monthly carbon credits bar
-          //   • created_date                         → Sparkline trend line
-          //   • national_id (unique count)           → Households fallback
+        const [bBulk, mBulk] = await Promise.allSettled([
+          // Beneficiary records drive all visible customer dashboard metrics.
           axios.post(
             `${API_BASE_URL}/beneficiary/list`,
             { filters: [] },
             { params: { page: 1, limit: 100000 } },
           ),
 
-          // ── API 3: All monitoring records ───────────────────────────────────
-          // Used for:
-          //   • health_better_air === "yes"  → Health gauge percentage
-          //   • savings_3_months             → Economic avg savings (MWK)
-          //   • est_fuel_last3meals_kg       → Environmental avg wood saved (kg)
-          axios.post(
-            `${API_BASE_URL}/monitoring/list`,
-            { filters: [] },
-            { params: { page: 1, limit: 100000 } },
-          ),
-
-          // ── API 4: All training-site records ────────────────────────────────
-          // Used for:
-          //   • total_people      → "People Impacted" (sum of all sites)
-          //   • house_holds_count → "Households" (sum of all sites)
-          //
-          // NOTE: If this API returns empty or 0, the dashboard falls back to
-          // beneficiary totalRecords for People Impacted and unique national_ids
-          // for Households. Make sure your backend populates these fields.
-          axios.post(
-            `${API_BASE_URL}/training-site/list`,
-            { filters: [] },
-            { params: { page: 1, limit: 100000 } },
-          ),
-        ]);
-
-        // ── Process API 1: beneficiary count ────────────────────────────────
-        const benTotal =
-          bCnt.status === "fulfilled"
-            ? (bCnt.value.data?.totalRecords ?? 0)
-            : 0;
-        setBenCount(benTotal);
-
-        // ── Process API 2: all beneficiary records ───────────────────────────
-        const bens =
-          bBulk.status === "fulfilled" ? (bBulk.value.data?.data ?? []) : [];
-        setAllBens(bens);
-
-        // ── Process API 3: all monitoring records ────────────────────────────
-        const mons =
-          mBulk.status === "fulfilled" ? (mBulk.value.data?.data ?? []) : [];
-        setAllMonitoring(mons);
-
-        // ── Process API 4: all training-site records ─────────────────────────
-        const sites =
-          sBulk.status === "fulfilled" ? (sBulk.value.data?.data ?? []) : [];
-        setAllSites(sites);
+          // Kept ready for the hidden Environmental, Economic, and Health cards.
+          SHOW_MONITORING_CARDS
+            ? axios.post(
+                `${API_BASE_URL}/monitoring/list`,
+                { filters: [] },
+                { params: { page: 1, limit: 100000 } },
+              )
+            : Promise.resolve({ data: { data: [] } }),
+        ])
+        const bens = scopeRowsForCustomer(
+          bBulk.status === "fulfilled" ? (bBulk.value.data?.data ?? []) : [],
+          userRole,
+          customerId,
+        )
+        setAllBens(bens)
+        setAllMonitoring(
+          mBulk.status === "fulfilled" ? (mBulk.value.data?.data ?? []) : [],
+        )
 
         // ── Build last-5-months carbon credits bar chart ─────────────────────
-        // Groups beneficiary registrations by month → multiplies by CREDITS_PER_STOVE
+        // Groups all cookstove deployments by month → multiplies by CREDITS_PER_STOVE
         const MONTHS = [
           "Jan",
           "Feb",
@@ -685,113 +1143,135 @@ const CustomerDashboard = () => {
           "Oct",
           "Nov",
           "Dec",
-        ];
-        const now = new Date();
+        ]
+        const now = new Date()
         const bars = Array.from({ length: 5 }, (_, i) => {
-          const d = new Date(now.getFullYear(), now.getMonth() - (4 - i), 1);
-          const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+          const d = new Date(now.getFullYear(), now.getMonth() - (4 - i), 1)
+          const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1)
           const cnt = bens.filter((r) => {
-            if (!r.created_date) return false;
-            const rd = new Date(r.created_date);
-            return rd >= d && rd < nd;
-          }).length;
+            const dateValue = getDeploymentDate(r)
+            if (!dateValue) return false
+            const rd = new Date(dateValue)
+            return rd >= d && rd < nd
+          }).length
           return {
             l: MONTHS[d.getMonth()],
-            v: Math.round(cnt * CREDITS_PER_STOVE),
-          };
-        });
-        setMonthlyBars(bars);
+            v: Number((cnt * CREDITS_PER_STOVE).toFixed(2)),
+          }
+        })
+        setMonthlyBars(bars)
       } catch (e) {
-        console.error("CustomerDashboard fetch error:", e);
+        console.error("CustomerDashboard fetch error:", e)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    })();
-  }, []);
+    })()
+  }, [customerId, userRole])
 
   // ── All derived values computed from API data ──────────────────────────────
 
-  const deployed = benCount ?? 0;
-  const pct = Math.min(Math.round((deployed / COOKSTOVE_TARGET) * 100), 100);
-  const totalCredits = deployed * CREDITS_PER_STOVE;
+  const totalCookstovesDeployed = allBens.length
+  const totalCredits = totalCookstovesDeployed * CREDITS_PER_STOVE
+  const estimatedTco2eReduction = totalCredits
 
-  // This-month vs last-month % badge (from beneficiary created_date)
-  const now = new Date();
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const thisMonthCnt = allBens.filter(
-    (r) => r.created_date && new Date(r.created_date) >= thisMonthStart,
-  ).length;
-  const prevMonthCnt = allBens.filter((r) => {
-    if (!r.created_date) return false;
-    const d = new Date(r.created_date);
-    return d >= prevMonthStart && d < thisMonthStart;
-  }).length;
-  const creditsPct =
-    prevMonthCnt > 0
-      ? Math.round(((thisMonthCnt - prevMonthCnt) / prevMonthCnt) * 100)
-      : null;
-
-  // ── People Impacted & Households ──────────────────────────────────────────
-  // Primary source: training-site API (total_people, house_holds_count)
-  // Fallback: beneficiary count & unique national_ids
-  const sitesPeopleTotal = allSites.reduce(
-    (s, r) => s + (Number(r.total_people) || 0),
+  // Last 3 months totals use beneficiary created_date.
+  const now = new Date()
+  const last3MonthsStart = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+  const deployedLast3Months = allBens.filter((r) => {
+    const dateValue = getDeploymentDate(r)
+    return dateValue && new Date(dateValue) >= last3MonthsStart
+  }).length
+  // ── People Impacted ───────────────────────────────────────────────────────
+  // Formula: sum all family members for the cookstove households.
+  const peopleImpacted = allBens.reduce(
+    (sum, row) => sum + householdMembers(row),
     0,
-  );
-  const sitesHouseholdsTotal = allSites.reduce(
-    (s, r) => s + (Number(r.house_holds_count) || 0),
-    0,
-  );
-
-  const peopleImpacted = sitesPeopleTotal > 0 ? sitesPeopleTotal : deployed; // fallback: 1 person per stove
-
-  const householdsCount =
-    sitesHouseholdsTotal > 0
-      ? sitesHouseholdsTotal
-      : new Set(
-          allBens
-            .map((r) => r.national_id)
-            .filter((id) => id && id !== "-" && id !== ""),
-        ).size || deployed;
+  )
 
   // ── Gender Distribution (from beneficiary females/males fields) ────────────
   const femaleCount = allBens.reduce(
     (s, r) =>
       s + (Number(r.females_above_18) || 0) + (Number(r.females_below_18) || 0),
     0,
-  );
+  )
   const maleCount = allBens.reduce(
     (s, r) =>
       s + (Number(r.males_above_18) || 0) + (Number(r.males_below_18) || 0),
     0,
-  );
-  const genderTot = femaleCount + maleCount || 1;
-  const femalePct = Math.round((femaleCount / genderTot) * 100);
+  )
+  const demographicRows = [
+    {
+      leftLabel: "Girls (<18)",
+      leftSubLabel: "Children",
+      leftIcon: <DemographicIcon age="child" gender="female" />,
+      leftValue: allBens.reduce(
+        (sum, row) => sum + toNum(row.females_below_18),
+        0,
+      ),
+      rightLabel: "Boys (<18)",
+      rightSubLabel: "Children",
+      rightIcon: <DemographicIcon age="child" gender="male" />,
+      rightValue: allBens.reduce(
+        (sum, row) => sum + toNum(row.males_below_18),
+        0,
+      ),
+    },
+    {
+      leftLabel: "Adult Women (18+)",
+      leftSubLabel: "Adults",
+      leftIcon: <DemographicIcon age="adult" gender="female" />,
+      leftValue: allBens.reduce(
+        (sum, row) => sum + toNum(row.females_above_18),
+        0,
+      ),
+      rightLabel: "Adult Men (18+)",
+      rightSubLabel: "Adults",
+      rightIcon: <DemographicIcon age="adult" gender="male" />,
+      rightValue: allBens.reduce(
+        (sum, row) => sum + toNum(row.males_above_18),
+        0,
+      ),
+    },
+  ]
+  const genderTot = femaleCount + maleCount || 1
+  const femalePct = Math.round((femaleCount / genderTot) * 100)
 
-  // ── Health (from monitoring.health_better_air) ────────────────────────────
-  const monTot = allMonitoring.length || 1;
+  // ── Hidden Monitoring Cards: keep calculations ready for later ────────────
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const thisMonthCnt = allBens.filter((r) => {
+    const dateValue = getDeploymentDate(r)
+    return dateValue && new Date(dateValue) >= thisMonthStart
+  }).length
+  const prevMonthCnt = allBens.filter((r) => {
+    const dateValue = getDeploymentDate(r)
+    if (!dateValue) return false
+    const d = new Date(dateValue)
+    return d >= prevMonthStart && d < thisMonthStart
+  }).length
+  const creditsPct =
+    prevMonthCnt > 0
+      ? Math.round(((thisMonthCnt - prevMonthCnt) / prevMonthCnt) * 100)
+      : null
+
+  const monTot = allMonitoring.length || 1
   const betterAirCnt = allMonitoring.filter(
     (r) => r.health_better_air === "yes" || r.health_better_air === true,
-  ).length;
-  const healthPct = Math.round((betterAirCnt / monTot) * 100);
+  ).length
+  const healthPct = Math.round((betterAirCnt / monTot) * 100)
 
-  // ── Economic (from monitoring.savings_3_months) ───────────────────────────
-  const monWithSav = allMonitoring.filter(
-    (r) => Number(r.savings_3_months) > 0,
-  );
+  const monWithSav = allMonitoring.filter((r) => Number(r.savings_3_months) > 0)
   const avgSavings =
     monWithSav.length > 0
       ? Math.round(
           monWithSav.reduce((s, r) => s + Number(r.savings_3_months), 0) /
             monWithSav.length,
         )
-      : AVG_SAVINGS_MWK;
+      : AVG_SAVINGS_MWK
 
-  // ── Environmental (from monitoring.est_fuel_last3meals_kg) ────────────────
   const monWithFuel = allMonitoring.filter(
     (r) => Number(r.est_fuel_last3meals_kg) > 0,
-  );
+  )
   const avgWoodKg =
     monWithFuel.length > 0
       ? (
@@ -800,24 +1280,26 @@ const CustomerDashboard = () => {
             0,
           ) / monWithFuel.length
         ).toFixed(2)
-      : AVG_WOOD_KG;
+      : AVG_WOOD_KG
 
-  // Trees saved — formula: deployed stoves × rate × 12 months (or fallback)
   const treesPerMonth =
-    deployed > 0
-      ? Math.max(Math.round(deployed * 0.00076 * 12), TREES_FALLBACK)
-      : TREES_FALLBACK;
+    totalCookstovesDeployed > 0
+      ? Math.max(
+          Math.round(totalCookstovesDeployed * 0.00076 * 12),
+          TREES_FALLBACK,
+        )
+      : TREES_FALLBACK
 
-  // ── Sparkline (monthly beneficiary registrations, last 6 months) ──────────
   const sparkData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1)
     return allBens.filter((r) => {
-      if (!r.created_date) return false;
-      const rd = new Date(r.created_date);
-      return rd >= d && rd < nd;
-    }).length;
-  });
+      const dateValue = getDeploymentDate(r)
+      if (!dateValue) return false
+      const rd = new Date(dateValue)
+      return rd >= d && rd < nd
+    }).length
+  })
 
   // ── CSV download handlers ──────────────────────────────────────────────────
   const dlGender = () =>
@@ -828,7 +1310,20 @@ const CustomerDashboard = () => {
         ["Male", maleCount],
       ],
       "gender_distribution.csv",
-    );
+    )
+  const dlDemographics = () =>
+    csvDL(
+      [
+        ["Female Group", "Female Count", "Male Group", "Male Count"],
+        ...demographicRows.map((row) => [
+          row.leftLabel,
+          row.leftValue,
+          row.rightLabel,
+          row.rightValue,
+        ]),
+      ],
+      "household_demographic_impact.csv",
+    )
   const dlEnv = () =>
     csvDL(
       [
@@ -837,7 +1332,7 @@ const CustomerDashboard = () => {
         ["Trees Saved/Month", treesPerMonth],
       ],
       "environmental.csv",
-    );
+    )
   const dlEcon = () =>
     csvDL(
       [
@@ -845,7 +1340,7 @@ const CustomerDashboard = () => {
         ["Avg 3-Month Savings (MWK)", avgSavings],
       ],
       "economic.csv",
-    );
+    )
   const dlHealth = () =>
     csvDL(
       [
@@ -853,20 +1348,20 @@ const CustomerDashboard = () => {
         ["Reporting Better Air Quality (%)", healthPct],
       ],
       "health.csv",
-    );
+    )
   const dlCarbon = () =>
     csvDL(
       [["Month", "Carbon Credits"], ...monthlyBars.map((d) => [d.l, d.v])],
       "carbon_credits.csv",
-    );
+    )
 
   // ── Responsive layout ──────────────────────────────────────────────────────
-  const heroPad = isMobile ? "20px 16px 22px" : "28px 28px 30px";
-  const contentPad = isMobile ? "14px 12px 40px" : "20px 20px 48px";
-  const col3 =
-    width >= 900 ? "repeat(3,1fr)" : width >= 560 ? "repeat(2,1fr)" : "1fr";
-  const col2 = width >= 820 ? "1fr 1fr" : "1fr";
-  const colBot = width >= 860 ? "1.3fr 1fr" : "1fr";
+  const heroPad = isMobile ? "20px 16px 22px" : "28px 28px 30px"
+  const contentPad = isMobile ? "14px 12px 40px" : "20px 20px 48px"
+  const col4 =
+    width >= 1100 ? "repeat(4,1fr)" : width >= 640 ? "repeat(2,1fr)" : "1fr"
+  const col2 = width >= 820 ? "1fr 1fr" : "1fr"
+  const colDemoCarbon = width >= 1024 ? "7fr 3fr" : "1fr"
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -929,11 +1424,11 @@ const CustomerDashboard = () => {
 
         {/* ── Main Content ──────────────────────────────────────────────── */}
         <div style={{ padding: contentPad }}>
-          {/* ── ROW 1: TOP 3 STAT CARDS ─────────────────────────────────── */}
+          {/* ── ROW 1: TOP 4 STAT CARDS ─────────────────────────────────── */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: col3,
+              gridTemplateColumns: col4,
               gap: isMobile ? 10 : 16,
               marginBottom: 20,
             }}
@@ -941,62 +1436,70 @@ const CustomerDashboard = () => {
             {/* Card 1 — Cookstove Deployed (API 1: /beneficiary/list totalRecords) */}
             <StatCard
               icon={IcoStove}
-              label="Cookstove Deployed"
+              label="Total Cookstoves Deployed"
               loading={loading}
-              mainValue={fmt(deployed)}
-              extra={<Progress pct={pct} />}
+              mainValue={fmtSpace(totalCookstovesDeployed)}
+              recentValue={fmtSpace(deployedLast3Months)}
             />
 
             {/* Card 2 — Total Credits (calculated: deployed × CREDITS_PER_STOVE) */}
             <StatCard
               icon={IcoCredit}
-              label="Total Credits"
+              label="Total Carbon Credits"
               loading={loading}
-              mainValue={fmtDec(totalCredits, 2)}
-              extra={
-                !loading && creditsPct != null ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      fontSize: 12,
-                      marginTop: 8,
-                    }}
-                  >
-                    <TrendingUp size={13} color="#2e7d32" />
-                    <span style={{ color: "#2e7d32", fontWeight: 700 }}>
-                      {creditsPct >= 0 ? "+" : ""}
-                      {creditsPct}%
-                    </span>
-                    <span style={{ color: "#9ca3af" }}>vs last month</span>
-                  </div>
-                ) : null
-              }
+              mainValue={fmtDecSpace(totalCredits, 2)}
             />
 
-            {/* Card 3 — People Impacted (API 4: training-site total_people) + Households (house_holds_count) */}
+            {/* Card 3 — Estimated tCO2e reduction (carbon credits expressed as tCO2e) */}
+            <StatCard
+              icon={IcoReduction}
+              label="Estimated tCO2e reduction"
+              loading={loading}
+              mainValue={fmtSpace(Math.round(estimatedTco2eReduction))}
+              mainSuffix="tCO2e/year"
+            />
+
+            {/* Card 4 — People Impacted (API 4: training-site total_people) + Households (house_holds_count) */}
             <StatCard
               icon={IcoPeople}
-              label="People Impacted"
+              label="Total People Impacted"
               loading={loading}
-              mainValue={fmt(peopleImpacted)}
-              subLabel="Households"
-              subValue={fmt(householdsCount)}
+              mainValue={fmtSpace(peopleImpacted)}
+              recentValue={fmtSpace(totalCookstovesDeployed)}
+              recentLabel="Verified Households"
             />
           </div>
 
-          {/* ── ROW 2: Gender Distribution + Environmental ───────────────── */}
+          {/* ── ROW 2: Household Demographic Impact + Carbon Credits ─────── */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: col2,
+              gridTemplateColumns: colDemoCarbon,
               gap: 16,
               marginBottom: 16,
             }}
           >
-            {/* Gender Distribution (API 2: beneficiary females_above_18, females_below_18, males_above_18, males_below_18) */}
-            <Panel delay={80}>
+            <Panel delay={70} style={{ padding: "26px 24px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  marginBottom: 8,
+                }}
+              >
+                <PTitle>Household Demographic Impact</PTitle>
+                <DLBtn onClick={dlDemographics} />
+              </div>
+              {loading ? (
+                <Sk w="100%" h={320} />
+              ) : (
+                <HouseholdDemographicChart rows={demographicRows} />
+              )}
+            </Panel>
+
+            <Panel delay={100}>
               <div
                 style={{
                   display: "flex",
@@ -1060,211 +1563,206 @@ const CustomerDashboard = () => {
                 </div>
               </div>
             </Panel>
+          </div>
 
-            {/* Environmental (API 3: monitoring est_fuel_last3meals_kg) */}
-            <Panel delay={120}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <PTitle>Environmental</PTitle>
-                <DLBtn onClick={dlEnv} />
-              </div>
-              <div
-                style={{ display: "flex", gap: 14, alignItems: "flex-start" }}
-              >
-                {/* Metric boxes */}
+          {SHOW_MONITORING_CARDS && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: col2,
+                gap: 16,
+                marginBottom: 16,
+              }}
+            >
+              <Panel delay={120}>
                 <div
                   style={{
                     display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                    flex: "0 0 auto",
-                    width: "55%",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                   }}
+                >
+                  <PTitle>Environmental</PTitle>
+                  <DLBtn onClick={dlEnv} />
+                </div>
+                <div
+                  style={{ display: "flex", gap: 14, alignItems: "flex-start" }}
                 >
                   <div
                     style={{
-                      background: "#f9fafb",
-                      borderRadius: 10,
-                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                      flex: "0 0 auto",
+                      width: "55%",
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 18,
-                        fontWeight: 800,
-                        color: "#111827",
-                        fontFamily: "'DM Mono',monospace",
-                        whiteSpace: "nowrap",
+                        background: "#f9fafb",
+                        borderRadius: 10,
+                        padding: "14px 16px",
                       }}
                     >
-                      {loading ? <Sk w={70} h={20} /> : `${avgWoodKg} KG`}
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 800,
+                          color: "#111827",
+                          fontFamily: "'DM Mono',monospace",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {loading ? <Sk w={70} h={20} /> : `${avgWoodKg} KG`}
+                      </div>
+                      <div
+                        style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}
+                      >
+                        Avg Wood Saved / Month
+                      </div>
                     </div>
                     <div
-                      style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}
+                      style={{
+                        background: "#f9fafb",
+                        borderRadius: 10,
+                        padding: "14px 16px",
+                      }}
                     >
-                      Avg Wood Saved / Month
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 800,
+                          color: "#111827",
+                          fontFamily: "'DM Mono',monospace",
+                        }}
+                      >
+                        {loading ? <Sk w={50} h={20} /> : fmt(treesPerMonth)}
+                      </div>
+                      <div
+                        style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}
+                      >
+                        Trees Saved per Month
+                      </div>
                     </div>
                   </div>
                   <div
                     style={{
-                      background: "#f9fafb",
-                      borderRadius: 10,
-                      padding: "14px 16px",
+                      flex: 1,
+                      minWidth: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      paddingTop: 4,
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 800,
-                        color: "#111827",
-                        fontFamily: "'DM Mono',monospace",
-                      }}
-                    >
-                      {loading ? <Sk w={50} h={20} /> : fmt(treesPerMonth)}
-                    </div>
-                    <div
-                      style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}
-                    >
-                      Trees Saved per Month
-                    </div>
+                    {loading ? (
+                      <Sk w={120} h={70} />
+                    ) : (
+                      <Spark
+                        data={sparkData}
+                        color="#2e7d32"
+                        w={Math.max(width >= 820 ? 130 : 100, 80)}
+                        h={70}
+                      />
+                    )}
+                    {!loading && creditsPct != null && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 12,
+                        }}
+                      >
+                        <TrendingUp size={12} color="#2e7d32" />
+                        <span style={{ color: "#2e7d32", fontWeight: 700 }}>
+                          {creditsPct >= 0 ? "+" : ""}
+                          {creditsPct}%
+                        </span>
+                        <span style={{ color: "#9ca3af" }}>vs Last Month</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {/* Sparkline */}
+              </Panel>
+
+              <Panel delay={160}>
                 <div
                   style={{
-                    flex: 1,
-                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <PTitle>Economic</PTitle>
+                  <DLBtn onClick={dlEcon} />
+                </div>
+                <div
+                  style={{
+                    fontSize: "clamp(20px,2.5vw,28px)",
+                    fontWeight: 900,
+                    color: "#111827",
+                    fontFamily: "'DM Mono',monospace",
+                    marginBottom: 6,
+                  }}
+                >
+                  {loading ? <Sk w={120} h={28} /> : `${fmt(avgSavings)} MWK`}
+                </div>
+                <div style={{ fontSize: 13, color: "#6b7280" }}>
+                  Average 3-Month Savings
+                </div>
+              </Panel>
+
+              <Panel delay={200}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <PTitle>Health</PTitle>
+                  <DLBtn onClick={dlHealth} />
+                </div>
+                <div
+                  style={{
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
+                    gap: 6,
                     paddingTop: 4,
                   }}
                 >
                   {loading ? (
-                    <Sk w={120} h={70} />
+                    <Sk w={110} h={110} />
                   ) : (
-                    <Spark
-                      data={sparkData}
-                      color="#2e7d32"
-                      w={Math.max(width >= 820 ? 130 : 100, 80)}
-                      h={70}
-                    />
+                    <HealthGauge pct={healthPct} />
                   )}
-                  {!loading && creditsPct != null && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontSize: 12,
-                      }}
-                    >
-                      <TrendingUp size={12} color="#2e7d32" />
-                      <span style={{ color: "#2e7d32", fontWeight: 700 }}>
-                        {creditsPct >= 0 ? "+" : ""}
-                        {creditsPct}%
-                      </span>
-                      <span style={{ color: "#9ca3af" }}>vs Last Month</span>
-                    </div>
-                  )}
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "#6b7280",
+                      textAlign: "center",
+                      fontWeight: 500,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Reporting Better
+                    <br />
+                    Air Quality
+                  </div>
                 </div>
-              </div>
-            </Panel>
-          </div>
+              </Panel>
+            </div>
+          )}
 
-          {/* ── ROW 3: Economic + Health ─────────────────────────────────── */}
+          {/* ── ROW 3: Carbon Credits + Distribution Map ─────────────────── */}
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: col2,
-              gap: 16,
-              marginBottom: 16,
-            }}
+            style={{ display: "grid", gridTemplateColumns: col2, gap: 16 }}
           >
-            {/* Economic (API 3: monitoring.savings_3_months averaged) */}
-            <Panel delay={160}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <PTitle>Economic</PTitle>
-                <DLBtn onClick={dlEcon} />
-              </div>
-              <div
-                style={{
-                  fontSize: "clamp(20px,2.5vw,28px)",
-                  fontWeight: 900,
-                  color: "#111827",
-                  fontFamily: "'DM Mono',monospace",
-                  marginBottom: 6,
-                }}
-              >
-                {loading ? <Sk w={120} h={28} /> : `${fmt(avgSavings)} MWK`}
-              </div>
-              <div style={{ fontSize: 13, color: "#6b7280" }}>
-                Average 3-Month Savings
-              </div>
-            </Panel>
-
-            {/* Health (API 3: monitoring.health_better_air === "yes" percentage) */}
-            <Panel delay={200}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <PTitle>Health</PTitle>
-                <DLBtn onClick={dlHealth} />
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 6,
-                  paddingTop: 4,
-                }}
-              >
-                {loading ? (
-                  <Sk w={110} h={110} />
-                ) : (
-                  <HealthGauge pct={healthPct} />
-                )}
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "#6b7280",
-                    textAlign: "center",
-                    fontWeight: 500,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  Reporting Better
-                  <br />
-                  Air Quality
-                </div>
-              </div>
-            </Panel>
-          </div>
-
-          {/* ── ROW 4: Carbon Credits Bar + Distribution Map ─────────────── */}
-          <div
-            style={{ display: "grid", gridTemplateColumns: colBot, gap: 16 }}
-          >
-            {/* Carbon Credit Generated (API 2: beneficiary created_date grouped by month × CREDITS_PER_STOVE) */}
-            <Panel delay={240}>
+            <Panel delay={220}>
               <div
                 style={{
                   display: "flex",
@@ -1295,7 +1793,7 @@ const CustomerDashboard = () => {
             </Panel>
 
             {/* Distribution Map (static OpenStreetMap embed — Malawi region) */}
-            <Panel delay={280}>
+            <Panel delay={260}>
               <div
                 style={{
                   display: "flex",
@@ -1381,7 +1879,7 @@ const CustomerDashboard = () => {
         </div>
       </div>
     </>
-  );
-};
+  )
+}
 
-export default CustomerDashboard;
+export default CustomerDashboard
