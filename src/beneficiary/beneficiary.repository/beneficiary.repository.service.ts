@@ -393,6 +393,8 @@ ON tr.training_point_id = bf.training_site
 
       const sql = `
         SELECT bf.*,
+         cb.customer_id AS adminID,
+         cb.customer_id AS customer_id,
          tr.training_site AS training_site_name,
          d.district_name AS district_name,
       a.name AS created_by_name,
@@ -402,6 +404,9 @@ ON tr.training_point_id = bf.training_site
 ON tr.training_point_id = bf.training_site
         LEFT JOIN ab_district d
 ON tr.district = d.district_id
+        LEFT JOIN customer_beneficiaries cb
+ON cb.beneficiary_id = bf.beneficiary_id
+AND (cb.status IS NULL OR cb.status = 'active')
            LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
@@ -431,6 +436,8 @@ ON tr.district = d.district_id
 
       const sql = `
       SELECT bf.*,
+        cb.customer_id AS adminID,
+        cb.customer_id AS customer_id,
         tr.training_site AS training_site_name,
         d.district_name AS district_name,
       a.name AS created_by_name,
@@ -441,6 +448,9 @@ ON tr.district = d.district_id
 ON tr.training_point_id = bf.training_site
        LEFT JOIN ab_district d
 ON tr.district = d.district_id
+       LEFT JOIN customer_beneficiaries cb
+ON cb.beneficiary_id = bf.beneficiary_id
+AND (cb.status IS NULL OR cb.status = 'active')
        LEFT JOIN ab_admin a ON bf.created_by = a.adminID
       LEFT JOIN ab_admin a2 ON bf.modified_by = a2.adminID
         WHERE (bf.status IS NULL OR bf.status = 'active')
@@ -641,4 +651,3 @@ ON tr.district = d.district_id
   }
 
 }
-
