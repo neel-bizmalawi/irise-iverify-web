@@ -393,6 +393,20 @@ ON tr.training_point_id = bf.training_site
 
       const sql = `
         SELECT bf.*,
+         bf.training_site AS training_site_id,
+         tr.training_site AS training_site,
+         CASE
+          WHEN CAST(bf.latitude AS CHAR) REGEXP '^-?[0-9]+(\\.[0-9]+)?$'
+          AND CAST(bf.latitude AS DOUBLE) BETWEEN -90 AND 90
+          THEN CAST(bf.latitude AS DOUBLE)
+          ELSE NULL
+         END AS latitude,
+         CASE
+          WHEN CAST(bf.longitude AS CHAR) REGEXP '^-?[0-9]+(\\.[0-9]+)?$'
+          AND CAST(bf.longitude AS DOUBLE) BETWEEN -180 AND 180
+          THEN CAST(bf.longitude AS DOUBLE)
+          ELSE NULL
+         END AS longitude,
          cb.customer_id AS adminID,
          cb.customer_id AS customer_id,
          tr.training_site AS training_site_name,
@@ -436,6 +450,20 @@ AND (cb.status IS NULL OR cb.status = 'active')
 
       const sql = `
       SELECT bf.*,
+        bf.training_site AS training_site_id,
+        tr.training_site AS training_site,
+        CASE
+          WHEN CAST(bf.latitude AS CHAR) REGEXP '^-?[0-9]+(\\.[0-9]+)?$'
+          AND CAST(bf.latitude AS DOUBLE) BETWEEN -90 AND 90
+          THEN CAST(bf.latitude AS DOUBLE)
+          ELSE NULL
+        END AS latitude,
+        CASE
+          WHEN CAST(bf.longitude AS CHAR) REGEXP '^-?[0-9]+(\\.[0-9]+)?$'
+          AND CAST(bf.longitude AS DOUBLE) BETWEEN -180 AND 180
+          THEN CAST(bf.longitude AS DOUBLE)
+          ELSE NULL
+        END AS longitude,
         cb.customer_id AS adminID,
         cb.customer_id AS customer_id,
         tr.training_site AS training_site_name,
