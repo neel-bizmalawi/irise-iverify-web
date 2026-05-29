@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 import { API_BASE_URL } from "../../config"
+import "leaflet/dist/leaflet.css"
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet"
+import L from "leaflet"
 import {
   Baby,
   Download,
@@ -18,6 +27,13 @@ const AVG_SAVINGS_MWK = 3000 // fallback if no monitoring savings data
 const AVG_WOOD_KG = 4.53 // fallback if no monitoring fuel data
 const TREES_FALLBACK = 38 // fallback trees saved per month
 const SHOW_MONITORING_CARDS = false // keep Environmental, Economic, Health hidden for now
+const BENEFICIARY_MARKER_ICON = L.divIcon({
+  className: "beneficiary-map-marker",
+  html: `<span class="beneficiary-map-marker-pin"></span>`,
+  iconSize: [22, 28],
+  iconAnchor: [11, 28],
+  popupAnchor: [0, -26],
+})
 // ─────────────────────────────────────────────────────────────────────────────
 // APIs USED IN THIS DASHBOARD:
 //
@@ -52,6 +68,35 @@ const householdMembers = (row) =>
   toNum(row.males_below_18)
 
 const getDeploymentDate = (row) => row.distribution_date || row.created_date
+
+const toCoordinate = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : null
+}
+
+const getBeneficiaryLocations = (rows = []) => {
+  const mapped = rows
+    .map((row, index) => {
+      const lat = toCoordinate(row.latitude)
+      const lng = toCoordinate(row.longitude)
+      if (lat == null || lng == null) return null
+      return {
+        id: row.beneficiary_id ?? row.id ?? `beneficiary-${index}`,
+        name:
+          [row.first_name, row.last_name].filter(Boolean).join(" ") ||
+          row.name ||
+          "Beneficiary",
+        trainingSite:
+          row.training_site_name ?? row.training_site ?? row.training_site_id ?? null,
+        mobile: row.mobile_no ?? row.mobile ?? row.contact_no ?? null,
+        lat,
+        lng,
+      }
+    })
+    .filter(Boolean)
+
+  return mapped
+}
 
 const getStoredUser = () => {
   if (typeof localStorage === "undefined") return {}
@@ -332,12 +377,12 @@ const Spark = ({ data = [], color = "#2e7d32", w = 130, h = 70 }) => {
 }
 
 // ── Carbon Credits Bar Chart ──────────────────────────────────────────────────
-const CarbonBar = ({ data = [] }) => {
+const CarbonBar = ({ data = [], height = 220 }) => {
   if (!data.length)
     return (
       <div
         style={{
-          height: 150,
+          height,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -348,55 +393,76 @@ const CarbonBar = ({ data = [] }) => {
     )
   const max = Math.max(...data.map((d) => d.v), 1)
   const gridMax = Math.ceil(max / 20) * 20 || 80
+  const plotTop = 10
+  const labelHeight = 26
+  const axisWidth = 36
+  const plotHeight = height - plotTop - labelHeight
   const steps = [
     gridMax,
-    Math.round(gridMax * 0.6),
-    Math.round(gridMax * 0.3),
+    Math.round(gridMax * 0.67),
+    Math.round(gridMax * 0.33),
     0,
   ]
   return (
-    <div style={{ position: "relative", height: 160, paddingTop: 8 }}>
+    <div
+      style={{
+        position: "relative",
+        height,
+        minWidth: 0,
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
           position: "absolute",
           left: 0,
           right: 0,
-          top: 8,
-          bottom: 28,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
+          top: plotTop,
+          height: plotHeight,
           pointerEvents: "none",
         }}
       >
-        {steps.map((g, i) => (
-          <div
-            key={i}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <span
+        {steps.map((g) => {
+          const y = ((gridMax - g) / gridMax) * plotHeight
+          return (
+            <div
+              key={g}
               style={{
-                fontSize: 10,
-                color: "#9ca3af",
-                width: 22,
-                textAlign: "right",
-                flexShrink: 0,
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: y,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                transform: "translateY(-50%)",
               }}
             >
-              {Number(g).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </span>
-            <div style={{ flex: 1, borderTop: "1px dashed #e8f5e9" }} />
-          </div>
-        ))}
+              <span
+                style={{
+                  fontSize: 10,
+                  color: "#9ca3af",
+                  width: axisWidth - 8,
+                  textAlign: "right",
+                  flexShrink: 0,
+                }}
+              >
+                {Number(g).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </span>
+              <div style={{ flex: 1, borderTop: "1px dashed #e8f5e9" }} />
+            </div>
+          )
+        })}
       </div>
       <div
         style={{
           display: "flex",
-          alignItems: "flex-end",
-          gap: 14,
-          height: "100%",
-          paddingBottom: 28,
-          paddingLeft: 30,
+          alignItems: "end",
+          gap: 8,
+          height: plotHeight,
+          marginTop: plotTop,
+          marginLeft: axisWidth,
+          paddingRight: 4,
           position: "relative",
           zIndex: 1,
         }}
@@ -408,12 +474,13 @@ const CarbonBar = ({ data = [] }) => {
               key={i}
               style={{
                 display: "flex",
-                flexDirection: "column",
+                flexDirection: "row",
                 alignItems: "center",
                 flex: 1,
-                gap: 5,
+                alignSelf: "stretch",
                 height: "100%",
-                justifyContent: "flex-end",
+                justifyContent: "center",
+                position: "relative",
               }}
             >
               <div
@@ -421,16 +488,27 @@ const CarbonBar = ({ data = [] }) => {
                   maximumFractionDigits: 2,
                 })} credits`}
                 style={{
-                  width: "55%",
+                  width: "48%",
                   background: "#2e7d32",
                   borderRadius: "4px 4px 0 0",
                   height: `${pct}%`,
                   transition: "height 0.9s cubic-bezier(.22,.68,0,1.2)",
                   minWidth: 10,
+                  alignSelf: "flex-end",
                 }}
               />
               <span
-                style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  marginTop: 8,
+                  left: 0,
+                  right: 0,
+                  textAlign: "center",
+                  fontSize: 10,
+                  color: "#6b7280",
+                  whiteSpace: "nowrap",
+                }}
               >
                 {d.l}
               </span>
@@ -438,6 +516,86 @@ const CarbonBar = ({ data = [] }) => {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+const MapBounds = ({ points }) => {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!points.length) return
+    const bounds = points.map((point) => [point.lat, point.lng])
+    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 10 })
+  }, [map, points])
+
+  return null
+}
+
+const BeneficiaryMap = ({ rows = [], height = 240, scrollWheelZoom = false }) => {
+  const points = getBeneficiaryLocations(rows)
+  const center = points.length ? [points[0].lat, points[0].lng] : [-13.5, 34.3]
+
+  return (
+    <div
+      style={{
+        borderRadius: 10,
+        overflow: "hidden",
+        height,
+        background: "#e8f5e9",
+        position: "relative",
+      }}
+    >
+      {points.length ? (
+        <MapContainer
+          center={center}
+          zoom={7}
+          scrollWheelZoom={scrollWheelZoom}
+          style={{ width: "100%", height: "100%" }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapBounds points={points} />
+          {points.map((point) => (
+            <Marker
+              key={point.id}
+              position={[point.lat, point.lng]}
+              icon={BENEFICIARY_MARKER_ICON}
+            >
+              <Popup>
+                <div style={{ minWidth: 160 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                    {point.name}
+                  </div>
+                  <div>Beneficiary ID: {point.id}</div>
+                  {point.trainingSite && (
+                    <div>Training Site: {point.trainingSite}</div>
+                  )}
+                  {point.mobile && <div>Mobile: {point.mobile}</div>}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      ) : (
+        <div
+          style={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#166534",
+            fontSize: 13,
+            fontWeight: 800,
+            textAlign: "center",
+            padding: 18,
+          }}
+        >
+          No beneficiary locations available yet
+        </div>
+      )}
     </div>
   )
 }
@@ -1095,6 +1253,7 @@ const CustomerDashboard = () => {
   const [allBens, setAllBens] = useState([])
   const [allMonitoring, setAllMonitoring] = useState([])
   const [monthlyBars, setMonthlyBars] = useState([])
+  const [mapModalOpen, setMapModalOpen] = useState(false)
 
   // ── Fetch dashboard data ───────────────────────────────────────────────────
   useEffect(() => {
@@ -1370,6 +1529,28 @@ const CustomerDashboard = () => {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&family=DM+Mono:wght@400;500;600&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;}
         .cd-root{font-family:'DM Sans',sans-serif;background:#f0faf0;min-height:100vh;}
+        .beneficiary-map-marker{background:transparent;border:0;}
+        .beneficiary-map-marker-pin{
+          position:relative;
+          display:block;
+          width:18px;
+          height:18px;
+          background:#35c96d;
+          border:2px solid #166534;
+          border-radius:50% 50% 50% 0;
+          transform:rotate(-45deg);
+          box-shadow:0 2px 7px rgba(22,101,52,0.32);
+        }
+        .beneficiary-map-marker-pin::after{
+          content:"";
+          position:absolute;
+          width:6px;
+          height:6px;
+          left:4px;
+          top:4px;
+          border-radius:50%;
+          background:#fff;
+        }
         @keyframes cdShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         @keyframes cdRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
       `}</style>
@@ -1762,7 +1943,7 @@ const CustomerDashboard = () => {
           <div
             style={{ display: "grid", gridTemplateColumns: col2, gap: 16 }}
           >
-            <Panel delay={220}>
+            <Panel delay={220} style={{ minHeight: 316 }}>
               <div
                 style={{
                   display: "flex",
@@ -1786,7 +1967,7 @@ const CustomerDashboard = () => {
                 <DLBtn onClick={dlCarbon} />
               </div>
               {loading ? (
-                <Sk w="100%" h={160} />
+                <Sk w="100%" h={220} />
               ) : (
                 <CarbonBar data={monthlyBars} />
               )}
@@ -1803,81 +1984,102 @@ const CustomerDashboard = () => {
                 }}
               >
                 <PTitle>Distribution Map</PTitle>
-                <a
-                  href="https://www.openstreetmap.org/#map=7/-13.5/34.3"
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setMapModalOpen(true)}
+                  disabled={loading}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
                     fontSize: 11,
                     color: "#2e7d32",
-                    fontWeight: 700,
+                    fontWeight: 800,
                     textDecoration: "none",
                     background: "#e8f5e9",
                     padding: "4px 10px",
                     borderRadius: 6,
+                    border: "none",
+                    cursor: loading ? "not-allowed" : "pointer",
                   }}
                 >
                   Full Map ↗
-                </a>
+                </button>
               </div>
-              <div
-                style={{
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  height: 200,
-                  background: "#e8f5e9",
-                  position: "relative",
-                }}
-              >
-                <iframe
-                  title="Distribution Map"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=32.0,-17.5,36.5,-8.5&layer=mapnik&marker=-13.2543,34.3015"
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 10,
-                    right: 10,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
-                    zIndex: 10,
-                  }}
-                >
-                  {["+", "−"].map((s, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 26,
-                        height: 26,
-                        background: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 16,
-                        fontWeight: 700,
-                        color: "#374151",
-                        cursor: "pointer",
-                        borderRadius: i === 0 ? "4px 4px 0 0" : "0 0 4px 4px",
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-                      }}
-                    >
-                      {s}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {loading ? <Sk w="100%" h={240} /> : <BeneficiaryMap rows={allBens} />}
             </Panel>
           </div>
         </div>
       </div>
+      {mapModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full beneficiary distribution map"
+          onClick={() => setMapModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2000,
+            background: "rgba(17,24,39,0.58)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: isMobile ? 12 : 28,
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(1120px, 100%)",
+              maxHeight: "92vh",
+              background: "#fff",
+              borderRadius: 12,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.28)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                padding: "14px 16px",
+                borderBottom: "1px solid #e5e7eb",
+              }}
+            >
+              <PTitle>Distribution Map</PTitle>
+              <button
+                type="button"
+                onClick={() => setMapModalOpen(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  border: "none",
+                  borderRadius: 6,
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  lineHeight: 1,
+                }}
+                aria-label="Close full map"
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ padding: isMobile ? 10 : 16 }}>
+              <BeneficiaryMap
+                rows={allBens}
+                height={isMobile ? "72vh" : "76vh"}
+                scrollWheelZoom
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
