@@ -553,6 +553,8 @@ const AppLayoutInner = () => {
       localStorage.removeItem("token")
       localStorage.removeItem("role")
       localStorage.removeItem("userName")
+      localStorage.removeItem("user")
+      localStorage.removeItem("customerId")
       navigate("/login")
     }
   }
