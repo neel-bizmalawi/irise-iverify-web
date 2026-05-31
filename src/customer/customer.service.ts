@@ -7,6 +7,7 @@ import { CUSTOMER_FILTER_SCHEMA } from './customer.filter.schema';
 
 @Injectable()
 export class CustomerService {
+    private readonly carbonCreditPerCookstove = 8.6688;
 
     constructor(private readonly customerRepo: CustomerRepositoryService) {
 
@@ -264,6 +265,195 @@ export class CustomerService {
             console.error("getAllCustomer error", error)
 
             throw new InternalServerErrorException("Failed to get all customers",);
+        }
+    }
+
+    private getLastFiveMonths() {
+        const months: string[] = [];
+        const date = new Date();
+        date.setDate(1);
+
+        for (let i = 4; i >= 0; i--) {
+            const monthDate = new Date(date.getFullYear(), date.getMonth() - i, 1);
+            const month = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+            months.push(month);
+        }
+
+        return months;
+    }
+
+    async getDashboardSummary(userId: number, customerId?: number) {
+        try {
+            if (!userId) {
+                throw new BadRequestException("User id is missing");
+            }
+
+            const user = await this.customerRepo.getUserById(userId);
+
+            if (!user) {
+                throw new NotFoundException("User not found");
+            }
+
+            const userRole = String(user.role ?? '').toLowerCase();
+            const effectiveCustomerId = userRole === 'customer'
+                ? Number(user.adminID)
+                : customerId ? Number(customerId) : null;
+            const includeAllBeneficiaries = userRole !== 'customer' && !effectiveCustomerId;
+
+            const result = await this.customerRepo.getDashboardSummary(effectiveCustomerId, includeAllBeneficiaries);
+            const aggregate = result.aggregate;
+
+            const totalCookstovesDeployed = Number(aggregate.totalCookstovesDeployed ?? 0);
+            const girlsBelow18 = Number(aggregate.girlsBelow18 ?? 0);
+            const boysBelow18 = Number(aggregate.boysBelow18 ?? 0);
+            const adultWomen18Plus = Number(aggregate.adultWomen18Plus ?? 0);
+            const adultMen18Plus = Number(aggregate.adultMen18Plus ?? 0);
+            const totalCarbonCredits = Number((totalCookstovesDeployed * this.carbonCreditPerCookstove).toFixed(4));
+
+            const creditsByMonthMap = new Map<string, number>(
+                result.carbonCreditsByMonth.map((row) => [
+                    row.month,
+                    Number(row.beneficiaryCount ?? 0),
+                ]),
+            );
+
+            const carbonCreditsByMonth = this.getLastFiveMonths().map((month) => {
+                const beneficiaryCount = creditsByMonthMap.get(month) ?? 0;
+
+                return {
+                    month,
+                    beneficiaryCount,
+                    credits: Number((beneficiaryCount * this.carbonCreditPerCookstove).toFixed(4)),
+                    carbonCredits: Number((beneficiaryCount * this.carbonCreditPerCookstove).toFixed(4)),
+                };
+            });
+            const deployedLast3Months = carbonCreditsByMonth
+                .slice(-3)
+                .reduce((total, row) => total + row.beneficiaryCount, 0);
+
+            return {
+                scope: {
+                    role: user.role,
+                    customer_id: effectiveCustomerId,
+                    includesAllBeneficiaries: includeAllBeneficiaries,
+                },
+                totalCookstovesDeployed,
+                deployedLast3Months,
+                totalCarbonCredits,
+                estimatedTco2eReduction: totalCarbonCredits,
+                verifiedHouseholds: totalCookstovesDeployed,
+                mapLocationCount: Number(result.mapLocationCount ?? 0),
+                totalPeopleImpacted: girlsBelow18 + boysBelow18 + adultWomen18Plus + adultMen18Plus,
+                gender: {
+                    girlsBelow18,
+                    boysBelow18,
+                    adultWomen18Plus,
+                    adultMen18Plus,
+                },
+                carbonCreditsByMonth,
+            };
+        } catch (error) {
+            console.error("getDashboardSummary error", error);
+            throw error;
+        }
+    }
+
+    private getClusterGridSize(zoom: number) {
+        if (zoom < 5) return 1;
+        if (zoom < 8) return 0.5;
+        return 0.1;
+    }
+
+    async getMapLocations(userId: number, query: any) {
+        try {
+            if (!userId) {
+                throw new BadRequestException("User id is missing");
+            }
+
+            const user = await this.customerRepo.getUserById(userId);
+
+            if (!user) {
+                throw new NotFoundException("User not found");
+            }
+
+            const userRole = String(user.role ?? '').toLowerCase();
+            const effectiveCustomerId = userRole === 'customer'
+                ? Number(user.adminID)
+                : query.customer_id ? Number(query.customer_id) : null;
+
+            if (!effectiveCustomerId) {
+                return {
+                    mode: "none",
+                    totalInBounds: 0,
+                    returned: 0,
+                    isLimited: false,
+                    message: "Select a customer to view beneficiary locations",
+                    clusters: [],
+                    points: [],
+                };
+            }
+
+            const bounds = {
+                north: Number(query.north),
+                south: Number(query.south),
+                east: Number(query.east),
+                west: Number(query.west),
+            };
+            const zoom = Number(query.zoom);
+
+            if (
+                [bounds.north, bounds.south, bounds.east, bounds.west, zoom].some((value) => Number.isNaN(value)) ||
+                bounds.south > bounds.north ||
+                bounds.west > bounds.east
+            ) {
+                throw new BadRequestException("Invalid map bounds or zoom");
+            }
+
+            const totalInBounds = await this.customerRepo.getMapTotalInBounds(effectiveCustomerId, bounds);
+
+            if (zoom < 11) {
+                const clusters: any = await this.customerRepo.getMapClusters(
+                    effectiveCustomerId,
+                    bounds,
+                    this.getClusterGridSize(zoom),
+                );
+
+                return {
+                    mode: "clusters",
+                    totalInBounds,
+                    returned: clusters.length,
+                    isLimited: clusters.length >= 1000,
+                    clusters: clusters.map((cluster) => ({
+                        latitude: Number(cluster.latitude),
+                        longitude: Number(cluster.longitude),
+                        count: Number(cluster.count),
+                    })),
+                    points: [],
+                };
+            }
+
+            const pointLimit = query.limit ? Number(query.limit) : 1000;
+            const points: any = await this.customerRepo.getMapPoints(effectiveCustomerId, bounds, pointLimit);
+
+            return {
+                mode: "points",
+                totalInBounds,
+                returned: points.length,
+                isLimited: totalInBounds > points.length,
+                clusters: [],
+                points: points.map((point) => ({
+                    beneficiary_id: point.beneficiary_id,
+                    first_name: point.first_name,
+                    last_name: point.last_name,
+                    training_site_name: point.training_site_name,
+                    mobile_no: point.mobile_no,
+                    latitude: Number(point.latitude),
+                    longitude: Number(point.longitude),
+                })),
+            };
+        } catch (error) {
+            console.error("getMapLocations error", error);
+            throw error;
         }
     }
 }

@@ -17,7 +17,7 @@ import { CreateCustomerDto } from './customer.dto';
 import { UpdateCustomerDto } from './updatecustomer.dto';
 import { AuthGuard } from '@nestjs/passport';
 
-@Controller('customer')
+@Controller(['customer', 'api/customer'])
 export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
@@ -31,6 +31,29 @@ export class CustomerController {
   @Get('getAllCustomers')
   async getAllCustomers() {
     return this.customerService.getAll();
+  }
+
+  @Get('dashboard-summary')
+  @UseGuards(AuthGuard('jwt'))
+  async getDashboardSummary(
+    @Req() req: any,
+    @Query('customer_id') customerId?: string,
+  ) {
+    const userId = req.user.userId;
+    return this.customerService.getDashboardSummary(
+      userId,
+      customerId ? Number(customerId) : undefined,
+    );
+  }
+
+  @Get('map-locations')
+  @UseGuards(AuthGuard('jwt'))
+  async getMapLocations(
+    @Req() req: any,
+    @Query() query: any,
+  ) {
+    const userId = req.user.userId;
+    return this.customerService.getMapLocations(userId, query);
   }
 
   @Put('update_customer/:id')
