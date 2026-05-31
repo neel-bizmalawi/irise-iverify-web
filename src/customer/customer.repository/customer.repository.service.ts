@@ -16,6 +16,20 @@ export class CustomerRepositoryService {
   private readonly primaryKey = 'adminID';
   private readonly mappingTableName = 'customer_beneficiaries';
 
+  async getUserById(userId: number) {
+    const rows: any = await this.db.query(
+      `
+      SELECT adminID, name, email, role, status
+      FROM ${this.tableName}
+      WHERE ${this.primaryKey} = ?
+      LIMIT 1
+      `,
+      [userId],
+    );
+
+    return rows[0] ?? null;
+  }
+
   async insertCustomer(data: CreateCustomerDto, userId: number) {
     try {
       const { name, user_name, email, password, user_setting, status, mobile_number, timezone, beneficiary_count } = data;
@@ -564,5 +578,154 @@ export class CustomerRepositoryService {
       console.error("getAllCustomer DB error is" + error);
       throw error;
     }
+  }
+
+  private validCoordinateWhere(alias = 'bf') {
+    return `
+      AND CAST(${alias}.latitude AS CHAR) REGEXP '^-?[0-9]+(\\.[0-9]+)?$'
+      AND CAST(${alias}.longitude AS CHAR) REGEXP '^-?[0-9]+(\\.[0-9]+)?$'
+      AND CAST(${alias}.latitude AS DOUBLE) BETWEEN -90 AND 90
+      AND CAST(${alias}.longitude AS DOUBLE) BETWEEN -180 AND 180
+    `;
+  }
+
+  private dashboardFromWhere(customerId?: number | null, includeAllBeneficiaries = false) {
+    const scopedFromWhere = `
+      FROM ${this.mappingTableName} cb
+      INNER JOIN beneficiaries bf
+      ON bf.beneficiary_id = cb.beneficiary_id
+      WHERE (cb.status IS NULL OR cb.status = 'active')
+      AND (bf.status IS NULL OR bf.status = 'active')
+      ${customerId ? 'AND cb.customer_id = ?' : ''}
+    `;
+    const allFrom = `
+      FROM beneficiaries bf
+      WHERE (bf.status IS NULL OR bf.status = 'active')
+    `;
+    const fromClause = includeAllBeneficiaries ? allFrom : scopedFromWhere;
+    const values = !includeAllBeneficiaries && customerId ? [customerId] : [];
+
+    return { fromClause, values };
+  }
+
+  private mapFromWhere(customerId: number) {
+    return `
+      FROM ${this.mappingTableName} cb
+      INNER JOIN beneficiaries bf
+      ON bf.beneficiary_id = cb.beneficiary_id
+      LEFT JOIN training_sites tr
+      ON tr.training_point_id = bf.training_site
+      WHERE (cb.status IS NULL OR cb.status = 'active')
+      AND (bf.status IS NULL OR bf.status = 'active')
+      AND cb.customer_id = ?
+    `;
+  }
+
+  async getDashboardSummary(customerId?: number | null, includeAllBeneficiaries = false) {
+    const { fromClause, values } = this.dashboardFromWhere(customerId, includeAllBeneficiaries);
+
+    const aggregateRows: any = await this.db.query(
+      `
+      SELECT
+        COUNT(DISTINCT bf.beneficiary_id) AS totalCookstovesDeployed,
+        COALESCE(SUM(COALESCE(bf.females_below_18, 0)), 0) AS girlsBelow18,
+        COALESCE(SUM(COALESCE(bf.males_below_18, 0)), 0) AS boysBelow18,
+        COALESCE(SUM(COALESCE(bf.females_above_18, 0)), 0) AS adultWomen18Plus,
+        COALESCE(SUM(COALESCE(bf.males_above_18, 0)), 0) AS adultMen18Plus
+      ${fromClause}
+      `,
+      values,
+    );
+
+    const mapLocationCountRows: any = await this.db.query(
+      `
+      SELECT COUNT(DISTINCT bf.beneficiary_id) AS total
+      ${fromClause}
+      ${this.validCoordinateWhere('bf')}
+      `,
+      values,
+    );
+
+    const monthRows: any = await this.db.query(
+      `
+      SELECT
+        DATE_FORMAT(COALESCE(bf.distribution_date, bf.created_date), '%Y-%m') AS month,
+        COUNT(DISTINCT bf.beneficiary_id) AS beneficiaryCount
+      ${fromClause}
+      AND COALESCE(bf.distribution_date, bf.created_date) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 4 MONTH), '%Y-%m-01')
+      GROUP BY DATE_FORMAT(COALESCE(bf.distribution_date, bf.created_date), '%Y-%m')
+      ORDER BY month ASC
+      `,
+      values,
+    );
+
+    return {
+      aggregate: aggregateRows[0] ?? {},
+      mapLocationCount: mapLocationCountRows[0]?.total ?? 0,
+      carbonCreditsByMonth: monthRows,
+    };
+  }
+
+  async getMapTotalInBounds(customerId: number, bounds: any): Promise<number> {
+    const rows: any = await this.db.query(
+      `
+      SELECT COUNT(DISTINCT bf.beneficiary_id) AS total
+      ${this.mapFromWhere(customerId)}
+      ${this.validCoordinateWhere('bf')}
+      AND CAST(bf.latitude AS DOUBLE) BETWEEN ? AND ?
+      AND CAST(bf.longitude AS DOUBLE) BETWEEN ? AND ?
+      `,
+      [customerId, bounds.south, bounds.north, bounds.west, bounds.east],
+    );
+
+    return Number(rows[0]?.total ?? 0);
+  }
+
+  async getMapClusters(customerId: number, bounds: any, gridSize: number) {
+    const rows = await this.db.query(
+      `
+      SELECT
+        AVG(CAST(bf.latitude AS DOUBLE)) AS latitude,
+        AVG(CAST(bf.longitude AS DOUBLE)) AS longitude,
+        COUNT(DISTINCT bf.beneficiary_id) AS count
+      ${this.mapFromWhere(customerId)}
+      ${this.validCoordinateWhere('bf')}
+      AND CAST(bf.latitude AS DOUBLE) BETWEEN ? AND ?
+      AND CAST(bf.longitude AS DOUBLE) BETWEEN ? AND ?
+      GROUP BY
+        FLOOR(CAST(bf.latitude AS DOUBLE) / ?),
+        FLOOR(CAST(bf.longitude AS DOUBLE) / ?)
+      ORDER BY count DESC
+      LIMIT 1000
+      `,
+      [customerId, bounds.south, bounds.north, bounds.west, bounds.east, gridSize, gridSize],
+    );
+
+    return rows;
+  }
+
+  async getMapPoints(customerId: number, bounds: any, limit: number) {
+    const safeLimit = Math.min(Math.max(1, Number(limit)), 1000);
+    const rows = await this.db.query(
+      `
+      SELECT
+        bf.beneficiary_id,
+        bf.first_name,
+        bf.last_name,
+        tr.training_site AS training_site_name,
+        bf.mobile_no,
+        CAST(bf.latitude AS DOUBLE) AS latitude,
+        CAST(bf.longitude AS DOUBLE) AS longitude
+      ${this.mapFromWhere(customerId)}
+      ${this.validCoordinateWhere('bf')}
+      AND CAST(bf.latitude AS DOUBLE) BETWEEN ? AND ?
+      AND CAST(bf.longitude AS DOUBLE) BETWEEN ? AND ?
+      ORDER BY bf.beneficiary_id DESC
+      LIMIT ${safeLimit}
+      `,
+      [customerId, bounds.south, bounds.north, bounds.west, bounds.east],
+    );
+
+    return rows;
   }
 }
