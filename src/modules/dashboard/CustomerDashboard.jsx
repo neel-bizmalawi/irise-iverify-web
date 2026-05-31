@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import axios from "axios"
 import { API_BASE_URL } from "../../config"
 import "leaflet/dist/leaflet.css"
@@ -7,7 +7,7 @@ import {
   Marker,
   Popup,
   TileLayer,
-  useMap,
+  useMapEvents,
 } from "react-leaflet"
 import L from "leaflet"
 import {
@@ -34,17 +34,20 @@ const BENEFICIARY_MARKER_ICON = L.divIcon({
   iconAnchor: [11, 28],
   popupAnchor: [0, -26],
 })
+const getClusterMarkerIcon = (count) =>
+  L.divIcon({
+    className: "beneficiary-map-cluster",
+    html: `<span class="beneficiary-map-cluster-dot">${Number(count || 0).toLocaleString("en-US")}</span>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -18],
+  })
 // ─────────────────────────────────────────────────────────────────────────────
 // APIs USED IN THIS DASHBOARD:
 //
-//  1. POST /beneficiary/list  { filters:[] } ?page=1&limit=100000
-//     → total rows             → Total Cookstoves Deployed
-//     → total rows × CREDITS_PER_STOVE → Total Carbon Credits / Estimated tCO2e
-//     → household member fields → Total People Impacted
-//     → distribution_date/created_date → Carbon Credits bar chart (month × CREDITS_PER_STOVE)
-//     → distribution_date/created_date → Sparkline (monthly deployments)
-//     → data[].females_above_18, females_below_18,
-//        males_above_18, males_below_18  → Gender Distribution donut
+//  1. GET /customer/dashboard-summary
+//     → aggregated dashboard metrics, gender totals, carbon monthly bars,
+//       and map locations without loading the full beneficiary table.
 //
 //  2. POST /monitoring/list  { filters:[] } ?page=1&limit=100000
 //     → data[].health_better_air === "yes"  → Health gauge %
@@ -58,16 +61,6 @@ const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"))
 const fmtDec = (n, d) => (n == null ? "—" : Number(n).toFixed(d ?? 2))
 const fmtSpace = (n) => fmt(n).replace(/,/g, " ")
 const fmtDecSpace = (n, d) => fmtDec(n, d).replace(/,/g, " ")
-
-const toNum = (value) => Number(value) || 0
-
-const householdMembers = (row) =>
-  toNum(row.females_above_18) +
-  toNum(row.females_below_18) +
-  toNum(row.males_above_18) +
-  toNum(row.males_below_18)
-
-const getDeploymentDate = (row) => row.distribution_date || row.created_date
 
 const toCoordinate = (value) => {
   const n = Number(value)
@@ -98,64 +91,162 @@ const getBeneficiaryLocations = (rows = []) => {
   return mapped
 }
 
-const getStoredUser = () => {
-  if (typeof localStorage === "undefined") return {}
-  try {
-    return JSON.parse(localStorage.getItem("user") || "{}")
-  } catch {
-    return {}
+const getAuthConfig = () => {
+  const token =
+    typeof localStorage !== "undefined" ? localStorage.getItem("token") : null
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+}
+
+const normalizeMapClusters = (rows = []) =>
+  rows
+    .map((row, index) => {
+      const lat = toCoordinate(row.latitude)
+      const lng = toCoordinate(row.longitude)
+      if (lat == null || lng == null) return null
+      return {
+        id: row.id ?? `cluster-${index}`,
+        lat,
+        lng,
+        count: Number(row.count ?? row.total ?? 0),
+      }
+    })
+    .filter(Boolean)
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "April",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+]
+
+const parseMonthKey = (value) => {
+  const raw = String(value ?? "")
+  const match = raw.match(/^(\d{4})-(\d{1,2})/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  if (!Number.isFinite(year) || month < 1 || month > 12) return null
+  return { year, month, sort: year * 100 + month, label: MONTH_LABELS[month - 1] }
+}
+
+const normalizeCarbonBars = (rows = []) =>
+  rows
+    .map((row) => {
+      const monthValue =
+        row.l ?? row.month ?? row.label ?? row.yearMonth ?? row.year_month ?? ""
+      const parsedMonth = parseMonthKey(monthValue)
+      const beneficiaryCount = Number(
+        row.count ?? row.beneficiaryCount ?? row.beneficiary_count ?? 0,
+      )
+      const value = Number(
+        row.v ??
+          row.value ??
+          row.credits ??
+          row.carbonCredits ??
+          row.carbon_credits ??
+          row.totalCredits ??
+          row.total_credits ??
+          row.total ??
+          (beneficiaryCount ? beneficiaryCount * CREDITS_PER_STOVE : 0),
+      )
+
+      return {
+        l: parsedMonth?.label ?? monthValue,
+        v: Number.isFinite(value) ? value : 0,
+        sort: parsedMonth?.sort ?? 0,
+      }
+    })
+    .sort((a, b) => b.sort - a.sort)
+    .map(({ l, v }) => ({ l, v }))
+
+const normalizeDashboardSummary = (payload = {}) => {
+  const source = payload.data ?? payload
+  const gender = source.gender ?? {}
+  const mapLocations =
+    source.mapLocations ?? source.map_locations ?? source.locations ?? []
+  const carbonCreditsByMonth =
+    source.carbonCreditsByMonth ??
+    source.carbon_credits_by_month ??
+    source.monthlyBars ??
+    []
+
+  return {
+    scope: source.scope ?? null,
+    totalCookstovesDeployed: Number(
+      source.totalCookstovesDeployed ??
+        source.total_cookstoves_deployed ??
+        source.totalBeneficiaries ??
+        0,
+    ),
+    totalCarbonCredits: Number(
+      source.totalCarbonCredits ?? source.total_carbon_credits ?? 0,
+    ),
+    estimatedTco2eReduction: Number(
+      source.estimatedTco2eReduction ??
+        source.estimated_tco2e_reduction ??
+        source.totalCarbonCredits ??
+        source.total_carbon_credits ??
+        0,
+    ),
+    totalPeopleImpacted: Number(
+      source.totalPeopleImpacted ?? source.total_people_impacted ?? 0,
+    ),
+    verifiedHouseholds: Number(
+      source.verifiedHouseholds ??
+        source.verified_households ??
+        source.totalCookstovesDeployed ??
+        source.total_cookstoves_deployed ??
+        0,
+    ),
+    mapLocationCount: Number(
+      source.mapLocationCount ?? source.map_location_count ?? mapLocations.length ?? 0,
+    ),
+    deployedLast3Months:
+      source.deployedLast3Months ??
+      source.deployed_last_3_months ??
+      source.last3MonthsCount ??
+      0,
+    gender: {
+      girlsBelow18: Number(
+        gender.girlsBelow18 ?? gender.girls_below_18 ?? gender.females_below_18 ?? 0,
+      ),
+      boysBelow18: Number(
+        gender.boysBelow18 ?? gender.boys_below_18 ?? gender.males_below_18 ?? 0,
+      ),
+      adultWomen18Plus: Number(
+        gender.adultWomen18Plus ??
+          gender.adult_women_18_plus ??
+          gender.females_above_18 ??
+          0,
+      ),
+      adultMen18Plus: Number(
+        gender.adultMen18Plus ??
+          gender.adult_men_18_plus ??
+          gender.males_above_18 ??
+          0,
+      ),
+    },
+    carbonCreditsByMonth: normalizeCarbonBars(carbonCreditsByMonth),
   }
 }
 
-const getStoredTokenPayload = () => {
-  if (typeof localStorage === "undefined") return {}
-  const token = localStorage.getItem("token")
-  if (!token || !token.includes(".")) return {}
-  try {
-    const payload = token.split(".")[1]
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
-    return JSON.parse(atob(normalized))
-  } catch {
-    return {}
-  }
-}
+const EMPTY_DASHBOARD_SUMMARY = normalizeDashboardSummary()
 
-const getStoredCustomerId = () => {
-  if (typeof localStorage === "undefined") return null
-  const user = getStoredUser()
-  const tokenUser = getStoredTokenPayload()
-  return (
-    localStorage.getItem("customerId") ||
-    user.customerID ||
-    user.customer_id ||
-    user.adminID ||
-    user.adminId ||
-    user.id ||
-    tokenUser.customerID ||
-    tokenUser.customer_id ||
-    tokenUser.adminID ||
-    tokenUser.adminId ||
-    tokenUser.id ||
-    null
-  )
-}
-
-const getRowCustomerId = (row) =>
-  row.customerID ??
-  row.customer_id ??
-  row.customerId ??
-  row.assigned_customer_id ??
-  row.assignedCustomerId ??
-  row.customer_admin_id ??
-  row.customerAdminID ??
-  row.customer_adminID ??
-  row.adminID ??
-  null
-
-const scopeRowsForCustomer = (rows, role, customerId) => {
-  if (String(role).toLowerCase() !== "customer") return rows
-  if (!customerId) return []
-  return rows.filter((row) => String(getRowCustomerId(row)) === String(customerId))
+const getDashboardSummaryParams = (selectedCustomerId) => {
+  const customerId =
+    selectedCustomerId ||
+    (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("customer_id")
+      : "")
+  return customerId ? { customer_id: customerId } : {}
 }
 
 const csvDL = (rows, name) => {
@@ -520,21 +611,104 @@ const CarbonBar = ({ data = [], height = 220 }) => {
   )
 }
 
-const MapBounds = ({ points }) => {
-  const map = useMap()
+const MapViewportLoader = ({ onViewportChange }) => {
+  const map = useMapEvents({
+    moveend: () => onViewportChange(map),
+    zoomend: () => onViewportChange(map),
+  })
 
   useEffect(() => {
-    if (!points.length) return
-    const bounds = points.map((point) => [point.lat, point.lng])
-    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 10 })
-  }, [map, points])
+    onViewportChange(map)
+  }, [map, onViewportChange])
 
   return null
 }
 
-const BeneficiaryMap = ({ rows = [], height = 240, scrollWheelZoom = false }) => {
-  const points = getBeneficiaryLocations(rows)
-  const center = points.length ? [points[0].lat, points[0].lng] : [-13.5, 34.3]
+const BeneficiaryMap = ({
+  height = 240,
+  scrollWheelZoom = false,
+  selectedCustomerId = "",
+  userRole = "",
+}) => {
+  const [mapData, setMapData] = useState({
+    mode: "none",
+    message: "",
+    points: [],
+    clusters: [],
+    loading: false,
+  })
+  const debounceRef = useRef(null)
+  const requestIdRef = useRef(0)
+  const isAdmin = String(userRole).toLowerCase() === "admin"
+  const shouldFetch = !isAdmin || Boolean(selectedCustomerId)
+  const points = getBeneficiaryLocations(mapData.points)
+  const clusters = normalizeMapClusters(mapData.clusters)
+  const center = [-13.5, 34.3]
+
+  const fetchMapLocations = useCallback(
+    (map) => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current)
+
+      debounceRef.current = window.setTimeout(async () => {
+        if (!shouldFetch) {
+          setMapData({
+            mode: "none",
+            message: "Select a customer to view beneficiary locations",
+            points: [],
+            clusters: [],
+            loading: false,
+          })
+          return
+        }
+
+        const bounds = map.getBounds()
+        const requestId = requestIdRef.current + 1
+        requestIdRef.current = requestId
+        setMapData((current) => ({ ...current, loading: true }))
+
+        try {
+          const params = {
+            north: bounds.getNorth(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            west: bounds.getWest(),
+            zoom: map.getZoom(),
+            ...(selectedCustomerId ? { customer_id: selectedCustomerId } : {}),
+          }
+          const res = await axios.get(`${API_BASE_URL}/customer/map-locations`, {
+            ...getAuthConfig(),
+            params,
+          })
+          if (requestIdRef.current !== requestId) return
+          setMapData({
+            mode: res.data?.mode ?? "none",
+            message: res.data?.message ?? "",
+            points: res.data?.points ?? [],
+            clusters: res.data?.clusters ?? [],
+            loading: false,
+          })
+        } catch (error) {
+          if (requestIdRef.current !== requestId) return
+          console.error("Map locations fetch error:", error)
+          setMapData({
+            mode: "none",
+            message: "Unable to load beneficiary locations",
+            points: [],
+            clusters: [],
+            loading: false,
+          })
+        }
+      }, 350)
+    },
+    [selectedCustomerId, shouldFetch],
+  )
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current)
+    },
+    [],
+  )
 
   return (
     <div
@@ -546,19 +720,29 @@ const BeneficiaryMap = ({ rows = [], height = 240, scrollWheelZoom = false }) =>
         position: "relative",
       }}
     >
-      {points.length ? (
-        <MapContainer
-          center={center}
-          zoom={7}
-          scrollWheelZoom={scrollWheelZoom}
-          style={{ width: "100%", height: "100%" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapBounds points={points} />
-          {points.map((point) => (
+      <MapContainer
+        center={center}
+        zoom={7}
+        scrollWheelZoom={scrollWheelZoom}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapViewportLoader onViewportChange={fetchMapLocations} />
+        {mapData.mode === "clusters" &&
+          clusters.map((cluster) => (
+            <Marker
+              key={cluster.id}
+              position={[cluster.lat, cluster.lng]}
+              icon={getClusterMarkerIcon(cluster.count)}
+            >
+              <Popup>{fmt(cluster.count)} beneficiaries in this area</Popup>
+            </Marker>
+          ))}
+        {mapData.mode === "points" &&
+          points.map((point) => (
             <Marker
               key={point.id}
               position={[point.lat, point.lng]}
@@ -578,11 +762,12 @@ const BeneficiaryMap = ({ rows = [], height = 240, scrollWheelZoom = false }) =>
               </Popup>
             </Marker>
           ))}
-        </MapContainer>
-      ) : (
+      </MapContainer>
+      {(mapData.loading || mapData.message) && (
         <div
           style={{
-            height: "100%",
+            position: "absolute",
+            inset: 0,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -591,9 +776,10 @@ const BeneficiaryMap = ({ rows = [], height = 240, scrollWheelZoom = false }) =>
             fontWeight: 800,
             textAlign: "center",
             padding: 18,
+            pointerEvents: "none",
           }}
         >
-          No beneficiary locations available yet
+          {mapData.loading ? "Loading beneficiary locations..." : mapData.message}
         </div>
       )}
     </div>
@@ -1246,168 +1432,144 @@ const CustomerDashboard = () => {
     "Customer"
   const userRole =
     (typeof localStorage !== "undefined" && localStorage.getItem("role")) || ""
-  const customerId = getStoredCustomerId()
+  const isAdmin = String(userRole).toLowerCase() === "admin"
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
-  const [allBens, setAllBens] = useState([])
+  const [dashboardSummary, setDashboardSummary] = useState(EMPTY_DASHBOARD_SUMMARY)
   const [allMonitoring, setAllMonitoring] = useState([])
-  const [monthlyBars, setMonthlyBars] = useState([])
+  const [customerOptions, setCustomerOptions] = useState([])
+  const [selectedMapCustomerId, setSelectedMapCustomerId] = useState(
+    () =>
+      (typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("customer_id")) ||
+      "",
+  )
   const [mapModalOpen, setMapModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isAdmin) return
+    ;(async () => {
+      try {
+        const res = await axios.post(
+          `${API_BASE_URL}/customer/list`,
+          { filters: [] },
+          { ...getAuthConfig(), params: { page: 1, limit: 1000 } },
+        )
+        setCustomerOptions(
+          (res.data?.data ?? []).map((customer) => ({
+            id:
+              customer.adminID ??
+              customer.customer_id ??
+              customer.customerID ??
+              customer.id,
+            label:
+              customer.name ??
+              customer.customer_name ??
+              customer.user_name ??
+              customer.userName ??
+              customer.email ??
+              "Customer",
+          })),
+        )
+      } catch (error) {
+        console.error("Customer dropdown fetch error:", error)
+        setCustomerOptions([])
+      }
+    })()
+  }, [isAdmin])
 
   // ── Fetch dashboard data ───────────────────────────────────────────────────
   useEffect(() => {
     ;(async () => {
       setLoading(true)
       try {
-        const [bBulk, mBulk] = await Promise.allSettled([
-          // Beneficiary records drive all visible customer dashboard metrics.
-          axios.post(
-            `${API_BASE_URL}/beneficiary/list`,
-            { filters: [] },
-            { params: { page: 1, limit: 100000 } },
-          ),
-
+        const token =
+          typeof localStorage !== "undefined"
+            ? localStorage.getItem("token")
+            : null
+        const authConfig = token
+          ? { headers: { Authorization: `Bearer ${token}` } }
+          : {}
+        const summaryParams = getDashboardSummaryParams(
+          isAdmin ? selectedMapCustomerId : "",
+        )
+        const summaryConfig = {
+          ...authConfig,
+          ...(Object.keys(summaryParams).length ? { params: summaryParams } : {}),
+        }
+        const [summaryResult, mBulk] = await Promise.allSettled([
+          axios.get(`${API_BASE_URL}/customer/dashboard-summary`, summaryConfig),
           // Kept ready for the hidden Environmental, Economic, and Health cards.
           SHOW_MONITORING_CARDS
             ? axios.post(
                 `${API_BASE_URL}/monitoring/list`,
                 { filters: [] },
-                { params: { page: 1, limit: 100000 } },
+                { ...authConfig, params: { page: 1, limit: 100000 } },
               )
             : Promise.resolve({ data: { data: [] } }),
         ])
-        const bens = scopeRowsForCustomer(
-          bBulk.status === "fulfilled" ? (bBulk.value.data?.data ?? []) : [],
-          userRole,
-          customerId,
+        setDashboardSummary(
+          normalizeDashboardSummary(
+            summaryResult.status === "fulfilled" ? summaryResult.value.data : {},
+          ),
         )
-        setAllBens(bens)
         setAllMonitoring(
           mBulk.status === "fulfilled" ? (mBulk.value.data?.data ?? []) : [],
         )
-
-        // ── Build last-5-months carbon credits bar chart ─────────────────────
-        // Groups all cookstove deployments by month → multiplies by CREDITS_PER_STOVE
-        const MONTHS = [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ]
-        const now = new Date()
-        const bars = Array.from({ length: 5 }, (_, i) => {
-          const d = new Date(now.getFullYear(), now.getMonth() - (4 - i), 1)
-          const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1)
-          const cnt = bens.filter((r) => {
-            const dateValue = getDeploymentDate(r)
-            if (!dateValue) return false
-            const rd = new Date(dateValue)
-            return rd >= d && rd < nd
-          }).length
-          return {
-            l: MONTHS[d.getMonth()],
-            v: Number((cnt * CREDITS_PER_STOVE).toFixed(2)),
-          }
-        })
-        setMonthlyBars(bars)
       } catch (e) {
         console.error("CustomerDashboard fetch error:", e)
+        setDashboardSummary(EMPTY_DASHBOARD_SUMMARY)
       } finally {
         setLoading(false)
       }
     })()
-  }, [customerId, userRole])
+  }, [isAdmin, selectedMapCustomerId])
 
   // ── All derived values computed from API data ──────────────────────────────
 
-  const totalCookstovesDeployed = allBens.length
-  const totalCredits = totalCookstovesDeployed * CREDITS_PER_STOVE
-  const estimatedTco2eReduction = totalCredits
+  const totalCookstovesDeployed = dashboardSummary.totalCookstovesDeployed
+  const totalCredits =
+    dashboardSummary.totalCarbonCredits ||
+    totalCookstovesDeployed * CREDITS_PER_STOVE
+  const estimatedTco2eReduction =
+    dashboardSummary.estimatedTco2eReduction || totalCredits
+  const deployedLast3Months = dashboardSummary.deployedLast3Months
+  const peopleImpacted = dashboardSummary.totalPeopleImpacted
+  const verifiedHouseholds = dashboardSummary.verifiedHouseholds
+  const monthlyBars = dashboardSummary.carbonCreditsByMonth
+  const genderTotals = dashboardSummary.gender
 
-  // Last 3 months totals use beneficiary created_date.
-  const now = new Date()
-  const last3MonthsStart = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-  const deployedLast3Months = allBens.filter((r) => {
-    const dateValue = getDeploymentDate(r)
-    return dateValue && new Date(dateValue) >= last3MonthsStart
-  }).length
-  // ── People Impacted ───────────────────────────────────────────────────────
-  // Formula: sum all family members for the cookstove households.
-  const peopleImpacted = allBens.reduce(
-    (sum, row) => sum + householdMembers(row),
-    0,
-  )
-
-  // ── Gender Distribution (from beneficiary females/males fields) ────────────
-  const femaleCount = allBens.reduce(
-    (s, r) =>
-      s + (Number(r.females_above_18) || 0) + (Number(r.females_below_18) || 0),
-    0,
-  )
-  const maleCount = allBens.reduce(
-    (s, r) =>
-      s + (Number(r.males_above_18) || 0) + (Number(r.males_below_18) || 0),
-    0,
-  )
+  const femaleCount = genderTotals.girlsBelow18 + genderTotals.adultWomen18Plus
+  const maleCount = genderTotals.boysBelow18 + genderTotals.adultMen18Plus
   const demographicRows = [
     {
       leftLabel: "Girls (<18)",
       leftSubLabel: "Children",
       leftIcon: <DemographicIcon age="child" gender="female" />,
-      leftValue: allBens.reduce(
-        (sum, row) => sum + toNum(row.females_below_18),
-        0,
-      ),
+      leftValue: genderTotals.girlsBelow18,
       rightLabel: "Boys (<18)",
       rightSubLabel: "Children",
       rightIcon: <DemographicIcon age="child" gender="male" />,
-      rightValue: allBens.reduce(
-        (sum, row) => sum + toNum(row.males_below_18),
-        0,
-      ),
+      rightValue: genderTotals.boysBelow18,
     },
     {
       leftLabel: "Adult Women (18+)",
       leftSubLabel: "Adults",
       leftIcon: <DemographicIcon age="adult" gender="female" />,
-      leftValue: allBens.reduce(
-        (sum, row) => sum + toNum(row.females_above_18),
-        0,
-      ),
+      leftValue: genderTotals.adultWomen18Plus,
       rightLabel: "Adult Men (18+)",
       rightSubLabel: "Adults",
       rightIcon: <DemographicIcon age="adult" gender="male" />,
-      rightValue: allBens.reduce(
-        (sum, row) => sum + toNum(row.males_above_18),
-        0,
-      ),
+      rightValue: genderTotals.adultMen18Plus,
     },
   ]
   const genderTot = femaleCount + maleCount || 1
   const femalePct = Math.round((femaleCount / genderTot) * 100)
 
   // ── Hidden Monitoring Cards: keep calculations ready for later ────────────
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const thisMonthCnt = allBens.filter((r) => {
-    const dateValue = getDeploymentDate(r)
-    return dateValue && new Date(dateValue) >= thisMonthStart
-  }).length
-  const prevMonthCnt = allBens.filter((r) => {
-    const dateValue = getDeploymentDate(r)
-    if (!dateValue) return false
-    const d = new Date(dateValue)
-    return d >= prevMonthStart && d < thisMonthStart
-  }).length
+  const thisMonthCnt = monthlyBars.at(-1)?.v ?? 0
+  const prevMonthCnt = monthlyBars.at(-2)?.v ?? 0
   const creditsPct =
     prevMonthCnt > 0
       ? Math.round(((thisMonthCnt - prevMonthCnt) / prevMonthCnt) * 100)
@@ -1449,16 +1611,7 @@ const CustomerDashboard = () => {
         )
       : TREES_FALLBACK
 
-  const sparkData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
-    const nd = new Date(d.getFullYear(), d.getMonth() + 1, 1)
-    return allBens.filter((r) => {
-      const dateValue = getDeploymentDate(r)
-      if (!dateValue) return false
-      const rd = new Date(dateValue)
-      return rd >= d && rd < nd
-    }).length
-  })
+  const sparkData = monthlyBars.map((row) => row.v)
 
   // ── CSV download handlers ──────────────────────────────────────────────────
   const dlGender = () =>
@@ -1551,6 +1704,21 @@ const CustomerDashboard = () => {
           border-radius:50%;
           background:#fff;
         }
+        .beneficiary-map-cluster{background:transparent;border:0;}
+        .beneficiary-map-cluster-dot{
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          width:38px;
+          height:38px;
+          border-radius:50%;
+          background:#35c96d;
+          border:3px solid #166534;
+          color:#fff;
+          font-size:10px;
+          font-weight:900;
+          box-shadow:0 3px 10px rgba(22,101,52,0.34);
+        }
         @keyframes cdShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         @keyframes cdRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
       `}</style>
@@ -1605,6 +1773,45 @@ const CustomerDashboard = () => {
 
         {/* ── Main Content ──────────────────────────────────────────────── */}
         <div style={{ padding: contentPad }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: 16,
+            }}
+          >
+            <select
+              value={isAdmin ? selectedMapCustomerId : "current-customer"}
+              disabled={!isAdmin}
+              onChange={(event) => setSelectedMapCustomerId(event.target.value)}
+              style={{
+                width: isMobile ? "100%" : 240,
+                border: "1px solid #c8e6c9",
+                borderRadius: 6,
+                background: isAdmin ? "#fff" : "#f0faf0",
+                color: "#166534",
+                fontSize: 12,
+                fontWeight: 800,
+                padding: "8px 10px",
+                outline: "none",
+                cursor: isAdmin ? "pointer" : "not-allowed",
+              }}
+            >
+              {isAdmin ? (
+                <>
+                  <option value="">Select Customer</option>
+                  {customerOptions.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.label}
+                    </option>
+                  ))}
+                </>
+              ) : (
+                <option value="current-customer">{userName}</option>
+              )}
+            </select>
+          </div>
+
           {/* ── ROW 1: TOP 4 STAT CARDS ─────────────────────────────────── */}
           <div
             style={{
@@ -1646,7 +1853,7 @@ const CustomerDashboard = () => {
               label="Total People Impacted"
               loading={loading}
               mainValue={fmtSpace(peopleImpacted)}
-              recentValue={fmtSpace(totalCookstovesDeployed)}
+              recentValue={fmtSpace(verifiedHouseholds)}
               recentLabel="Verified Households"
             />
           </div>
@@ -2006,7 +2213,14 @@ const CustomerDashboard = () => {
                   Full Map ↗
                 </button>
               </div>
-              {loading ? <Sk w="100%" h={240} /> : <BeneficiaryMap rows={allBens} />}
+              {loading ? (
+                <Sk w="100%" h={240} />
+              ) : (
+                <BeneficiaryMap
+                  selectedCustomerId={selectedMapCustomerId}
+                  userRole={userRole}
+                />
+              )}
             </Panel>
           </div>
         </div>
@@ -2072,7 +2286,8 @@ const CustomerDashboard = () => {
             </div>
             <div style={{ padding: isMobile ? 10 : 16 }}>
               <BeneficiaryMap
-                rows={allBens}
+                selectedCustomerId={selectedMapCustomerId}
+                userRole={userRole}
                 height={isMobile ? "72vh" : "76vh"}
                 scrollWheelZoom
               />
