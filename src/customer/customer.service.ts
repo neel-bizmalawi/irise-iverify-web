@@ -141,14 +141,26 @@ export class CustomerService {
             const result = await this.customerRepo.updateRandomBeneficiaries(customerId, userId);
 
             const changedNow = result.assignedNow + result.unassignedNow;
+            let message = 'Beneficiaries already up to date';
+
+            if (result.assignedNow > 0 && result.remainingToAssign > 0) {
+                message = `${result.assignedNow} beneficiaries assigned. ${result.remainingToAssign} more beneficiaries are required to reach the requested count.`;
+            } else if (result.assignedNow > 0) {
+                message = `${result.assignedNow} beneficiaries assigned successfully`;
+            } else if (result.unassignedNow > 0) {
+                message = `${result.unassignedNow} beneficiaries unassigned successfully`;
+            } else if (result.remainingToAssign > 0) {
+                message = `No unassigned beneficiaries are currently available. ${result.remainingToAssign} more beneficiaries are required to reach the requested count.`;
+            }
 
             return {
                 success: changedNow > 0,
-                message: changedNow > 0
-                    ? 'Beneficiaries updated successfully'
-                    : 'Beneficiaries already up to date',
+                message,
                 assignedNow: result.assignedNow,
                 unassignedNow: result.unassignedNow,
+                assignedCount: result.assignedCount,
+                requestedCount: result.beneficiaryCount,
+                remainingRequired: result.remainingToAssign,
                 assigned_beneficiary_count: result.assignedCount,
                 beneficiary_count: result.beneficiaryCount,
                 remaining_beneficiary_count: result.remainingToAssign,

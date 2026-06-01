@@ -270,11 +270,8 @@ export class CustomerRepositoryService {
         `,
       );
 
-      if (!beneficiaryRows || beneficiaryRows.length < difference) {
-        throw new ConflictException('Not enough unassigned beneficiaries available');
-      }
-
-      const values = beneficiaryRows.map((row) => [
+      const availableBeneficiaries = beneficiaryRows ?? [];
+      const values = availableBeneficiaries.map((row) => [
         customerId,
         row.beneficiary_id,
         'active',
@@ -282,26 +279,30 @@ export class CustomerRepositoryService {
         userId ?? null,
       ]);
 
-      await conn.query(
-        `
-        INSERT INTO ${this.mappingTableName}
-        (customer_id, beneficiary_id, status, created_by, modified_by)
-        VALUES ?
-        ON DUPLICATE KEY UPDATE
-          customer_id = VALUES(customer_id),
-          status = VALUES(status),
-          modified_by = VALUES(modified_by),
-          modified_date = NOW()
-        `,
-        [values],
-      );
+      if (values.length) {
+        await conn.query(
+          `
+          INSERT INTO ${this.mappingTableName}
+          (customer_id, beneficiary_id, status, created_by, modified_by)
+          VALUES ?
+          ON DUPLICATE KEY UPDATE
+            customer_id = VALUES(customer_id),
+            status = VALUES(status),
+            modified_by = VALUES(modified_by),
+            modified_date = NOW()
+          `,
+          [values],
+        );
+      }
+
+      const newAssignedCount = assignedCount + availableBeneficiaries.length;
 
       return {
-        assignedNow: beneficiaryRows.length,
+        assignedNow: availableBeneficiaries.length,
         unassignedNow: 0,
-        assignedCount: assignedCount + beneficiaryRows.length,
+        assignedCount: newAssignedCount,
         beneficiaryCount,
-        remainingToAssign: beneficiaryCount - (assignedCount + beneficiaryRows.length),
+        remainingToAssign: Math.max(beneficiaryCount - newAssignedCount, 0),
         excessBeneficiaryCount: 0,
       };
     });
