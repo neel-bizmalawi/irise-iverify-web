@@ -58,9 +58,13 @@ const getClusterMarkerIcon = (count) =>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("en-US"))
-const fmtDec = (n, d) => (n == null ? "—" : Number(n).toFixed(d ?? 2))
-const fmtSpace = (n) => fmt(n).replace(/,/g, " ")
-const fmtDecSpace = (n, d) => fmtDec(n, d).replace(/,/g, " ")
+const fmtDec = (n, d = 2) =>
+  n == null
+    ? "—"
+    : Number(n).toLocaleString("en-US", {
+        minimumFractionDigits: d,
+        maximumFractionDigits: d,
+      })
 
 const toCoordinate = (value) => {
   const n = Number(value)
@@ -1773,44 +1777,39 @@ const CustomerDashboard = () => {
 
         {/* ── Main Content ──────────────────────────────────────────────── */}
         <div style={{ padding: contentPad }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginBottom: 16,
-            }}
-          >
-            <select
-              value={isAdmin ? selectedMapCustomerId : "current-customer"}
-              disabled={!isAdmin}
-              onChange={(event) => setSelectedMapCustomerId(event.target.value)}
+          {isAdmin && (
+            <div
               style={{
-                width: isMobile ? "100%" : 240,
-                border: "1px solid #c8e6c9",
-                borderRadius: 6,
-                background: isAdmin ? "#fff" : "#f0faf0",
-                color: "#166534",
-                fontSize: 12,
-                fontWeight: 800,
-                padding: "8px 10px",
-                outline: "none",
-                cursor: isAdmin ? "pointer" : "not-allowed",
+                display: "flex",
+                justifyContent: "flex-end",
+                marginBottom: 16,
               }}
             >
-              {isAdmin ? (
-                <>
-                  <option value="">Select Customer</option>
-                  {customerOptions.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.label}
-                    </option>
-                  ))}
-                </>
-              ) : (
-                <option value="current-customer">{userName}</option>
-              )}
-            </select>
-          </div>
+              <select
+                value={selectedMapCustomerId}
+                onChange={(event) => setSelectedMapCustomerId(event.target.value)}
+                style={{
+                  width: isMobile ? "100%" : 240,
+                  border: "1px solid #c8e6c9",
+                  borderRadius: 6,
+                  background: "#fff",
+                  color: "#166534",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  padding: "8px 10px",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">Select Customer</option>
+                {customerOptions.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* ── ROW 1: TOP 4 STAT CARDS ─────────────────────────────────── */}
           <div
@@ -1826,8 +1825,8 @@ const CustomerDashboard = () => {
               icon={IcoStove}
               label="Total Cookstoves Deployed"
               loading={loading}
-              mainValue={fmtSpace(totalCookstovesDeployed)}
-              recentValue={fmtSpace(deployedLast3Months)}
+              mainValue={fmt(totalCookstovesDeployed)}
+              recentValue={fmt(deployedLast3Months)}
             />
 
             {/* Card 2 — Total Credits (calculated: deployed × CREDITS_PER_STOVE) */}
@@ -1835,7 +1834,7 @@ const CustomerDashboard = () => {
               icon={IcoCredit}
               label="Total Carbon Credits"
               loading={loading}
-              mainValue={fmtDecSpace(totalCredits, 2)}
+              mainValue={fmtDec(totalCredits, 2)}
             />
 
             {/* Card 3 — Estimated tCO2e reduction (carbon credits expressed as tCO2e) */}
@@ -1843,7 +1842,7 @@ const CustomerDashboard = () => {
               icon={IcoReduction}
               label="Estimated tCO2e reduction"
               loading={loading}
-              mainValue={fmtSpace(Math.round(estimatedTco2eReduction))}
+              mainValue={fmt(Math.round(estimatedTco2eReduction))}
               mainSuffix="tCO2e/year"
             />
 
@@ -1852,8 +1851,8 @@ const CustomerDashboard = () => {
               icon={IcoPeople}
               label="Total People Impacted"
               loading={loading}
-              mainValue={fmtSpace(peopleImpacted)}
-              recentValue={fmtSpace(verifiedHouseholds)}
+              mainValue={fmt(peopleImpacted)}
+              recentValue={fmt(verifiedHouseholds)}
               recentLabel="Verified Households"
             />
           </div>
